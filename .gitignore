@@ -6,3 +6,4 @@ site/.tunnel.err.log
 site/.tunnel.out.log
 npm-debug.log*
 gh-auth.*.log
+netlify-login.*.log
