@@ -1,0 +1,8 @@
+node_modules/
+.netlify/
+site/.server.pid
+site/.tunnel.pid
+site/.tunnel.err.log
+site/.tunnel.out.log
+npm-debug.log*
+gh-auth.*.log
