@@ -5,18 +5,18 @@ const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/.netlify/functions/load-state";
 const CLOUD_SAVE_ENDPOINT = "/.netlify/functions/save-state";
-const DEFAULT_SECRET_LETTER = `小裴：
-如果你点到了这里，说明你发现了我藏起来的小心思。
+const DEFAULT_SECRET_LETTER = `给今晚的我们：
+如果你点到了这里，说明你发现了这张藏起来的小纸条。
 
-在这里把最想说的话都留给你。
+这里可以写给婉婉，也可以写给李家鑫。
+可以认真一点，也可以害羞一点。
+不用急着把所有话都说完，只要把此刻最想留下的心情放在这里就好。
 
-所以这张小纸条，只想认真告诉你：我喜欢你。
+愿今晚的抽卡不是为了分输赢，
+而是让两个人都被认真看见、认真偏爱、认真照顾。
 
-我不想破坏我们这样的的状态，也不清楚你的想法
-
-嗯......我也不知道该怎么说，反正喜欢你，同不同意那就看你啦
-
-李家鑫`;
+如果有一句话不好意思当面说，就先写在这里。
+等某个合适的夜晚，再慢慢告诉对方。`;
 
 const truthQuestions = [
   "真心话：第一次见到对方时，你的第一印象是什么？",
@@ -287,7 +287,7 @@ const playerCopy = {
   李家鑫: {
     recipient: "TO 李家鑫",
     ready: "这次轮到李家鑫了",
-    button: "替李家鑫抽一张",
+    button: "替婉婉抽一张",
     result: "可以完成，也可以直接跳过",
   },
   婉婉: {
@@ -299,7 +299,7 @@ const playerCopy = {
   一起: {
     recipient: "TO 我们",
     ready: "这一张一起完成",
-    button: "给我们抽一张",
+    button: "替婉婉抽一张",
     result: "双方同意才继续",
   },
 };
@@ -339,6 +339,7 @@ const elements = {
   restoreButton: document.querySelector("#restore-button"),
   clearButton: document.querySelector("#clear-button"),
   pickButton: document.querySelector("#pick-button"),
+  resetRoundButton: document.querySelector("#reset-round-button"),
   pickerCard: document.querySelector("#picker-card"),
   deckPanel: document.querySelector("#deck-panel"),
   toggleDeckButton: document.querySelector("#toggle-deck-button"),
@@ -386,6 +387,8 @@ function createDefaultState() {
       custom: [],
     },
     history: [],
+    usedCardIds: [],
+    currentCard: null,
   };
 }
 
@@ -399,6 +402,11 @@ function loadState() {
       ...stored,
       customDecks: { ...fallback.customDecks, ...stored.customDecks },
       history: Array.isArray(stored.history) ? stored.history : [],
+      usedCardIds: normalizeUsedCardIds(
+        stored.usedCardIds || stored.drawnCards,
+        stored.mode || fallback.mode,
+      ),
+      currentCard: stored.currentCard || null,
     };
   } catch {
     return fallback;
@@ -431,13 +439,31 @@ function mergeUniqueCards(primary = [], secondary = []) {
   });
 }
 
+function cardKey(mode, option) {
+  return `${mode}::${String(option).trim().toLocaleLowerCase()}`;
+}
+
+function normalizeUsedCardIds(value = [], mode = "mixed") {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .filter((item) => typeof item === "string" && item.trim())
+    .map((item) => item.trim())
+    .map((item) => (item.includes("::") ? item : cardKey(mode, item)))
+    .filter((item) => {
+      if (seen.has(item)) return false;
+      seen.add(item);
+      return true;
+    });
+}
+
 // Cloud sync boundary: the UI still uses the existing state shape, and this
 // function converts it to the JSON document stored in Supabase app_state.data.
 function cloudDataFromState() {
   const now = new Date().toISOString();
   return {
     customCards: [...state.customDecks.custom],
-    drawnCards: state.history.map((entry) => entry.value),
+    drawnCards: [...state.usedCardIds],
     remainingCards: state.customDecks,
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
     history: state.history,
@@ -449,6 +475,8 @@ function cloudDataFromState() {
       currentStep: state.currentStep,
       isDeckOpen: state.isDeckOpen,
       specialUnlocked: state.specialUnlocked,
+      usedCardIds: [...state.usedCardIds],
+      currentCard: state.currentCard,
     },
   };
 }
@@ -470,6 +498,11 @@ function applyCloudData(data) {
         : state.secretLetter || fallback.secretLetter,
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
+    usedCardIds: normalizeUsedCardIds(
+      data.drawnCards || data.usedCardIds || app.usedCardIds || state.usedCardIds,
+      app.mode || state.mode,
+    ),
+    currentCard: app.currentCard || state.currentCard || null,
   };
 
   if (Array.isArray(data.customCards)) {
@@ -485,7 +518,12 @@ function isCloudStateEmpty(data) {
   const hasRemainingCards =
     data.remainingCards &&
     Object.values(data.remainingCards).some((items) => Array.isArray(items) && items.length);
-  return !hasRemainingCards && !data.letter && !(Array.isArray(data.history) && data.history.length);
+  return (
+    !hasRemainingCards &&
+    !data.letter &&
+    !(Array.isArray(data.history) && data.history.length) &&
+    !(Array.isArray(data.drawnCards) && data.drawnCards.length)
+  );
 }
 
 function mergeLocalStateIntoCloud(localState) {
@@ -513,6 +551,10 @@ function mergeLocalStateIntoCloud(localState) {
     }
   });
   state.history = state.history.slice(0, HISTORY_LIMIT);
+  state.usedCardIds = normalizeUsedCardIds([
+    ...state.usedCardIds,
+    ...(Array.isArray(localState.usedCardIds) ? localState.usedCardIds : []),
+  ], localState.mode || state.mode);
 
   return before !== JSON.stringify(state);
 }
@@ -611,6 +653,11 @@ function filteredOptions() {
   return options.filter((option) => optionType(option) === state.drawType);
 }
 
+function availableOptions() {
+  const used = new Set(state.usedCardIds || []);
+  return filteredOptions().filter((option) => !used.has(cardKey(state.mode, option)));
+}
+
 function createOptionItem(option, index) {
   const item = document.createElement("li");
   item.className = "option-item";
@@ -636,6 +683,7 @@ function createOptionItem(option, index) {
 
 function renderOptions() {
   const options = filteredOptions();
+  const available = availableOptions();
   const total = currentOptions().length;
   elements.list.replaceChildren(
     ...options.map((option, index) => createOptionItem(option, index)),
@@ -644,14 +692,14 @@ function renderOptions() {
   elements.list.hidden = options.length === 0;
   elements.count.textContent =
     options.length === total ? `${total} 道题` : `${options.length} / ${total} 道`;
-  elements.pickButton.disabled = options.length === 0 || isPicking;
+  elements.pickButton.disabled = available.length === 0 || isPicking;
   elements.deckTitle.textContent = decks[state.mode].title;
   elements.deckDescription.textContent = decks[state.mode].description;
   elements.deckPreviewTitle.textContent = decks[state.mode].title;
   elements.deckPreviewSubtitle.textContent =
-    options.length === total
-      ? `剩余 ${total} 张可抽`
-      : `当前筛选剩余 ${options.length} / ${total} 张`;
+    state.drawType === "all"
+      ? `本轮剩余 ${available.length} / ${options.length} 张可抽`
+      : `当前筛选本轮剩余 ${available.length} / ${options.length} 张`;
 }
 
 function renderControls() {
@@ -854,9 +902,9 @@ function delay(milliseconds) {
 }
 
 async function pickRandomOption() {
-  const pool = filteredOptions();
+  const pool = availableOptions();
   if (isPicking || !pool.length) {
-    if (!pool.length) showToast("当前筛选下没有可抽取的题目");
+    if (!pool.length) showToast("本轮已经抽完啦，点“重置本轮抽卡”可以重新开始");
     return;
   }
 
@@ -875,9 +923,16 @@ async function pickRandomOption() {
   }
 
   const result = pool[secureRandomIndex(pool.length)];
-  const source = currentOptions();
-  const resultIndex = source.indexOf(result);
-  if (resultIndex !== -1) source.splice(resultIndex, 1);
+  const resultKey = cardKey(state.mode, result);
+  if (!state.usedCardIds.includes(resultKey)) {
+    state.usedCardIds.push(resultKey);
+  }
+  state.currentCard = {
+    value: result,
+    player: state.player,
+    mode: state.mode,
+    time: new Date().toISOString(),
+  };
 
   state.history.unshift({
     value: result,
@@ -905,6 +960,7 @@ async function pickRandomOption() {
 
 function resetResult() {
   const copy = playerCopy[state.player];
+  state.currentCard = null;
   elements.resultStage.classList.remove("is-picking", "has-result");
   elements.ticketRecipient.textContent = copy.recipient;
   elements.resultKicker.textContent = copy.ready;
@@ -912,6 +968,31 @@ function resetResult() {
   elements.resultCaption.textContent = "任何一张都可以跳过";
   elements.resultCaption.textContent = randomCaption();
   elements.pickButton.querySelector(".button-label").textContent = copy.button;
+}
+
+function resetDrawRound() {
+  if (isPicking) return;
+  state.usedCardIds = [];
+  state.history = [];
+  state.currentCard = null;
+  saveState();
+  resetResult();
+  renderOptions();
+  renderHistory();
+  showToast("本轮抽卡已重置，题库都还在");
+  void saveCloudState();
+}
+
+function restoreDefaultDeck() {
+  const defaults = decks[state.mode].options;
+  const current = currentOptions();
+  state.customDecks[state.mode] = mergeUniqueCards(defaults, current);
+  state.usedCardIds = state.usedCardIds.filter((id) => !id.startsWith(`${state.mode}::`));
+  saveState();
+  renderOptions();
+  resetResult();
+  showToast("默认题库已恢复，自定义题已保留");
+  void saveCloudState();
 }
 
 function showToast(message) {
@@ -1043,12 +1124,7 @@ elements.drawButtons.forEach((button) => {
 });
 
 elements.restoreButton.addEventListener("click", () => {
-  state.customDecks[state.mode] = [...decks[state.mode].options];
-  saveState();
-  renderOptions();
-  resetResult();
-  showToast("题库已恢复");
-  void saveCloudState();
+  restoreDefaultDeck();
 });
 
 elements.toggleDeckButton.addEventListener("click", () => {
@@ -1059,7 +1135,11 @@ elements.toggleDeckButton.addEventListener("click", () => {
 });
 
 elements.clearButton.addEventListener("click", () => {
+  if (!window.confirm("确定要清空当前题库吗？这个操作会删除当前题库里的题目。")) {
+    return;
+  }
   state.customDecks[state.mode] = [];
+  state.usedCardIds = state.usedCardIds.filter((id) => !id.startsWith(`${state.mode}::`));
   saveState();
   renderOptions();
   resetResult();
@@ -1067,6 +1147,7 @@ elements.clearButton.addEventListener("click", () => {
 });
 
 elements.pickButton.addEventListener("click", pickRandomOption);
+elements.resetRoundButton.addEventListener("click", resetDrawRound);
 elements.clearHistoryButton.addEventListener("click", () => {
   state.history = [];
   saveState();
