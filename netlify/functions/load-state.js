@@ -9,7 +9,14 @@ const DEFAULT_DATA = {
 
 async function loadFromBlobStore() {
   const { getStore } = await import("@netlify/blobs");
-  const store = getStore("wanwan-picker");
+  const storeOptions = process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN
+    ? {
+        name: "wanwan-picker",
+        siteID: process.env.NETLIFY_SITE_ID,
+        token: process.env.NETLIFY_AUTH_TOKEN,
+      }
+    : "wanwan-picker";
+  const store = getStore(storeOptions);
   return (await store.get("main", { type: "json" })) || DEFAULT_DATA;
 }
 

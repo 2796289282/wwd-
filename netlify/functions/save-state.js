@@ -11,7 +11,14 @@ function json(statusCode, body) {
 
 async function saveToBlobStore(nextData) {
   const { getStore } = await import("@netlify/blobs");
-  const store = getStore("wanwan-picker");
+  const storeOptions = process.env.NETLIFY_SITE_ID && process.env.NETLIFY_AUTH_TOKEN
+    ? {
+        name: "wanwan-picker",
+        siteID: process.env.NETLIFY_SITE_ID,
+        token: process.env.NETLIFY_AUTH_TOKEN,
+      }
+    : "wanwan-picker";
+  const store = getStore(storeOptions);
   await store.setJSON("main", nextData);
 }
 
