@@ -28,8 +28,13 @@ export async function onRequestGet({ env }) {
 
   if (!supabaseUrl || !supabaseKey) {
     if (env.APP_STATE) {
-      const data = (await env.APP_STATE.get("main", { type: "json" })) || DEFAULT_DATA;
-      return json({ data, storage: "cloudflare-kv" });
+      try {
+        const stored = await env.APP_STATE.get("main");
+        const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
+        return json({ data, storage: "cloudflare-kv" });
+      } catch (error) {
+        return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 });
+      }
     }
     return json({ data: DEFAULT_DATA, storage: "none" }, { status: 200 });
   }
