@@ -15,6 +15,25 @@
     <div class="floating-heart heart-one" aria-hidden="true">✦</div>
     <div class="floating-heart heart-two" aria-hidden="true">✦</div>
 
+    <section id="entrance-gate" class="entrance-gate" aria-labelledby="entrance-title">
+      <form id="entrance-form" class="entrance-card" autocomplete="off">
+        <p class="step-label">PRIVATE ENTRANCE</p>
+        <h1 id="entrance-title">婉婉的抽签机</h1>
+        <p>这是只给我们两个看的入口。暗号对了，今晚才正式开始。</p>
+        <label class="sr-only" for="entrance-password">入口暗号</label>
+        <input
+          id="entrance-password"
+          class="entrance-password"
+          type="password"
+          placeholder="输入我们的暗号"
+          autocomplete="off"
+        />
+        <button class="start-game-button" type="submit">进入今晚</button>
+        <p id="entrance-error" class="entrance-error" hidden>暗号不对，再试一次。</p>
+      </form>
+    </section>
+
+    <div id="app-content" class="app-content" hidden>
     <header class="site-header">
       <a class="brand" href="#" aria-label="返回顶部">
         <span class="brand-mark" id="brand-mark" aria-hidden="true">裴</span>
@@ -40,8 +59,9 @@
         <div class="landing-card">
           <p>今晚规则</p>
           <strong>先抽卡，再靠近一点点。每一次抽取都要认真对待哦</strong>
+          <span class="flow-preview">选一种今晚的玩法，决定谁来抽，然后把答案交给卡片。</span>
           <button id="start-game-button" class="start-game-button" type="button">
-            进入今晚游戏
+            开始今晚第一轮
           </button>
         </div>
       </section>
@@ -87,17 +107,17 @@
                 <button class="mode-button" type="button" data-mode="truth">
                   <span>真</span>
                   <strong>真心话</strong>
-                  <small>认真回答，不许耍赖</small>
+                  <small>进入真心话，不许耍赖</small>
                 </button>
                 <button class="mode-button" type="button" data-mode="dare">
                   <span>冒</span>
                   <strong>大冒险</strong>
-                  <small>说到做到，做不到就撒娇</small>
+                  <small>进入大冒险，做不到就撒娇</small>
                 </button>
                 <button class="mode-button" type="button" data-mode="custom">
                   <span>＋</span>
                   <strong>自定义</strong>
-                  <small>把你们的小心思放进去</small>
+                  <small>进入自定义，放一点小心思</small>
                 </button>
               </div>
             </section>
@@ -116,7 +136,20 @@
             <h2 id="special-step-title">神秘专区玩哪种？</h2>
             <p class="setup-note">这里单独放一点更害羞、更私密的玩法，给婉婉留一点点被偏爱的神秘感。</p>
           </div>
-          <div id="special-lock-panel" class="special-lock-panel mode-zone special-zone">
+          <div id="special-boundary-panel" class="special-boundary-panel mode-zone special-zone">
+            <div class="special-lock-copy">
+              <p class="step-label">BOUNDARY FIRST</p>
+              <h3>先确认边界</h3>
+              <span>
+                进入这里代表两个人都愿意继续探索。任何一方都可以暂停、跳过或直接回到常规玩法，
+                不舒服就停下来，安全词永远最大。
+              </span>
+            </div>
+            <button id="confirm-boundary-button" class="special-password-button boundary-button" type="button">
+              确认边界，继续进入
+            </button>
+          </div>
+          <div id="special-lock-panel" class="special-lock-panel mode-zone special-zone" hidden>
             <div class="special-lock-copy">
               <p class="step-label">PASSWORD</p>
               <h3>输入暗号</h3>
@@ -209,6 +242,14 @@
               placeholder="写下你想问婉婉的话，或想一起完成的小冒险……&#10;每行一道题"
               maxlength="800"
             ></textarea>
+            <div class="template-buttons" aria-label="快速题目模板">
+              <button type="button" class="template-button" data-template="温柔一点">温柔一点</button>
+              <button type="button" class="template-button" data-template="搞笑一点">搞笑一点</button>
+              <button type="button" class="template-button" data-template="害羞一点">害羞一点</button>
+              <button type="button" class="template-button" data-template="大胆一点">大胆一点</button>
+              <button type="button" class="template-button" data-template="只给婉婉">只给婉婉</button>
+              <button type="button" class="template-button" data-template="只给小裴">只给小裴</button>
+            </div>
             <div class="form-actions">
               <span>支持换行、逗号或顿号分隔</span>
               <button type="submit" class="add-button">
@@ -259,6 +300,7 @@
             <div class="orbit orbit-two" aria-hidden="true"></div>
             <div class="result-ticket">
               <span class="ticket-recipient" id="ticket-recipient">TO 婉婉</span>
+              <span class="result-type-tag" id="result-type-tag">等待抽卡</span>
               <p id="result-kicker">乖乖准备好了吗？</p>
               <strong id="result-text">点击下方按钮</strong>
               <span id="result-caption">抽到就不许耍赖</span>
@@ -269,6 +311,15 @@
             <span class="button-label">替婉婉抽一张</span>
             <span class="button-icon" aria-hidden="true">↗</span>
           </button>
+
+          <div class="draw-actions">
+            <button id="skip-card-button" class="secondary-button" type="button">
+              跳过一次
+            </button>
+            <button id="result-back-mode-button" class="secondary-button" type="button">
+              返回玩法选择
+            </button>
+          </div>
 
           <div class="settings">
             <button id="reset-round-button" class="secondary-button reset-round-button" type="button">
@@ -305,6 +356,12 @@
             <p id="history-empty" class="history-empty">
               第一张卡，还在等你们。
             </p>
+            <div id="letter-prompt" class="letter-prompt" hidden>
+              <span>要不要给今晚留一句话？</span>
+              <button id="open-letter-prompt-button" class="secondary-button" type="button">
+                打开小纸条
+              </button>
+            </div>
           </section>
         </section>
 
@@ -338,6 +395,9 @@
                 ></textarea>
                 <div class="letter-actions">
                   <span id="letter-count" class="letter-count">0 / 1200</span>
+                  <button id="toggle-letter-visibility-button" class="secondary-button" type="button">
+                    隐藏内容
+                  </button>
                   <button id="save-letter-button" class="special-password-button" type="button">
                     保存这封信
                   </button>
@@ -353,6 +413,7 @@
       <p>本游戏最终解释权归李家鑫所有，撒娇有效，但不一定有用。</p>
       <span>MADE FOR WANWAN, WITH A LITTLE COURAGE</span>
     </footer>
+    </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <script src="script.js"></script>

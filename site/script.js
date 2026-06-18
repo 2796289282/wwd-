@@ -1,5 +1,6 @@
 const STORAGE_KEY = "wanwan-picker-v6";
 const HISTORY_LIMIT = 10;
+const ENTRANCE_PASSWORD = "婉婉是小猪";
 const SPECIAL_PASSWORD = "0831";
 const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
@@ -305,6 +306,11 @@ const playerCopy = {
 };
 
 const elements = {
+  appContent: document.querySelector("#app-content"),
+  entranceGate: document.querySelector("#entrance-gate"),
+  entranceForm: document.querySelector("#entrance-form"),
+  entrancePassword: document.querySelector("#entrance-password"),
+  entranceError: document.querySelector("#entrance-error"),
   footer: document.querySelector("footer"),
   brand: document.querySelector(".brand"),
   brandMark: document.querySelector("#brand-mark"),
@@ -317,6 +323,8 @@ const elements = {
   playStep: document.querySelector("#play-step"),
   letterStep: document.querySelector("#letter-step"),
   openSpecialStepButton: document.querySelector("#open-special-step-button"),
+  specialBoundaryPanel: document.querySelector("#special-boundary-panel"),
+  confirmBoundaryButton: document.querySelector("#confirm-boundary-button"),
   specialLockPanel: document.querySelector("#special-lock-panel"),
   specialContent: document.querySelector("#special-content"),
   specialPasswordForm: document.querySelector("#special-password-form"),
@@ -331,8 +339,10 @@ const elements = {
   letterInput: document.querySelector("#letter-input"),
   letterCount: document.querySelector("#letter-count"),
   saveLetterButton: document.querySelector("#save-letter-button"),
+  toggleLetterVisibilityButton: document.querySelector("#toggle-letter-visibility-button"),
   form: document.querySelector("#option-form"),
   input: document.querySelector("#option-input"),
+  templateButtons: [...document.querySelectorAll(".template-button")],
   list: document.querySelector("#option-list"),
   emptyState: document.querySelector("#empty-state"),
   count: document.querySelector("#option-count"),
@@ -349,10 +359,15 @@ const elements = {
   resultKicker: document.querySelector("#result-kicker"),
   resultText: document.querySelector("#result-text"),
   resultCaption: document.querySelector("#result-caption"),
+  resultTypeTag: document.querySelector("#result-type-tag"),
   ticketRecipient: document.querySelector("#ticket-recipient"),
+  skipCardButton: document.querySelector("#skip-card-button"),
+  resultBackModeButton: document.querySelector("#result-back-mode-button"),
   historyList: document.querySelector("#history-list"),
   historyEmpty: document.querySelector("#history-empty"),
   clearHistoryButton: document.querySelector("#clear-history-button"),
+  letterPrompt: document.querySelector("#letter-prompt"),
+  openLetterPromptButton: document.querySelector("#open-letter-prompt-button"),
   deckTitle: document.querySelector("#deck-title"),
   deckDescription: document.querySelector("#deck-description"),
   modeButtons: [...document.querySelectorAll(".mode-button")],
@@ -369,6 +384,10 @@ let hiddenTapSequence = [];
 let letterReturnStep = "intro";
 let cloudReady = false;
 let lastSavedCloudPayload = "";
+let siteUnlocked = false;
+let specialBoundaryConfirmed = false;
+let specialUnlocked = false;
+let letterHidden = false;
 
 function createDefaultState() {
   return {
@@ -377,7 +396,6 @@ function createDefaultState() {
     drawType: "all",
     currentStep: "intro",
     isDeckOpen: false,
-    specialUnlocked: false,
     secretLetter: DEFAULT_SECRET_LETTER,
     customDecks: {
       mixed: [...decks.mixed.options],
@@ -399,14 +417,17 @@ function loadState() {
     if (!stored || !stored.customDecks) return fallback;
     return {
       ...fallback,
-      ...stored,
       customDecks: { ...fallback.customDecks, ...stored.customDecks },
       history: Array.isArray(stored.history) ? stored.history : [],
       usedCardIds: normalizeUsedCardIds(
         stored.usedCardIds || stored.drawnCards,
-        stored.mode || fallback.mode,
+        fallback.mode,
       ),
-      currentCard: stored.currentCard || null,
+      secretLetter:
+        typeof stored.secretLetter === "string" && stored.secretLetter.trim()
+          ? stored.secretLetter
+          : fallback.secretLetter,
+      currentCard: null,
     };
   } catch {
     return fallback;
@@ -414,7 +435,28 @@ function loadState() {
 }
 
 function saveState() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // 只把真正需要跨设备/刷新保留的内容写入本地缓存。
+  // 入口解锁、当前步骤、玩法选择、专区解锁都保持为本次打开的临时状态。
+  const persistentState = {
+    customDecks: state.customDecks,
+    secretLetter: state.secretLetter,
+    history: state.history,
+    usedCardIds: state.usedCardIds,
+  };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentState));
+}
+
+function resetVolatileFlow() {
+  state.mode = "mixed";
+  state.player = "婉婉";
+  state.drawType = "all";
+  state.currentStep = "intro";
+  state.isDeckOpen = false;
+  state.currentCard = null;
+  specialBoundaryConfirmed = false;
+  specialUnlocked = false;
+  letterReturnStep = "intro";
+  letterHidden = false;
 }
 
 function normalizeDeckMap(value) {
@@ -468,16 +510,6 @@ function cloudDataFromState() {
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
     history: state.history,
     updatedAt: now,
-    app: {
-      mode: state.mode,
-      player: state.player,
-      drawType: state.drawType,
-      currentStep: state.currentStep,
-      isDeckOpen: state.isDeckOpen,
-      specialUnlocked: state.specialUnlocked,
-      usedCardIds: [...state.usedCardIds],
-      currentCard: state.currentCard,
-    },
   };
 }
 
@@ -485,13 +517,11 @@ function cloudDataFromState() {
 // changing the current layout, buttons, animations, or rendering functions.
 function applyCloudData(data) {
   if (!data || typeof data !== "object") return;
-  const app = data.app && typeof data.app === "object" ? data.app : {};
   const fallback = createDefaultState();
 
   state = {
     ...fallback,
     ...state,
-    ...app,
     secretLetter:
       typeof data.letter === "string" && data.letter.trim()
         ? data.letter
@@ -499,10 +529,15 @@ function applyCloudData(data) {
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
-      data.drawnCards || data.usedCardIds || app.usedCardIds || state.usedCardIds,
-      app.mode || state.mode,
+      data.drawnCards || data.usedCardIds || state.usedCardIds,
+      fallback.mode,
     ),
-    currentCard: app.currentCard || state.currentCard || null,
+    mode: fallback.mode,
+    player: fallback.player,
+    drawType: fallback.drawType,
+    currentStep: fallback.currentStep,
+    isDeckOpen: false,
+    currentCard: null,
   };
 
   if (Array.isArray(data.customCards)) {
@@ -630,11 +665,20 @@ async function migrateLocalStorageToCloud(cloudData) {
 }
 
 function renderFromState() {
+  renderEntranceGate();
   renderControls();
   renderPlayer();
   renderHistory();
   renderFlow();
   renderDeckPanel();
+}
+
+function renderEntranceGate() {
+  elements.entranceGate.hidden = siteUnlocked;
+  elements.appContent.hidden = !siteUnlocked;
+  if (!siteUnlocked) {
+    elements.entranceError.hidden = true;
+  }
 }
 
 function currentOptions() {
@@ -645,6 +689,25 @@ function optionType(option) {
   if (option.startsWith("真心话：")) return "truth";
   if (option.startsWith("大冒险：")) return "dare";
   return "all";
+}
+
+function optionTypeLabel(option) {
+  const type = optionType(option);
+  if (type === "truth") return "真心话";
+  if (type === "dare") return "大冒险";
+  return decks[state.mode]?.title || "抽卡";
+}
+
+function drawTemplateText(template) {
+  const templates = {
+    温柔一点: "真心话：说一句今晚最想认真告诉对方的温柔话。",
+    搞笑一点: "大冒险：用最夸张的语气夸对方十秒，不能笑场。",
+    害羞一点: "真心话：说一个你嘴上不承认、心里会偷偷开心的称呼。",
+    大胆一点: "大冒险：认真看着对方，说一句今晚只对她说的话。",
+    只给婉婉: "真心话：婉婉今晚最想被怎么哄？",
+    只给小裴: "大冒险：叫一次“小裴同学”，再补一句不许耍赖。",
+  };
+  return templates[template] || "";
 }
 
 function filteredOptions() {
@@ -721,15 +784,16 @@ function renderPlayer() {
   const copy = playerCopy[state.player];
   elements.ticketRecipient.textContent = copy.recipient;
   elements.resultKicker.textContent = copy.ready;
+  elements.resultTypeTag.textContent = "等待抽卡";
   elements.pickButton.querySelector(".button-label").textContent = copy.button;
 }
 
 function renderSpecialAccess() {
-  const unlocked = state.specialUnlocked;
-  elements.specialLockPanel.hidden = unlocked;
-  elements.specialContent.hidden = !unlocked;
+  elements.specialBoundaryPanel.hidden = specialBoundaryConfirmed || specialUnlocked;
+  elements.specialLockPanel.hidden = !specialBoundaryConfirmed || specialUnlocked;
+  elements.specialContent.hidden = !specialUnlocked;
   elements.specialPasswordHint.hidden = true;
-  if (!unlocked) {
+  if (!specialUnlocked) {
     elements.specialPasswordInput.value = "";
   }
 }
@@ -738,6 +802,8 @@ function renderLetter() {
   const content = state.secretLetter || DEFAULT_SECRET_LETTER;
   elements.letterInput.value = content;
   elements.letterCount.textContent = `${content.length} / 1200`;
+  elements.letterInput.classList.toggle("letter-hidden", letterHidden);
+  elements.toggleLetterVisibilityButton.textContent = letterHidden ? "显示内容" : "隐藏内容";
 }
 
 function renderFlow() {
@@ -769,7 +835,6 @@ function renderDeckPanel() {
 
 function openStep(step) {
   state.currentStep = step;
-  saveState();
   renderFlow();
   if (step === "mode") {
     elements.modeStep.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -827,11 +892,16 @@ function randomCaption() {
 }
 
 function renderHistory() {
-  const visibleHistory = state.history.slice(0, 5);
+  const visibleHistory = state.history.slice(0, HISTORY_LIMIT);
   elements.historyList.replaceChildren(
-    ...visibleHistory.map((entry) => {
+    ...visibleHistory.map((entry, index) => {
       const item = document.createElement("li");
       item.className = "history-item";
+      const meta = document.createElement("span");
+      meta.className = "history-meta";
+      meta.textContent = `第 ${index + 1} 张｜${
+        entry.player === "一起" ? "我们一起" : entry.player
+      }｜${optionTypeLabel(entry.value)}`;
       const player = document.createElement("span");
       player.className = "history-player";
       player.textContent =
@@ -846,7 +916,7 @@ function renderHistory() {
         minute: "2-digit",
         hour12: false,
       }).format(new Date(entry.time));
-      item.append(player, value, time);
+      item.append(meta, player, value, time);
       return item;
     }),
   );
@@ -854,6 +924,7 @@ function renderHistory() {
   elements.historyList.hidden = !hasHistory;
   elements.historyEmpty.hidden = hasHistory;
   elements.clearHistoryButton.hidden = !hasHistory;
+  elements.letterPrompt.hidden = state.history.length < 3;
 }
 
 function parseOptions(value) {
@@ -949,10 +1020,11 @@ async function pickRandomOption() {
   elements.resultKicker.textContent =
     state.player === "一起" ? "这一张属于我们" : `这一张属于${state.player}`;
   elements.resultText.textContent = result;
-  elements.resultCaption.textContent = playerCopy[state.player].result;
-  elements.resultCaption.textContent = randomCaption();
+  elements.resultTypeTag.textContent = optionTypeLabel(result);
   isPicking = false;
-  elements.pickButton.querySelector(".button-label").textContent = "再抽一张";
+  const remainingCount = availableOptions().length;
+  elements.resultCaption.textContent = `已加入今晚抽过的卡，还剩 ${remainingCount} 张。`;
+  elements.pickButton.querySelector(".button-label").textContent = "下一张";
   renderOptions();
   renderHistory();
   void saveCloudState({ silent: true });
@@ -963,6 +1035,7 @@ function resetResult() {
   state.currentCard = null;
   elements.resultStage.classList.remove("is-picking", "has-result");
   elements.ticketRecipient.textContent = copy.recipient;
+  elements.resultTypeTag.textContent = "等待抽卡";
   elements.resultKicker.textContent = copy.ready;
   elements.resultText.textContent = "点击下方按钮";
   elements.resultCaption.textContent = "任何一张都可以跳过";
@@ -970,8 +1043,18 @@ function resetResult() {
   elements.pickButton.querySelector(".button-label").textContent = copy.button;
 }
 
+function skipCurrentCard() {
+  if (isPicking) return;
+  state.currentCard = null;
+  resetResult();
+  showToast("没关系，可以跳过、换一张，或者回到常规玩法。");
+}
+
 function resetDrawRound() {
   if (isPicking) return;
+  if (!window.confirm("确定要重置本轮抽卡吗？题库和自定义题都会保留，只清空本轮已抽状态。")) {
+    return;
+  }
   state.usedCardIds = [];
   state.history = [];
   state.currentCard = null;
@@ -1006,13 +1089,42 @@ function saveLetter() {
   state.secretLetter = elements.letterInput.value.trim() || DEFAULT_SECRET_LETTER;
   saveState();
   renderLetter();
-  showToast("信件已保存");
+  showToast("已收好。下次打开还在这里。");
   void saveCloudState();
 }
+
+function unlockEntrance() {
+  siteUnlocked = true;
+  resetVolatileFlow();
+  renderFromState();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+elements.entranceForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (elements.entrancePassword.value.trim() !== ENTRANCE_PASSWORD) {
+    elements.entranceError.hidden = false;
+    elements.entrancePassword.focus();
+    elements.entrancePassword.select();
+    return;
+  }
+  elements.entrancePassword.value = "";
+  unlockEntrance();
+});
 
 elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
   addOptions(elements.input.value);
+});
+
+elements.templateButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const text = drawTemplateText(button.dataset.template);
+    if (!text) return;
+    const spacer = elements.input.value.trim() ? "\n" : "";
+    elements.input.value = `${elements.input.value}${spacer}${text}`;
+    elements.input.focus();
+  });
 });
 
 elements.startButton.addEventListener("click", () => {
@@ -1040,7 +1152,15 @@ elements.backToIntroButton.addEventListener("click", () => {
 });
 
 elements.openSpecialStepButton.addEventListener("click", () => {
+  specialBoundaryConfirmed = false;
+  specialUnlocked = false;
   openStep("special");
+});
+
+elements.confirmBoundaryButton.addEventListener("click", () => {
+  specialBoundaryConfirmed = true;
+  renderSpecialAccess();
+  elements.specialPasswordInput.focus();
 });
 
 elements.specialPasswordForm.addEventListener("submit", (event) => {
@@ -1052,11 +1172,9 @@ elements.specialPasswordForm.addEventListener("submit", (event) => {
     elements.specialPasswordInput.select();
     return;
   }
-  state.specialUnlocked = true;
-  saveState();
+  specialUnlocked = true;
   renderSpecialAccess();
   showToast("独立专区已打开");
-  void saveCloudState({ silent: true });
 });
 
 elements.backToModeFromSpecialButton.addEventListener("click", () => {
@@ -1067,12 +1185,21 @@ elements.backToModeButton.addEventListener("click", () => {
   openStep("mode");
 });
 
+elements.resultBackModeButton.addEventListener("click", () => {
+  openStep("mode");
+});
+
 elements.backFromLetterButton.addEventListener("click", () => {
   openStep(letterReturnStep);
 });
 
 elements.letterInput.addEventListener("input", () => {
   elements.letterCount.textContent = `${elements.letterInput.value.length} / 1200`;
+});
+
+elements.toggleLetterVisibilityButton.addEventListener("click", () => {
+  letterHidden = !letterHidden;
+  renderLetter();
 });
 
 elements.saveLetterButton.addEventListener("click", saveLetter);
@@ -1093,11 +1220,9 @@ elements.modeButtons.forEach((button) => {
     if (isPicking) return;
     state.mode = button.dataset.mode;
     state.isDeckOpen = false;
-    saveState();
     renderControls();
     resetResult();
     openStep("play");
-    void saveCloudState({ silent: true });
   });
 });
 
@@ -1105,10 +1230,8 @@ elements.playerButtons.forEach((button) => {
   button.addEventListener("click", () => {
     if (isPicking) return;
     state.player = button.dataset.player;
-    saveState();
     renderControls();
     resetResult();
-    void saveCloudState({ silent: true });
   });
 });
 
@@ -1116,10 +1239,8 @@ elements.drawButtons.forEach((button) => {
   button.addEventListener("click", () => {
     if (isPicking) return;
     state.drawType = button.dataset.drawType;
-    saveState();
     renderControls();
     resetResult();
-    void saveCloudState({ silent: true });
   });
 });
 
@@ -1129,9 +1250,7 @@ elements.restoreButton.addEventListener("click", () => {
 
 elements.toggleDeckButton.addEventListener("click", () => {
   state.isDeckOpen = !state.isDeckOpen;
-  saveState();
   renderDeckPanel();
-  void saveCloudState({ silent: true });
 });
 
 elements.clearButton.addEventListener("click", () => {
@@ -1147,17 +1266,26 @@ elements.clearButton.addEventListener("click", () => {
 });
 
 elements.pickButton.addEventListener("click", pickRandomOption);
+elements.skipCardButton.addEventListener("click", skipCurrentCard);
 elements.resetRoundButton.addEventListener("click", resetDrawRound);
 elements.clearHistoryButton.addEventListener("click", () => {
+  if (!window.confirm("确定要清除今晚抽卡记录吗？题库不会被删除。")) {
+    return;
+  }
   state.history = [];
   saveState();
   renderHistory();
   void saveCloudState();
 });
 
+elements.openLetterPromptButton.addEventListener("click", () => {
+  unlockLetterStep();
+});
+
 async function initApp() {
   const cloudData = await loadCloudState();
   await migrateLocalStorageToCloud(cloudData);
+  resetVolatileFlow();
   saveState();
   renderFromState();
 }

@@ -2,6 +2,9 @@
   "name": "wanwan-picker",
   "version": "1.0.0",
   "private": true,
+  "scripts": {
+    "build": "node -e \"console.log('Static site ready')\""
+  },
   "dependencies": {
     "@netlify/blobs": "^10.0.10"
   }
