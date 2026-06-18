@@ -2730,3 +2730,157 @@ body {
     padding: 12px;
   }
 }
+
+/* Compact mobile layout: keep the new logic, restore the earlier tighter feel. */
+@media (max-width: 600px) {
+  .site-header,
+  .app-shell {
+    width: min(100% - 28px, 430px);
+  }
+
+  .app-shell {
+    padding: 18px 0 32px;
+  }
+
+  .mode-step,
+  .special-step,
+  .letter-step {
+    min-height: calc(100dvh - 110px);
+  }
+
+  .mode-zones {
+    gap: 12px;
+  }
+
+  .mode-zone {
+    padding: 14px;
+  }
+
+  .classic-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .special-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mode-button {
+    min-height: 78px;
+    padding: 10px 8px;
+    grid-template-columns: 20px 1fr;
+    border-radius: 14px;
+  }
+
+  .mode-button > span {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
+
+  .mode-button strong {
+    font-size: 13px;
+  }
+
+  .mode-button small {
+    font-size: 10px;
+    line-height: 1.28;
+  }
+
+  .play-step {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .play-step > .panel-topline,
+  .play-step > .picker-card,
+  .play-step > .little-note,
+  .play-step > .history-section {
+    grid-column: 1 / -1;
+  }
+
+  .turn-selector,
+  .draw-selector {
+    padding: 12px;
+  }
+
+  .turn-selector h2,
+  .draw-selector h2 {
+    font-size: 17px;
+  }
+
+  .player-switch,
+  .draw-switch {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .player-switch button,
+  .draw-switch button {
+    min-height: 34px;
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  .result-toolbar {
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+  }
+
+  .result-stage {
+    min-height: 190px;
+    margin: 10px 0 6px;
+  }
+
+  .result-ticket {
+    width: min(230px, 76%);
+    min-height: 142px;
+    padding: 20px 14px 16px;
+  }
+
+  .result-ticket strong {
+    font-size: clamp(18px, 5.7vw, 25px);
+    line-height: 1.22;
+  }
+
+  .result-ticket p,
+  .result-ticket span {
+    font-size: 10px;
+  }
+
+  .result-type-tag {
+    margin-top: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .draw-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .settings {
+    margin-top: 10px;
+    gap: 10px;
+  }
+
+  .template-button {
+    flex: 0 1 auto;
+    min-height: 34px;
+    padding: 6px 10px;
+  }
+}
+
+@media (max-width: 390px) {
+  .play-step {
+    gap: 10px;
+  }
+
+  .result-ticket {
+    width: min(214px, 78%);
+  }
+
+  .button-label {
+    font-size: 13px;
+  }
+}
