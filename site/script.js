@@ -1,7 +1,9 @@
 const STORAGE_KEY = "wanwan-picker-v6";
 const HISTORY_LIMIT = 10;
-const ENTRANCE_PASSWORD = "wwsxz";
+const ENTRANCE_PASSWORD = "080831";
 const SPECIAL_PASSWORD = "0831";
+const PLAN_EDIT_PASSWORD = "050116";
+const PLAN_GATE_SEQUENCE = ["敬", "请", "期", "待"];
 const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/.netlify/functions/load-state";
@@ -322,7 +324,9 @@ const elements = {
   specialStep: document.querySelector("#special-step"),
   playStep: document.querySelector("#play-step"),
   letterStep: document.querySelector("#letter-step"),
+  planStep: document.querySelector("#plan-step"),
   openSpecialStepButton: document.querySelector("#open-special-step-button"),
+  openPlanButton: document.querySelector("#open-plan-button"),
   specialBoundaryPanel: document.querySelector("#special-boundary-panel"),
   confirmBoundaryButton: document.querySelector("#confirm-boundary-button"),
   specialLockPanel: document.querySelector("#special-lock-panel"),
@@ -336,10 +340,19 @@ const elements = {
   ),
   backToModeButton: document.querySelector("#back-to-mode-button"),
   backFromLetterButton: document.querySelector("#back-from-letter-button"),
+  backFromPlanButton: document.querySelector("#back-from-plan-button"),
   letterInput: document.querySelector("#letter-input"),
   letterCount: document.querySelector("#letter-count"),
   saveLetterButton: document.querySelector("#save-letter-button"),
   toggleLetterVisibilityButton: document.querySelector("#toggle-letter-visibility-button"),
+  planGateModal: document.querySelector("#plan-gate-modal"),
+  closePlanGateButton: document.querySelector("#close-plan-gate-button"),
+  planGateButtons: [...document.querySelectorAll("[data-plan-word]")],
+  planInput: document.querySelector("#plan-input"),
+  planNotesInput: document.querySelector("#plan-notes-input"),
+  planCount: document.querySelector("#plan-count"),
+  editPlanButton: document.querySelector("#edit-plan-button"),
+  savePlanButton: document.querySelector("#save-plan-button"),
   form: document.querySelector("#option-form"),
   input: document.querySelector("#option-input"),
   templateButtons: [...document.querySelectorAll(".template-button")],
@@ -370,7 +383,7 @@ const elements = {
   openLetterPromptButton: document.querySelector("#open-letter-prompt-button"),
   deckTitle: document.querySelector("#deck-title"),
   deckDescription: document.querySelector("#deck-description"),
-  modeButtons: [...document.querySelectorAll(".mode-button")],
+  modeButtons: [...document.querySelectorAll(".mode-button[data-mode]")],
   playerButtons: [...document.querySelectorAll(".player-switch button")],
   drawButtons: [...document.querySelectorAll(".draw-switch button")],
   toast: document.querySelector("#toast"),
@@ -388,6 +401,9 @@ let siteUnlocked = false;
 let specialBoundaryConfirmed = false;
 let specialUnlocked = false;
 let letterHidden = false;
+let planReturnStep = "special";
+let planGateIndex = 0;
+let planEditable = false;
 
 function createDefaultState() {
   return {
@@ -397,6 +413,8 @@ function createDefaultState() {
     currentStep: "intro",
     isDeckOpen: false,
     secretLetter: DEFAULT_SECRET_LETTER,
+    planBook: "",
+    planNotes: "",
     customDecks: {
       mixed: [...decks.mixed.options],
       shame: [...decks.shame.options],
@@ -427,6 +445,8 @@ function loadState() {
         typeof stored.secretLetter === "string" && stored.secretLetter.trim()
           ? stored.secretLetter
           : fallback.secretLetter,
+      planBook: typeof stored.planBook === "string" ? stored.planBook : "",
+      planNotes: typeof stored.planNotes === "string" ? stored.planNotes : "",
       currentCard: null,
     };
   } catch {
@@ -440,6 +460,8 @@ function saveState() {
   const persistentState = {
     customDecks: state.customDecks,
     secretLetter: state.secretLetter,
+    planBook: state.planBook,
+    planNotes: state.planNotes,
     history: state.history,
     usedCardIds: state.usedCardIds,
   };
@@ -457,6 +479,9 @@ function resetVolatileFlow() {
   specialUnlocked = false;
   letterReturnStep = "intro";
   letterHidden = false;
+  planReturnStep = "special";
+  planGateIndex = 0;
+  planEditable = false;
 }
 
 function normalizeDeckMap(value) {
@@ -508,6 +533,8 @@ function cloudDataFromState() {
     drawnCards: [...state.usedCardIds],
     remainingCards: state.customDecks,
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
+    planBook: state.planBook || "",
+    planNotes: state.planNotes || "",
     history: state.history,
     updatedAt: now,
   };
@@ -526,6 +553,8 @@ function applyCloudData(data) {
       typeof data.letter === "string" && data.letter.trim()
         ? data.letter
         : state.secretLetter || fallback.secretLetter,
+    planBook: typeof data.planBook === "string" ? data.planBook : state.planBook || "",
+    planNotes: typeof data.planNotes === "string" ? data.planNotes : state.planNotes || "",
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
@@ -556,6 +585,8 @@ function isCloudStateEmpty(data) {
   return (
     !hasRemainingCards &&
     !data.letter &&
+    !data.planBook &&
+    !data.planNotes &&
     !(Array.isArray(data.history) && data.history.length) &&
     !(Array.isArray(data.drawnCards) && data.drawnCards.length)
   );
@@ -572,6 +603,13 @@ function mergeLocalStateIntoCloud(localState) {
 
   if (!state.secretLetter || state.secretLetter === DEFAULT_SECRET_LETTER) {
     state.secretLetter = localState.secretLetter || state.secretLetter;
+  }
+
+  if (!state.planBook && typeof localState.planBook === "string") {
+    state.planBook = localState.planBook;
+  }
+  if (!state.planNotes && typeof localState.planNotes === "string") {
+    state.planNotes = localState.planNotes;
   }
 
   const historyKeys = new Set(
@@ -657,8 +695,19 @@ async function migrateLocalStorageToCloud(cloudData) {
     ? localState.customDecks.custom
     : [];
   const mergedCustom = mergeUniqueCards(state.customDecks.custom, localCustom);
-  if (mergedCustom.length !== state.customDecks.custom.length) {
+  let changed = mergedCustom.length !== state.customDecks.custom.length;
+  if (changed) {
     state.customDecks.custom = mergedCustom;
+  }
+  if (!state.planBook && typeof localState.planBook === "string" && localState.planBook) {
+    state.planBook = localState.planBook;
+    changed = true;
+  }
+  if (!state.planNotes && typeof localState.planNotes === "string" && localState.planNotes) {
+    state.planNotes = localState.planNotes;
+    changed = true;
+  }
+  if (changed) {
     saveState();
     await saveCloudState({ silent: true });
   }
@@ -671,6 +720,7 @@ function renderFromState() {
   renderHistory();
   renderFlow();
   renderDeckPanel();
+  renderPlan();
 }
 
 function renderEntranceGate() {
@@ -806,12 +856,25 @@ function renderLetter() {
   elements.toggleLetterVisibilityButton.textContent = letterHidden ? "显示内容" : "隐藏内容";
 }
 
+function renderPlan() {
+  elements.planInput.value = state.planBook || "";
+  elements.planNotesInput.value = state.planNotes || "";
+  elements.planCount.textContent = `${elements.planInput.value.length} / 3000`;
+  elements.planInput.readOnly = !planEditable;
+  elements.planNotesInput.readOnly = !planEditable;
+  elements.planInput.classList.toggle("is-editing", planEditable);
+  elements.planNotesInput.classList.toggle("is-editing", planEditable);
+  elements.editPlanButton.hidden = planEditable;
+  elements.savePlanButton.hidden = !planEditable;
+}
+
 function renderFlow() {
   const inIntro = state.currentStep === "intro";
   const inMode = state.currentStep === "mode";
   const inSpecial = state.currentStep === "special";
   const inPlay = state.currentStep === "play";
   const inLetter = state.currentStep === "letter";
+  const inPlan = state.currentStep === "plan";
 
   document.body.dataset.currentStep = state.currentStep;
   elements.introSection.hidden = !inIntro;
@@ -820,9 +883,11 @@ function renderFlow() {
   elements.specialStep.hidden = !inSpecial;
   elements.playStep.hidden = !inPlay;
   elements.letterStep.hidden = !inLetter;
+  elements.planStep.hidden = !inPlan;
   elements.footer.hidden = !inIntro;
   renderSpecialAccess();
   renderLetter();
+  renderPlan();
 }
 
 function renderDeckPanel() {
@@ -847,6 +912,9 @@ function openStep(step) {
   }
   if (step === "letter") {
     elements.letterStep.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (step === "plan") {
+    elements.planStep.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 }
 
@@ -1093,6 +1161,60 @@ function saveLetter() {
   void saveCloudState();
 }
 
+function openPlanGate() {
+  planGateIndex = 0;
+  elements.planGateModal.hidden = false;
+  elements.planGateButtons.forEach((button) => button.classList.remove("active"));
+}
+
+function closePlanGate() {
+  planGateIndex = 0;
+  elements.planGateModal.hidden = true;
+  elements.planGateButtons.forEach((button) => button.classList.remove("active"));
+}
+
+function unlockPlanStep() {
+  planReturnStep = state.currentStep === "plan" ? "special" : state.currentStep;
+  closePlanGate();
+  planEditable = false;
+  openStep("plan");
+}
+
+function handlePlanGateClick(word, button) {
+  if (word !== PLAN_GATE_SEQUENCE[planGateIndex]) {
+    planGateIndex = word === PLAN_GATE_SEQUENCE[0] ? 1 : 0;
+    elements.planGateButtons.forEach((item) => item.classList.remove("active"));
+    if (planGateIndex === 1) button.classList.add("active");
+    return;
+  }
+  button.classList.add("active");
+  planGateIndex += 1;
+  if (planGateIndex === PLAN_GATE_SEQUENCE.length) {
+    unlockPlanStep();
+  }
+}
+
+function unlockPlanEditing() {
+  const password = window.prompt("请输入修改密码");
+  if (password !== PLAN_EDIT_PASSWORD) {
+    showToast("密码不对");
+    return;
+  }
+  planEditable = true;
+  renderPlan();
+  elements.planInput.focus();
+}
+
+function savePlan() {
+  state.planBook = elements.planInput.value.trim();
+  state.planNotes = elements.planNotesInput.value.trim();
+  planEditable = false;
+  saveState();
+  renderPlan();
+  showToast("已保存");
+  void saveCloudState();
+}
+
 function unlockEntrance() {
   siteUnlocked = true;
   resetVolatileFlow();
@@ -1157,6 +1279,18 @@ elements.openSpecialStepButton.addEventListener("click", () => {
   openStep("special");
 });
 
+elements.openPlanButton.addEventListener("click", openPlanGate);
+
+elements.closePlanGateButton.addEventListener("click", closePlanGate);
+
+elements.planGateModal.addEventListener("click", (event) => {
+  if (event.target === elements.planGateModal) closePlanGate();
+});
+
+elements.planGateButtons.forEach((button) => {
+  button.addEventListener("click", () => handlePlanGateClick(button.dataset.planWord, button));
+});
+
 elements.confirmBoundaryButton.addEventListener("click", () => {
   specialBoundaryConfirmed = true;
   renderSpecialAccess();
@@ -1193,9 +1327,22 @@ elements.backFromLetterButton.addEventListener("click", () => {
   openStep(letterReturnStep);
 });
 
+elements.backFromPlanButton.addEventListener("click", () => {
+  planEditable = false;
+  renderPlan();
+  openStep(planReturnStep);
+});
+
 elements.letterInput.addEventListener("input", () => {
   elements.letterCount.textContent = `${elements.letterInput.value.length} / 1200`;
 });
+
+elements.planInput.addEventListener("input", () => {
+  elements.planCount.textContent = `${elements.planInput.value.length} / 3000`;
+});
+
+elements.editPlanButton.addEventListener("click", unlockPlanEditing);
+elements.savePlanButton.addEventListener("click", savePlan);
 
 elements.toggleLetterVisibilityButton.addEventListener("click", () => {
   letterHidden = !letterHidden;

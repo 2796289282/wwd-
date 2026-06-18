@@ -184,6 +184,11 @@
                 <strong>羞耻版</strong>
                 <small>让婉婉脸红一点点</small>
               </button>
+              <button id="open-plan-button" class="mode-button plan-mode" type="button">
+                <span>书</span>
+                <strong>神秘计划书</strong>
+                <small>今晚之后，慢慢写</small>
+              </button>
             </div>
           </div>
         </section>
@@ -406,6 +411,53 @@
             </article>
           </div>
         </section>
+
+        <section id="plan-step" class="flow-panel plan-step" aria-labelledby="plan-title" hidden>
+          <div class="panel-topline">
+            <button id="back-from-plan-button" class="ghost-back-button" type="button">
+              返回上一层
+            </button>
+            <span class="flow-badge">PLAN</span>
+          </div>
+
+          <div class="plan-shell">
+            <div class="letter-intro">
+              <p class="step-label">SECRET PLAN</p>
+              <h2 id="plan-title">神秘计划书</h2>
+            </div>
+
+            <article class="secret-letter plan-letter" aria-label="神秘计划书">
+              <div class="letter-stamp">PLAN</div>
+              <label class="sr-only" for="plan-input">计划书内容</label>
+              <textarea
+                id="plan-input"
+                class="letter-input plan-input"
+                rows="10"
+                maxlength="3000"
+                placeholder="把计划书写在这里"
+                readonly
+              ></textarea>
+              <label class="plan-notes-label" for="plan-notes-input">记事本</label>
+              <textarea
+                id="plan-notes-input"
+                class="plan-notes-input"
+                rows="6"
+                maxlength="3000"
+                placeholder="这里可以记录一些零碎想法"
+                readonly
+              ></textarea>
+              <div class="letter-actions plan-actions">
+                <span id="plan-count" class="letter-count">0 / 3000</span>
+                <button id="edit-plan-button" class="secondary-button" type="button">
+                  修改
+                </button>
+                <button id="save-plan-button" class="special-password-button" type="button" hidden>
+                  保存计划书
+                </button>
+              </div>
+            </article>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -416,6 +468,18 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="plan-gate-modal" class="plan-gate-modal" hidden>
+      <div class="plan-gate-card" role="dialog" aria-modal="true" aria-labelledby="plan-gate-title">
+        <h2 id="plan-gate-title">敬请期待</h2>
+        <div class="plan-gate-words" aria-label="依次点击敬请期待">
+          <button type="button" data-plan-word="敬">敬</button>
+          <button type="button" data-plan-word="请">请</button>
+          <button type="button" data-plan-word="期">期</button>
+          <button type="button" data-plan-word="待">待</button>
+        </div>
+        <button id="close-plan-gate-button" class="text-button" type="button">关闭</button>
+      </div>
+    </div>
     <script src="script.js"></script>
   </body>
 </html>
