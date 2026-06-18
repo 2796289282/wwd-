@@ -348,11 +348,24 @@ const elements = {
   planGateModal: document.querySelector("#plan-gate-modal"),
   closePlanGateButton: document.querySelector("#close-plan-gate-button"),
   planGateButtons: [...document.querySelectorAll("[data-plan-word]")],
+  planGateUnlocked: document.querySelector("#plan-gate-unlocked"),
+  enterPlanButton: document.querySelector("#enter-plan-button"),
   planInput: document.querySelector("#plan-input"),
-  planNotesInput: document.querySelector("#plan-notes-input"),
+  planNoteForm: document.querySelector("#plan-note-form"),
+  planNoteInput: document.querySelector("#plan-note-input"),
+  planNotesList: document.querySelector("#plan-notes-list"),
+  planNotesEmpty: document.querySelector("#plan-notes-empty"),
   planCount: document.querySelector("#plan-count"),
   editPlanButton: document.querySelector("#edit-plan-button"),
   savePlanButton: document.querySelector("#save-plan-button"),
+  siteDialog: document.querySelector("#site-dialog"),
+  siteDialogForm: document.querySelector("#site-dialog-form"),
+  siteDialogTitle: document.querySelector("#site-dialog-title"),
+  siteDialogMessage: document.querySelector("#site-dialog-message"),
+  siteDialogLabel: document.querySelector("#site-dialog-label"),
+  siteDialogInput: document.querySelector("#site-dialog-input"),
+  siteDialogCancel: document.querySelector("#site-dialog-cancel"),
+  siteDialogConfirm: document.querySelector("#site-dialog-confirm"),
   form: document.querySelector("#option-form"),
   input: document.querySelector("#option-input"),
   templateButtons: [...document.querySelectorAll(".template-button")],
@@ -404,6 +417,7 @@ let letterHidden = false;
 let planReturnStep = "special";
 let planGateIndex = 0;
 let planEditable = false;
+let siteDialogResolver = null;
 
 function createDefaultState() {
   return {
@@ -414,7 +428,7 @@ function createDefaultState() {
     isDeckOpen: false,
     secretLetter: DEFAULT_SECRET_LETTER,
     planBook: "",
-    planNotes: "",
+    planNotes: [],
     customDecks: {
       mixed: [...decks.mixed.options],
       shame: [...decks.shame.options],
@@ -446,7 +460,7 @@ function loadState() {
           ? stored.secretLetter
           : fallback.secretLetter,
       planBook: typeof stored.planBook === "string" ? stored.planBook : "",
-      planNotes: typeof stored.planNotes === "string" ? stored.planNotes : "",
+      planNotes: normalizePlanNotes(stored.planNotes),
       currentCard: null,
     };
   } catch {
@@ -495,6 +509,40 @@ function normalizeDeckMap(value) {
   );
 }
 
+function normalizePlanNotes(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          return {
+            id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            text: item.trim(),
+            time: new Date().toISOString(),
+          };
+        }
+        if (!item || typeof item !== "object") return null;
+        const text = typeof item.text === "string" ? item.text.trim() : "";
+        if (!text) return null;
+        return {
+          id: typeof item.id === "string" && item.id ? item.id : `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          text,
+          time: typeof item.time === "string" ? item.time : new Date().toISOString(),
+        };
+      })
+      .filter(Boolean);
+  }
+  if (typeof value === "string" && value.trim()) {
+    return [
+      {
+        id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        text: value.trim(),
+        time: new Date().toISOString(),
+      },
+    ];
+  }
+  return [];
+}
+
 function mergeUniqueCards(primary = [], secondary = []) {
   const seen = new Set();
   return [...primary, ...secondary].filter((card) => {
@@ -534,7 +582,7 @@ function cloudDataFromState() {
     remainingCards: state.customDecks,
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
     planBook: state.planBook || "",
-    planNotes: state.planNotes || "",
+    planNotes: normalizePlanNotes(state.planNotes),
     history: state.history,
     updatedAt: now,
   };
@@ -554,7 +602,7 @@ function applyCloudData(data) {
         ? data.letter
         : state.secretLetter || fallback.secretLetter,
     planBook: typeof data.planBook === "string" ? data.planBook : state.planBook || "",
-    planNotes: typeof data.planNotes === "string" ? data.planNotes : state.planNotes || "",
+    planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
@@ -586,7 +634,7 @@ function isCloudStateEmpty(data) {
     !hasRemainingCards &&
     !data.letter &&
     !data.planBook &&
-    !data.planNotes &&
+    !(Array.isArray(data.planNotes) && data.planNotes.length) &&
     !(Array.isArray(data.history) && data.history.length) &&
     !(Array.isArray(data.drawnCards) && data.drawnCards.length)
   );
@@ -608,8 +656,8 @@ function mergeLocalStateIntoCloud(localState) {
   if (!state.planBook && typeof localState.planBook === "string") {
     state.planBook = localState.planBook;
   }
-  if (!state.planNotes && typeof localState.planNotes === "string") {
-    state.planNotes = localState.planNotes;
+  if (!state.planNotes.length && localState.planNotes) {
+    state.planNotes = normalizePlanNotes(localState.planNotes);
   }
 
   const historyKeys = new Set(
@@ -703,8 +751,8 @@ async function migrateLocalStorageToCloud(cloudData) {
     state.planBook = localState.planBook;
     changed = true;
   }
-  if (!state.planNotes && typeof localState.planNotes === "string" && localState.planNotes) {
-    state.planNotes = localState.planNotes;
+  if (!state.planNotes.length && localState.planNotes) {
+    state.planNotes = normalizePlanNotes(localState.planNotes);
     changed = true;
   }
   if (changed) {
@@ -858,14 +906,59 @@ function renderLetter() {
 
 function renderPlan() {
   elements.planInput.value = state.planBook || "";
-  elements.planNotesInput.value = state.planNotes || "";
   elements.planCount.textContent = `${elements.planInput.value.length} / 3000`;
   elements.planInput.readOnly = !planEditable;
-  elements.planNotesInput.readOnly = !planEditable;
   elements.planInput.classList.toggle("is-editing", planEditable);
-  elements.planNotesInput.classList.toggle("is-editing", planEditable);
   elements.editPlanButton.hidden = planEditable;
   elements.savePlanButton.hidden = !planEditable;
+  renderPlanNotes();
+}
+
+function renderPlanNotes() {
+  const notes = normalizePlanNotes(state.planNotes);
+  state.planNotes = notes;
+  elements.planNotesList.replaceChildren(
+    ...notes.map((note) => {
+      const item = document.createElement("li");
+      item.className = "plan-note-item";
+      item.dataset.noteId = note.id;
+
+      const text = document.createElement("span");
+      text.className = "plan-note-text";
+      text.textContent = note.text;
+
+      const time = document.createElement("time");
+      time.className = "plan-note-time";
+      time.dateTime = note.time;
+      time.textContent = new Intl.DateTimeFormat("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(new Date(note.time));
+
+      const actions = document.createElement("div");
+      actions.className = "plan-note-actions";
+
+      const editButton = document.createElement("button");
+      editButton.className = "text-button";
+      editButton.type = "button";
+      editButton.dataset.noteAction = "edit";
+      editButton.textContent = "修改";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "text-button danger";
+      deleteButton.type = "button";
+      deleteButton.dataset.noteAction = "delete";
+      deleteButton.textContent = "删除";
+
+      actions.append(editButton, deleteButton);
+      item.append(text, time, actions);
+      return item;
+    }),
+  );
+  elements.planNotesEmpty.hidden = notes.length > 0;
 }
 
 function renderFlow() {
@@ -1118,9 +1211,13 @@ function skipCurrentCard() {
   showToast("没关系，可以跳过、换一张，或者回到常规玩法。");
 }
 
-function resetDrawRound() {
+async function resetDrawRound() {
   if (isPicking) return;
-  if (!window.confirm("确定要重置本轮抽卡吗？题库和自定义题都会保留，只清空本轮已抽状态。")) {
+  const confirmed = await confirmInSiteDialog(
+    "题库和自定义题都会保留，只清空本轮已抽状态。",
+    "重置本轮抽卡",
+  );
+  if (!confirmed) {
     return;
   }
   state.usedCardIds = [];
@@ -1153,6 +1250,81 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("show"), 2200);
 }
 
+function closeSiteDialog(result) {
+  if (!siteDialogResolver) return;
+  const resolver = siteDialogResolver;
+  siteDialogResolver = null;
+  elements.siteDialog.hidden = true;
+  elements.siteDialogInput.value = "";
+  resolver(result);
+}
+
+function openSiteDialog({
+  title = "确认一下",
+  message = "",
+  confirmText = "确定",
+  cancelText = "取消",
+  input = false,
+  inputType = "text",
+  placeholder = "",
+  defaultValue = "",
+} = {}) {
+  elements.siteDialogTitle.textContent = title;
+  elements.siteDialogMessage.textContent = message;
+  elements.siteDialogConfirm.textContent = confirmText;
+  elements.siteDialogCancel.textContent = cancelText;
+  elements.siteDialogInput.hidden = !input;
+  elements.siteDialogInput.type = inputType;
+  elements.siteDialogInput.placeholder = placeholder;
+  elements.siteDialogInput.value = defaultValue;
+  elements.siteDialog.hidden = false;
+  if (input) {
+    window.setTimeout(() => {
+      elements.siteDialogInput.focus();
+      elements.siteDialogInput.select();
+    }, 0);
+  }
+  return new Promise((resolve) => {
+    siteDialogResolver = resolve;
+  });
+}
+
+async function confirmInSiteDialog(message, title = "确认一下") {
+  const result = await openSiteDialog({
+    title,
+    message,
+    confirmText: "确定",
+    cancelText: "取消",
+  });
+  return Boolean(result?.confirmed);
+}
+
+async function requestPasswordInSiteDialog(title = "输入密码") {
+  const result = await openSiteDialog({
+    title,
+    message: "",
+    input: true,
+    inputType: "password",
+    placeholder: "输入密码",
+    confirmText: "确定",
+    cancelText: "取消",
+  });
+  return result?.confirmed ? result.value : null;
+}
+
+async function requestTextInSiteDialog(title, defaultValue = "") {
+  const result = await openSiteDialog({
+    title,
+    input: true,
+    inputType: "text",
+    placeholder: "写下记录",
+    defaultValue,
+    confirmText: "保存",
+    cancelText: "取消",
+  });
+  return result?.confirmed ? result.value.trim() : null;
+}
+
 function saveLetter() {
   state.secretLetter = elements.letterInput.value.trim() || DEFAULT_SECRET_LETTER;
   saveState();
@@ -1164,13 +1336,13 @@ function saveLetter() {
 function openPlanGate() {
   planGateIndex = 0;
   elements.planGateModal.hidden = false;
-  elements.planGateButtons.forEach((button) => button.classList.remove("active"));
+  elements.planGateUnlocked.hidden = true;
 }
 
 function closePlanGate() {
   planGateIndex = 0;
   elements.planGateModal.hidden = true;
-  elements.planGateButtons.forEach((button) => button.classList.remove("active"));
+  elements.planGateUnlocked.hidden = true;
 }
 
 function unlockPlanStep() {
@@ -1183,21 +1355,18 @@ function unlockPlanStep() {
 function handlePlanGateClick(word, button) {
   if (word !== PLAN_GATE_SEQUENCE[planGateIndex]) {
     planGateIndex = word === PLAN_GATE_SEQUENCE[0] ? 1 : 0;
-    elements.planGateButtons.forEach((item) => item.classList.remove("active"));
-    if (planGateIndex === 1) button.classList.add("active");
     return;
   }
-  button.classList.add("active");
   planGateIndex += 1;
   if (planGateIndex === PLAN_GATE_SEQUENCE.length) {
-    unlockPlanStep();
+    elements.planGateUnlocked.hidden = false;
   }
 }
 
-function unlockPlanEditing() {
-  const password = window.prompt("请输入修改密码");
+async function unlockPlanEditing() {
+  const password = await requestPasswordInSiteDialog("修改计划书");
   if (password !== PLAN_EDIT_PASSWORD) {
-    showToast("密码不对");
+    if (password !== null) showToast("密码不对");
     return;
   }
   planEditable = true;
@@ -1205,9 +1374,61 @@ function unlockPlanEditing() {
   elements.planInput.focus();
 }
 
+async function requirePlanPassword(title = "输入密码") {
+  const password = await requestPasswordInSiteDialog(title);
+  if (password === null) return false;
+  if (password !== PLAN_EDIT_PASSWORD) {
+    showToast("密码不对");
+    return false;
+  }
+  return true;
+}
+
+function addPlanNote(text) {
+  const value = text.trim();
+  if (!value) {
+    showToast("先写一条记录吧");
+    return;
+  }
+  state.planNotes.unshift({
+    id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    text: value,
+    time: new Date().toISOString(),
+  });
+  elements.planNoteInput.value = "";
+  saveState();
+  renderPlan();
+  showToast("已添加");
+  void saveCloudState();
+}
+
+async function editPlanNote(noteId) {
+  if (!(await requirePlanPassword("修改记录"))) return;
+  const note = state.planNotes.find((item) => item.id === noteId);
+  if (!note) return;
+  const nextText = await requestTextInSiteDialog("修改记录", note.text);
+  if (!nextText) return;
+  note.text = nextText;
+  note.time = new Date().toISOString();
+  saveState();
+  renderPlan();
+  showToast("已修改");
+  void saveCloudState();
+}
+
+async function deletePlanNote(noteId) {
+  if (!(await requirePlanPassword("删除记录"))) return;
+  const confirmed = await confirmInSiteDialog("确定删除这条记录吗？", "删除记录");
+  if (!confirmed) return;
+  state.planNotes = state.planNotes.filter((item) => item.id !== noteId);
+  saveState();
+  renderPlan();
+  showToast("已删除");
+  void saveCloudState();
+}
+
 function savePlan() {
   state.planBook = elements.planInput.value.trim();
-  state.planNotes = elements.planNotesInput.value.trim();
   planEditable = false;
   saveState();
   renderPlan();
@@ -1283,6 +1504,8 @@ elements.openPlanButton.addEventListener("click", openPlanGate);
 
 elements.closePlanGateButton.addEventListener("click", closePlanGate);
 
+elements.enterPlanButton.addEventListener("click", unlockPlanStep);
+
 elements.planGateModal.addEventListener("click", (event) => {
   if (event.target === elements.planGateModal) closePlanGate();
 });
@@ -1344,6 +1567,42 @@ elements.planInput.addEventListener("input", () => {
 elements.editPlanButton.addEventListener("click", unlockPlanEditing);
 elements.savePlanButton.addEventListener("click", savePlan);
 
+elements.planNoteForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addPlanNote(elements.planNoteInput.value);
+});
+
+elements.planNotesList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-note-action]");
+  if (!button) return;
+  const item = button.closest(".plan-note-item");
+  if (!item) return;
+  if (button.dataset.noteAction === "edit") {
+    void editPlanNote(item.dataset.noteId);
+  }
+  if (button.dataset.noteAction === "delete") {
+    void deletePlanNote(item.dataset.noteId);
+  }
+});
+
+elements.siteDialogForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  closeSiteDialog({
+    confirmed: true,
+    value: elements.siteDialogInput.hidden ? "" : elements.siteDialogInput.value,
+  });
+});
+
+elements.siteDialogCancel.addEventListener("click", () => {
+  closeSiteDialog({ confirmed: false, value: "" });
+});
+
+elements.siteDialog.addEventListener("click", (event) => {
+  if (event.target === elements.siteDialog) {
+    closeSiteDialog({ confirmed: false, value: "" });
+  }
+});
+
 elements.toggleLetterVisibilityButton.addEventListener("click", () => {
   letterHidden = !letterHidden;
   renderLetter();
@@ -1400,8 +1659,12 @@ elements.toggleDeckButton.addEventListener("click", () => {
   renderDeckPanel();
 });
 
-elements.clearButton.addEventListener("click", () => {
-  if (!window.confirm("确定要清空当前题库吗？这个操作会删除当前题库里的题目。")) {
+elements.clearButton.addEventListener("click", async () => {
+  const confirmed = await confirmInSiteDialog(
+    "这个操作会删除当前题库里的题目。",
+    "清空当前题库",
+  );
+  if (!confirmed) {
     return;
   }
   state.customDecks[state.mode] = [];
@@ -1415,8 +1678,9 @@ elements.clearButton.addEventListener("click", () => {
 elements.pickButton.addEventListener("click", pickRandomOption);
 elements.skipCardButton.addEventListener("click", skipCurrentCard);
 elements.resetRoundButton.addEventListener("click", resetDrawRound);
-elements.clearHistoryButton.addEventListener("click", () => {
-  if (!window.confirm("确定要清除今晚抽卡记录吗？题库不会被删除。")) {
+elements.clearHistoryButton.addEventListener("click", async () => {
+  const confirmed = await confirmInSiteDialog("题库不会被删除。", "清除抽卡记录");
+  if (!confirmed) {
     return;
   }
   state.history = [];

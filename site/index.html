@@ -437,15 +437,25 @@
                 placeholder="把计划书写在这里"
                 readonly
               ></textarea>
-              <label class="plan-notes-label" for="plan-notes-input">记事本</label>
-              <textarea
-                id="plan-notes-input"
-                class="plan-notes-input"
-                rows="6"
-                maxlength="3000"
-                placeholder="这里可以记录一些零碎想法"
-                readonly
-              ></textarea>
+              <div class="plan-notes-block">
+                <div class="plan-notes-head">
+                  <span class="plan-notes-label">记事本</span>
+                  <small>任何人都可以添加，修改和删除需要密码</small>
+                </div>
+                <form id="plan-note-form" class="plan-note-form">
+                  <input
+                    id="plan-note-input"
+                    class="plan-note-input"
+                    type="text"
+                    maxlength="180"
+                    placeholder="添加一条记录"
+                    autocomplete="off"
+                  />
+                  <button class="secondary-button" type="submit">添加</button>
+                </form>
+                <ul id="plan-notes-list" class="plan-notes-list"></ul>
+                <p id="plan-notes-empty" class="history-empty">还没有记录。</p>
+              </div>
               <div class="letter-actions plan-actions">
                 <span id="plan-count" class="letter-count">0 / 3000</span>
                 <button id="edit-plan-button" class="secondary-button" type="button">
@@ -470,15 +480,27 @@
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <div id="plan-gate-modal" class="plan-gate-modal" hidden>
       <div class="plan-gate-card" role="dialog" aria-modal="true" aria-labelledby="plan-gate-title">
-        <h2 id="plan-gate-title">敬请期待</h2>
-        <div class="plan-gate-words" aria-label="依次点击敬请期待">
-          <button type="button" data-plan-word="敬">敬</button>
-          <button type="button" data-plan-word="请">请</button>
-          <button type="button" data-plan-word="期">期</button>
-          <button type="button" data-plan-word="待">待</button>
+        <h2 id="plan-gate-title" class="plan-gate-text" aria-label="敬请期待">
+          <span data-plan-word="敬">敬</span><span data-plan-word="请">请</span><span data-plan-word="期">期</span><span data-plan-word="待">待</span>
+        </h2>
+        <div id="plan-gate-unlocked" class="plan-gate-unlocked" hidden>
+          <p>已解锁</p>
+          <button id="enter-plan-button" class="special-password-button" type="button">进入计划书</button>
         </div>
         <button id="close-plan-gate-button" class="text-button" type="button">关闭</button>
       </div>
+    </div>
+    <div id="site-dialog" class="site-dialog" hidden>
+      <form id="site-dialog-form" class="site-dialog-card" role="dialog" aria-modal="true">
+        <h2 id="site-dialog-title">确认一下</h2>
+        <p id="site-dialog-message"></p>
+        <label id="site-dialog-label" class="sr-only" for="site-dialog-input">输入内容</label>
+        <input id="site-dialog-input" class="site-dialog-input" type="password" autocomplete="off" hidden />
+        <div class="site-dialog-actions">
+          <button id="site-dialog-cancel" class="secondary-button" type="button">取消</button>
+          <button id="site-dialog-confirm" class="special-password-button" type="submit">确定</button>
+        </div>
+      </form>
     </div>
     <script src="script.js"></script>
   </body>
