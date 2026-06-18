@@ -1,6 +1,6 @@
 const STORAGE_KEY = "wanwan-picker-v6";
 const HISTORY_LIMIT = 10;
-const ENTRANCE_PASSWORD = "婉婉是小猪";
+const ENTRANCE_PASSWORD = "wwsxz";
 const SPECIAL_PASSWORD = "0831";
 const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
