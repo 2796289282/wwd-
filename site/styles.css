@@ -2631,6 +2631,24 @@ body {
   font-size: 11px;
 }
 
+.plan-note-pin-button {
+  justify-self: end;
+  min-height: 34px;
+  padding: 7px 14px;
+  color: var(--text-main);
+  font: inherit;
+  font-weight: 800;
+  background: rgba(255, 143, 199, 0.14);
+  border: 1px solid rgba(255, 143, 199, 0.34);
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(255, 143, 199, 0.1);
+  cursor: pointer;
+}
+
+.plan-note-pin-button:active {
+  transform: translateY(1px);
+}
+
 .plan-gate-modal {
   position: fixed;
   z-index: 40;

@@ -944,7 +944,16 @@ function renderPlanNotes() {
         hour12: false,
       }).format(new Date(note.time));
 
-      item.append(text, time);
+      if (planEditable) {
+        const pinButton = document.createElement("button");
+        pinButton.className = "plan-note-pin-button";
+        pinButton.type = "button";
+        pinButton.dataset.pinNote = note.id;
+        pinButton.textContent = "置顶";
+        item.append(text, time, pinButton);
+      } else {
+        item.append(text, time);
+      }
       return item;
     }),
   );
@@ -1526,6 +1535,15 @@ elements.savePlanButton.addEventListener("click", savePlan);
 elements.planNoteForm.addEventListener("submit", (event) => {
   event.preventDefault();
   addPlanNote(elements.planNoteInput.value);
+});
+
+elements.planNotesList.addEventListener("click", (event) => {
+  const pinButton = event.target.closest("[data-pin-note]");
+  if (!pinButton || !planEditable) return;
+  const item = pinButton.closest(".plan-note-item");
+  if (!item || item === elements.planNotesList.firstElementChild) return;
+  elements.planNotesList.prepend(item);
+  showToast("保存后置顶生效");
 });
 
 elements.siteDialogForm.addEventListener("submit", (event) => {
