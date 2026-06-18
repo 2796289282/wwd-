@@ -32,10 +32,20 @@ export async function onRequestPost({ request, env }) {
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    return json(
-      { error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY" },
-      { status: 500 },
-    );
+    if (!env.APP_STATE) {
+      return json({ error: "Missing cloud storage binding" }, { status: 500 });
+    }
+
+    let data;
+    try {
+      data = await request.json();
+    } catch {
+      return json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const nextData = normalizeData(data);
+    await env.APP_STATE.put("main", JSON.stringify(nextData));
+    return json({ data: nextData, storage: "cloudflare-kv" });
   }
 
   let data;

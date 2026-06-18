@@ -26,7 +26,24 @@ values (
 on conflict (id) do nothing;
 ```
 
-## Cloudflare Pages 环境变量
+## Cloudflare Pages 云同步
+
+当前 Cloudflare Pages 版本已经绑定 Cloudflare KV：
+
+```text
+APP_STATE
+```
+
+没有配置 Supabase 时，网页会自动使用 Cloudflare KV 保存：
+
+```text
+/api/load-state
+/api/save-state
+```
+
+这套方式不需要把任何数据库密钥写进前端，也不依赖 Netlify 额度。
+
+## Cloudflare Pages 环境变量（可选 Supabase）
 
 在 Cloudflare Pages 项目的 Settings -> Environment variables 添加：
 
@@ -35,7 +52,7 @@ SUPABASE_URL=https://你的项目引用.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=你的 Supabase service_role key
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY` 只放在 Cloudflare 环境变量里，不要写到前端文件。前端默认调用：
+`SUPABASE_SERVICE_ROLE_KEY` 只放在 Cloudflare 环境变量里，不要写到前端文件。如果配置了 Supabase，接口会优先使用 Supabase；如果没有配置，会使用 Cloudflare KV。
 
 ```text
 /api/load-state

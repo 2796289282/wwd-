@@ -27,14 +27,11 @@ export async function onRequestGet({ env }) {
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    return json(
-      {
-        data: DEFAULT_DATA,
-        storage: "none",
-        warning: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
-      },
-      { status: 200 },
-    );
+    if (env.APP_STATE) {
+      const data = (await env.APP_STATE.get("main", { type: "json" })) || DEFAULT_DATA;
+      return json({ data, storage: "cloudflare-kv" });
+    }
+    return json({ data: DEFAULT_DATA, storage: "none" }, { status: 200 });
   }
 
   try {

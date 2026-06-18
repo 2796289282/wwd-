@@ -1,5 +1,6 @@
 node_modules/
 .netlify/
+.wrangler/
 site/.server.pid
 site/.tunnel.pid
 site/.tunnel.err.log
