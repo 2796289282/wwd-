@@ -754,6 +754,18 @@ async function migrateLocalStorageToCloud(cloudData) {
     state.planNotes = normalizePlanNotes(localState.planNotes);
     changed = true;
   }
+  if (
+    state.planBook &&
+    (!cloudData || typeof cloudData.planBook !== "string" || !cloudData.planBook)
+  ) {
+    changed = true;
+  }
+  if (
+    state.planNotes.length &&
+    (!cloudData || !Array.isArray(cloudData.planNotes) || !cloudData.planNotes.length)
+  ) {
+    changed = true;
+  }
   if (changed) {
     saveState();
     await saveCloudState({ silent: true });
