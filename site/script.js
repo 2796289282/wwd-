@@ -5,8 +5,8 @@ const PLAN_EDIT_PASSWORD = "050116";
 const PLAN_GATE_SEQUENCE = ["敬", "请", "请", "期", "期", "待", "待"];
 const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
-const CLOUD_LOAD_ENDPOINT = "/.netlify/functions/load-state";
-const CLOUD_SAVE_ENDPOINT = "/.netlify/functions/save-state";
+const CLOUD_LOAD_ENDPOINT = "/api/load-state";
+const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const DEFAULT_SECRET_LETTER = `给今晚的我们：
 如果你点到了这里，说明你发现了这张藏起来的小纸条。
 
