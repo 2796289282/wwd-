@@ -1,9 +1,8 @@
 const STORAGE_KEY = "wanwan-picker-v6";
 const HISTORY_LIMIT = 10;
 const ENTRANCE_PASSWORD = "080831";
-const SPECIAL_PASSWORD = "0831";
 const PLAN_EDIT_PASSWORD = "050116";
-const PLAN_GATE_SEQUENCE = ["敬", "请", "期", "待"];
+const PLAN_GATE_SEQUENCE = ["敬", "请", "请", "期", "期", "待", "待"];
 const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/.netlify/functions/load-state";
@@ -887,13 +886,12 @@ function renderPlayer() {
 }
 
 function renderSpecialAccess() {
-  elements.specialBoundaryPanel.hidden = specialBoundaryConfirmed || specialUnlocked;
-  elements.specialLockPanel.hidden = !specialBoundaryConfirmed || specialUnlocked;
-  elements.specialContent.hidden = !specialUnlocked;
+  const canEnterSpecial = specialBoundaryConfirmed || specialUnlocked;
+  elements.specialBoundaryPanel.hidden = canEnterSpecial;
+  elements.specialLockPanel.hidden = true;
+  elements.specialContent.hidden = !canEnterSpecial;
   elements.specialPasswordHint.hidden = true;
-  if (!specialUnlocked) {
-    elements.specialPasswordInput.value = "";
-  }
+  elements.specialPasswordInput.value = "";
 }
 
 function renderLetter() {
@@ -923,9 +921,17 @@ function renderPlanNotes() {
       item.className = "plan-note-item";
       item.dataset.noteId = note.id;
 
-      const text = document.createElement("span");
-      text.className = "plan-note-text";
-      text.textContent = note.text;
+      const text = document.createElement(planEditable ? "input" : "span");
+      text.className = planEditable ? "plan-note-edit-input" : "plan-note-text";
+      if (planEditable) {
+        text.type = "text";
+        text.value = note.text;
+        text.maxLength = 180;
+        text.placeholder = "清空这条并保存即可删除";
+        text.dataset.noteEditInput = note.id;
+      } else {
+        text.textContent = note.text;
+      }
 
       const time = document.createElement("time");
       time.className = "plan-note-time";
@@ -938,23 +944,7 @@ function renderPlanNotes() {
         hour12: false,
       }).format(new Date(note.time));
 
-      const actions = document.createElement("div");
-      actions.className = "plan-note-actions";
-
-      const editButton = document.createElement("button");
-      editButton.className = "text-button";
-      editButton.type = "button";
-      editButton.dataset.noteAction = "edit";
-      editButton.textContent = "修改";
-
-      const deleteButton = document.createElement("button");
-      deleteButton.className = "text-button danger";
-      deleteButton.type = "button";
-      deleteButton.dataset.noteAction = "delete";
-      deleteButton.textContent = "删除";
-
-      actions.append(editButton, deleteButton);
-      item.append(text, time, actions);
+      item.append(text, time);
       return item;
     }),
   );
@@ -1374,16 +1364,6 @@ async function unlockPlanEditing() {
   elements.planInput.focus();
 }
 
-async function requirePlanPassword(title = "输入密码") {
-  const password = await requestPasswordInSiteDialog(title);
-  if (password === null) return false;
-  if (password !== PLAN_EDIT_PASSWORD) {
-    showToast("密码不对");
-    return false;
-  }
-  return true;
-}
-
 function addPlanNote(text) {
   const value = text.trim();
   if (!value) {
@@ -1402,33 +1382,22 @@ function addPlanNote(text) {
   void saveCloudState();
 }
 
-async function editPlanNote(noteId) {
-  if (!(await requirePlanPassword("修改记录"))) return;
-  const note = state.planNotes.find((item) => item.id === noteId);
-  if (!note) return;
-  const nextText = await requestTextInSiteDialog("修改记录", note.text);
-  if (!nextText) return;
-  note.text = nextText;
-  note.time = new Date().toISOString();
-  saveState();
-  renderPlan();
-  showToast("已修改");
-  void saveCloudState();
-}
-
-async function deletePlanNote(noteId) {
-  if (!(await requirePlanPassword("删除记录"))) return;
-  const confirmed = await confirmInSiteDialog("确定删除这条记录吗？", "删除记录");
-  if (!confirmed) return;
-  state.planNotes = state.planNotes.filter((item) => item.id !== noteId);
-  saveState();
-  renderPlan();
-  showToast("已删除");
-  void saveCloudState();
-}
-
 function savePlan() {
   state.planBook = elements.planInput.value.trim();
+  if (planEditable) {
+    state.planNotes = [...elements.planNotesList.querySelectorAll("[data-note-edit-input]")]
+      .map((input) => {
+        const note = state.planNotes.find((item) => item.id === input.dataset.noteEditInput);
+        const nextText = input.value.trim();
+        if (!note || !nextText) return null;
+        return {
+          ...note,
+          text: nextText,
+          time: nextText === note.text ? note.time : new Date().toISOString(),
+        };
+      })
+      .filter(Boolean);
+  }
   planEditable = false;
   saveState();
   renderPlan();
@@ -1516,19 +1485,6 @@ elements.planGateButtons.forEach((button) => {
 
 elements.confirmBoundaryButton.addEventListener("click", () => {
   specialBoundaryConfirmed = true;
-  renderSpecialAccess();
-  elements.specialPasswordInput.focus();
-});
-
-elements.specialPasswordForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  if (elements.specialPasswordInput.value.trim() !== SPECIAL_PASSWORD) {
-    elements.specialPasswordHint.hidden = false;
-    showToast("独立专区暗号不对");
-    elements.specialPasswordInput.focus();
-    elements.specialPasswordInput.select();
-    return;
-  }
   specialUnlocked = true;
   renderSpecialAccess();
   showToast("独立专区已打开");
@@ -1570,19 +1526,6 @@ elements.savePlanButton.addEventListener("click", savePlan);
 elements.planNoteForm.addEventListener("submit", (event) => {
   event.preventDefault();
   addPlanNote(elements.planNoteInput.value);
-});
-
-elements.planNotesList.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-note-action]");
-  if (!button) return;
-  const item = button.closest(".plan-note-item");
-  if (!item) return;
-  if (button.dataset.noteAction === "edit") {
-    void editPlanNote(item.dataset.noteId);
-  }
-  if (button.dataset.noteAction === "delete") {
-    void deletePlanNote(item.dataset.noteId);
-  }
 });
 
 elements.siteDialogForm.addEventListener("submit", (event) => {

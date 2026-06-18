@@ -2608,15 +2608,27 @@ body {
   line-height: 1.65;
 }
 
+.plan-note-edit-input {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--text-main);
+  font: inherit;
+  line-height: 1.45;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  outline: none;
+}
+
+.plan-note-edit-input:focus {
+  border-color: rgba(255, 143, 199, 0.58);
+  box-shadow: 0 0 0 3px rgba(255, 143, 199, 0.14);
+}
+
 .plan-note-time {
   color: var(--text-sub);
   font-size: 11px;
-}
-
-.plan-note-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
 }
 
 .plan-gate-modal {
