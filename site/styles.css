@@ -2884,3 +2884,44 @@ body {
     font-size: 13px;
   }
 }
+
+/* Mobile ticket label fix: keep badges in normal flow to avoid overlap in WeChat browsers. */
+@media (max-width: 600px) {
+  .result-ticket {
+    justify-content: flex-start;
+    padding-top: 14px;
+  }
+
+  .ticket-recipient {
+    position: static;
+    display: inline-flex;
+    max-width: 86%;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 6px;
+    line-height: 1.15;
+    white-space: nowrap;
+    transform: none;
+  }
+
+  .result-type-tag {
+    display: inline-flex;
+    min-height: 22px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 10px;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .result-ticket p {
+    margin-top: 0;
+    line-height: 1.35;
+  }
+
+  .result-ticket strong {
+    margin: 8px 0;
+    line-height: 1.2;
+  }
+}
