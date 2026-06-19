@@ -1,5 +1,6 @@
 const STORAGE_KEY = "wanwan-picker-v6";
 const HISTORY_LIMIT = 10;
+const PLAN_BOOK_LIMIT = 12000;
 const ENTRANCE_PASSWORD = "080831";
 const PLAN_EDIT_PASSWORD = "050116";
 const PLAN_GATE_SEQUENCE = ["敬", "请", "请", "期", "期", "待", "待"];
@@ -1019,7 +1020,7 @@ function renderLetter() {
 
 function renderPlan() {
   elements.planInput.value = state.planBook || "";
-  elements.planCount.textContent = `${elements.planInput.value.length} / 3000`;
+  elements.planCount.textContent = `${elements.planInput.value.length} / ${PLAN_BOOK_LIMIT}`;
   elements.planInput.readOnly = !planEditable;
   elements.planInput.classList.toggle("is-editing", planEditable);
   elements.editPlanButton.hidden = planEditable;
@@ -1644,7 +1645,7 @@ elements.letterInput.addEventListener("input", () => {
 });
 
 elements.planInput.addEventListener("input", () => {
-  elements.planCount.textContent = `${elements.planInput.value.length} / 3000`;
+  elements.planCount.textContent = `${elements.planInput.value.length} / ${PLAN_BOOK_LIMIT}`;
 });
 
 elements.editPlanButton.addEventListener("click", unlockPlanEditing);
