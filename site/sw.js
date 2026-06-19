@@ -1,4 +1,4 @@
-const CACHE_NAME = "wanwan-picker-v1";
+const CACHE_NAME = "wanwan-picker-v2";
 const APP_SHELL = [
   "/",
   "/index.html",

@@ -2894,12 +2894,27 @@ body {
   border-color: rgba(125, 211, 252, 0.38);
 }
 
-.flight-cell-penalty {
+.flight-cell-punishment,
+.flight-cell-dare,
+.flight-cell-truth {
+  border-color: rgba(255, 143, 199, 0.42);
+}
+
+.flight-cell-reverse {
   border-color: rgba(255, 107, 129, 0.38);
 }
 
-.flight-cell-circle {
-  border-color: rgba(255, 143, 199, 0.42);
+.flight-cell-rest {
+  border-color: rgba(167, 139, 250, 0.42);
+}
+
+.flight-cell-restart {
+  border-color: rgba(255, 193, 7, 0.42);
+}
+
+.flight-cell-trap {
+  border-color: rgba(255, 107, 129, 0.5);
+  box-shadow: inset 0 0 24px rgba(255, 107, 129, 0.1);
 }
 
 .flight-cell-number {
@@ -2915,6 +2930,15 @@ body {
   position: relative;
   z-index: 1;
   font-size: clamp(16px, 2.5vw, 24px);
+}
+
+.flight-cell-desc {
+  position: relative;
+  z-index: 1;
+  color: var(--text-sub);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .flight-cell-markers {
@@ -3079,30 +3103,34 @@ body {
   }
 
   .flight-board {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    padding: 8px;
-    gap: 6px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    padding: 7px;
+    gap: 5px;
     border-radius: 18px;
   }
 
   .flight-cell {
-    min-height: 58px;
-    padding: 5px;
-    border-radius: 12px;
+    min-height: 46px;
+    padding: 4px;
+    border-radius: 11px;
   }
 
   .flight-cell-number {
-    font-size: 8px;
+    font-size: 7px;
   }
 
   .flight-cell strong {
-    font-size: clamp(14px, 4.8vw, 20px);
+    font-size: clamp(13px, 4vw, 18px);
+  }
+
+  .flight-cell-desc {
+    display: none;
   }
 
   .flight-piece {
-    width: 22px;
-    height: 22px;
-    font-size: 10px;
+    width: 19px;
+    height: 19px;
+    font-size: 9px;
   }
 
   .flight-control-panel {
