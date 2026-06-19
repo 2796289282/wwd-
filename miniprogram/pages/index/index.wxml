@@ -1,1 +1,125 @@
-<web-view src="{{webUrl}}"></web-view>
+<view class="page">
+  <view class="bg-glow glow-a"></view>
+  <view class="bg-glow glow-b"></view>
+
+  <view wx:if="{{view === 'home'}}" class="screen home-screen">
+    <view class="hero-card">
+      <view class="eyebrow">Tonight only</view>
+      <view class="title">婉婉的抽签机</view>
+      <view class="subtitle">给两个人的夜晚留一点温柔、心跳和小小的仪式感。</view>
+      <view class="sync-line {{syncStatus === '已同步' ? 'ok' : ''}}">{{syncStatus}}</view>
+    </view>
+
+    <button class="primary-btn" bindtap="goDraw">今晚抽一张</button>
+    <button class="secondary-btn" bindtap="goPlan">神秘计划书</button>
+    <button class="secondary-btn" bindtap="openLetter">小纸条</button>
+  </view>
+
+  <view wx:elif="{{view === 'draw'}}" class="screen">
+    <view class="topbar">
+      <button class="ghost-btn" bindtap="goHome">返回</button>
+      <view class="top-title">今晚玩哪种</view>
+    </view>
+
+    <view class="mode-tabs">
+      <button class="tab {{mode === 'truth' ? 'active' : ''}}" data-mode="truth" bindtap="setMode">只抽真心话</button>
+      <button class="tab {{mode === 'dare' ? 'active' : ''}}" data-mode="dare" bindtap="setMode">只抽大冒险</button>
+      <button class="tab {{mode === 'both' ? 'active' : ''}}" data-mode="both" bindtap="setMode">两种都抽</button>
+    </view>
+
+    <view class="panel compact">
+      <view class="label">谁来抽</view>
+      <view class="player-row">
+        <button class="pill {{player === '婉婉' ? 'selected' : ''}}" data-player="婉婉" bindtap="setPlayer">婉婉</button>
+        <button class="pill {{player === '李家鑫' ? 'selected' : ''}}" data-player="李家鑫" bindtap="setPlayer">李家鑫</button>
+        <button class="pill {{player === '我们' ? 'selected' : ''}}" data-player="我们" bindtap="setPlayer">我们</button>
+      </view>
+    </view>
+
+    <view class="draw-card">
+      <view class="card-tag">TO {{player}}</view>
+      <view class="card-small">{{currentCard ? '抽到了这一张' : '婉婉准备好了吗？'}}</view>
+      <view class="card-text">{{currentCard || '点击下方按钮'}}</view>
+      <view class="card-note">{{currentCard ? '可以认真，也可以害羞一点。' : randomHint}}</view>
+    </view>
+
+    <button class="primary-btn draw-btn" bindtap="drawCard">替婉婉抽一张</button>
+    <view class="action-row">
+      <button class="secondary-btn mini" bindtap="resetRound">重置本轮抽卡</button>
+      <button class="secondary-btn mini" bindtap="toggleBank">{{showBank ? '隐藏题库' : '查看题库'}}</button>
+    </view>
+    <view class="tip">每张卡本轮只出现一次，重置后可重新开始。</view>
+
+    <view wx:if="{{showBank}}" class="panel bank">
+      <view class="section-title">题库</view>
+      <textarea class="input area" placeholder="写一条自定义题目，真心话或大冒险都可以" value="{{newCardText}}" bindinput="onNewCardInput"></textarea>
+      <button class="secondary-btn" bindtap="addCustomCard">加入题库</button>
+      <view class="bank-count">当前可抽：{{availableCount}} 张，本轮已抽：{{history.length}} 张</view>
+      <button class="danger-btn" bindtap="clearCurrentBank">清空当前题库</button>
+    </view>
+
+    <view class="panel history">
+      <view class="section-head">
+        <view class="section-title">今晚抽过的卡</view>
+        <button class="text-btn" bindtap="clearHistory">清除抽卡记录</button>
+      </view>
+      <view wx:if="{{history.length === 0}}" class="empty">还没有记录，第一张留给今晚。</view>
+      <view wx:for="{{history}}" wx:key="time" class="history-item">
+        <view class="history-main">{{item.value}}</view>
+        <view class="history-sub">{{item.player}} · {{item.modeLabel}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:elif="{{view === 'plan'}}" class="screen">
+    <view class="topbar">
+      <button class="ghost-btn" bindtap="goHome">返回</button>
+      <view class="top-title">神秘计划书</view>
+    </view>
+
+    <view class="panel plan-panel">
+      <view class="plan-title">婉婉挨揍计划</view>
+      <textarea class="input plan-input" disabled="{{!planEditing}}" value="{{planBook}}" bindinput="onPlanInput" placeholder="这里放你的计划书。"></textarea>
+      <view class="action-row">
+        <button class="secondary-btn mini" bindtap="requestPlanEdit">{{planEditing ? '退出修改' : '修改计划书'}}</button>
+        <button class="primary-btn mini" wx:if="{{planEditing}}" bindtap="savePlan">保存计划书</button>
+      </view>
+    </view>
+
+    <view class="panel notes-panel">
+      <view class="section-title">记事本</view>
+      <input class="input" placeholder="添加一条记录" value="{{newNoteText}}" bindinput="onNoteInput" />
+      <button class="secondary-btn" bindtap="addNote">添加事件</button>
+      <view wx:if="{{planNotes.length === 0}}" class="empty">这里还空着，等今晚慢慢写。</view>
+      <view wx:for="{{planNotes}}" wx:key="id" class="note-item">
+        <view class="note-text">{{item.text}}</view>
+        <view class="note-time">{{item.timeText}}</view>
+        <button wx:if="{{planEditing}}" class="text-btn" data-id="{{item.id}}" bindtap="pinNote">置顶</button>
+      </view>
+    </view>
+  </view>
+
+  <view wx:elif="{{view === 'letter'}}" class="screen">
+    <view class="topbar">
+      <button class="ghost-btn" bindtap="goHome">返回</button>
+      <view class="top-title">小纸条</view>
+    </view>
+    <view class="panel">
+      <textarea class="input letter-input" value="{{letter}}" bindinput="onLetterInput" placeholder="给两个人留一句话。"></textarea>
+      <button class="primary-btn" bindtap="saveLetter">保存这封信</button>
+    </view>
+  </view>
+
+  <view wx:if="{{toastText}}" class="toast">{{toastText}}</view>
+
+  <view wx:if="{{passwordModal}}" class="modal-mask">
+    <view class="password-card">
+      <view class="section-title">输入修改密码</view>
+      <input class="input" password placeholder="密码" value="{{passwordValue}}" bindinput="onPasswordInput" />
+      <view class="action-row">
+        <button class="secondary-btn mini" bindtap="closePasswordModal">取消</button>
+        <button class="primary-btn mini" bindtap="confirmPassword">确认</button>
+      </view>
+    </view>
+  </view>
+</view>

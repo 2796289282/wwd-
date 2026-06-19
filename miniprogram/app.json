@@ -5,7 +5,8 @@
   "window": {
     "navigationBarTitleText": "婉婉的抽签机",
     "navigationBarBackgroundColor": "#090912",
-    "navigationBarTextStyle": "white"
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#090912"
   },
   "style": "v2",
   "sitemapLocation": "sitemap.json"
