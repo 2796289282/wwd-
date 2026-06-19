@@ -1,0 +1,30 @@
+{
+  "name": "婉婉的抽签机",
+  "short_name": "婉婉抽签",
+  "description": "真心话、大冒险、神秘专区和飞行棋小游戏。",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#090912",
+  "theme_color": "#090912",
+  "lang": "zh-CN",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

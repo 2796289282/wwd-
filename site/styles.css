@@ -150,6 +150,31 @@ button {
   letter-spacing: 0.04em;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.install-app-button {
+  min-height: 36px;
+  padding: 8px 14px;
+  color: var(--text-main, var(--ink));
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  box-shadow: 0 0 18px rgba(255, 143, 199, 0.16);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.install-app-button:hover {
+  border-color: rgba(255, 143, 199, 0.46);
+  box-shadow: 0 0 24px rgba(255, 143, 199, 0.24);
+}
+
 .app-shell {
   width: min(1180px, calc(100% - 48px));
   margin: 0 auto;
@@ -1826,6 +1851,22 @@ footer,
   .site-header,
   .app-shell {
     width: min(100% - 28px, 1180px);
+  }
+
+  .site-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .header-actions {
+    align-items: flex-end;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .install-app-button {
+    min-height: 34px;
+    padding: 7px 12px;
   }
 
   .site-header {

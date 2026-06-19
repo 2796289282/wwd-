@@ -8,6 +8,10 @@
       content="给小裴同学准备的真心话与大冒险随机抽取小游戏。"
     />
     <title>婉婉的抽签机</title>
+    <meta name="theme-color" content="#090912" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="icons/icon-192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -39,7 +43,12 @@
         <span class="brand-mark" id="brand-mark" aria-hidden="true">裴</span>
         <span id="brand-text">婉婉的抽签机</span>
       </a>
-      <p class="header-note">今晚的答案，不许说“随便”。</p>
+      <div class="header-actions">
+        <p class="header-note">今晚的答案，不许说“随便”。</p>
+        <button id="install-app-button" class="install-app-button" type="button" hidden>
+          安装到本地
+        </button>
+      </div>
     </header>
 
     <main class="app-shell">
