@@ -2649,6 +2649,506 @@ body {
   transform: translateY(1px);
 }
 
+.flight-entry-mode {
+  background:
+    radial-gradient(circle at 82% 16%, rgba(125, 211, 252, 0.16), transparent 32%),
+    rgba(255, 255, 255, 0.08);
+}
+
+.flight-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.flight-mode-card {
+  min-height: 132px;
+  padding: 18px;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--text-main);
+  text-align: left;
+  background:
+    radial-gradient(circle at 86% 12%, rgba(255, 143, 199, 0.14), transparent 34%),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 22px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.flight-mode-card:hover,
+.flight-mode-card.active {
+  border-color: rgba(255, 143, 199, 0.5);
+  box-shadow: 0 0 28px rgba(255, 143, 199, 0.22);
+  transform: translateY(-3px);
+}
+
+.flight-mode-card > span {
+  grid-row: 1 / 3;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.flight-mode-card strong {
+  min-width: 0;
+  font-size: clamp(17px, 2.4vw, 24px);
+  line-height: 1.25;
+}
+
+.flight-mode-card small {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.flight-mode-card.recommended {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(125, 211, 252, 0.18), transparent 32%),
+    rgba(255, 255, 255, 0.1);
+}
+
+.flight-mode-card.circle {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(255, 107, 129, 0.18), transparent 34%),
+    rgba(255, 255, 255, 0.09);
+}
+
+.flight-landscape-warning {
+  display: none;
+  min-height: 280px;
+  place-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.flight-landscape-warning strong {
+  font-size: clamp(30px, 8vw, 48px);
+}
+
+.flight-landscape-warning span {
+  color: var(--text-sub);
+  line-height: 1.7;
+}
+
+.flight-game-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.flight-game-head,
+.flight-player-status,
+.flight-play-area,
+.flight-control-panel,
+.flight-turn-card,
+.flight-task-card {
+  min-width: 0;
+}
+
+.flight-game-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.flight-game-head h2 {
+  margin: 0 0 8px;
+  font-size: clamp(30px, 4vw, 48px);
+  letter-spacing: -0.06em;
+}
+
+.flight-player-status {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.flight-player-card {
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 2px 10px;
+  align-items: center;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+}
+
+.flight-player-card.active {
+  border-color: rgba(255, 143, 199, 0.55);
+  box-shadow: 0 0 22px rgba(255, 143, 199, 0.18);
+}
+
+.flight-player-card.winner {
+  border-color: rgba(125, 211, 252, 0.58);
+  box-shadow: 0 0 24px rgba(125, 211, 252, 0.18);
+}
+
+.flight-player-marker {
+  grid-row: 1 / 3;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #241024;
+  background: linear-gradient(135deg, var(--accent-pink), var(--accent-blue));
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.flight-player-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flight-player-card small {
+  color: var(--text-sub);
+}
+
+.flight-play-area {
+  display: grid;
+  grid-template-columns: minmax(420px, 1fr) minmax(260px, 0.42fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.flight-board {
+  margin: 0;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+  list-style: none;
+  background:
+    radial-gradient(circle at 18% 18%, rgba(255, 143, 199, 0.13), transparent 30%),
+    radial-gradient(circle at 80% 82%, rgba(125, 211, 252, 0.12), transparent 32%),
+    rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 24px;
+}
+
+.flight-cell {
+  position: relative;
+  min-height: 72px;
+  padding: 8px;
+  display: grid;
+  align-content: space-between;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.flight-cell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.5));
+  pointer-events: none;
+}
+
+.flight-cell-start,
+.flight-cell-finish {
+  border-color: rgba(125, 211, 252, 0.46);
+}
+
+.flight-cell-bonus {
+  border-color: rgba(125, 211, 252, 0.38);
+}
+
+.flight-cell-penalty {
+  border-color: rgba(255, 107, 129, 0.38);
+}
+
+.flight-cell-circle {
+  border-color: rgba(255, 143, 199, 0.42);
+}
+
+.flight-cell-number {
+  position: relative;
+  z-index: 1;
+  color: var(--text-sub);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.flight-cell strong {
+  position: relative;
+  z-index: 1;
+  font-size: clamp(16px, 2.5vw, 24px);
+}
+
+.flight-cell-markers {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+}
+
+.flight-piece {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  color: #180b18;
+  border: 2px solid rgba(255, 255, 255, 0.62);
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+}
+
+.flight-piece-0 {
+  background: var(--accent-blue);
+}
+
+.flight-piece-1 {
+  background: var(--accent-pink);
+}
+
+.flight-control-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.flight-turn-card,
+.flight-task-card {
+  padding: 16px;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 22px;
+}
+
+.flight-turn-card {
+  display: grid;
+  gap: 10px;
+}
+
+.flight-turn-card span,
+.flight-task-card > span {
+  color: var(--accent-blue);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.flight-turn-card strong {
+  display: grid;
+  min-height: 78px;
+  place-items: center;
+  font-size: clamp(46px, 7vw, 76px);
+  line-height: 1;
+}
+
+.flight-roll-button {
+  min-height: 54px;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 18px;
+  box-shadow: 0 0 24px rgba(255, 143, 199, 0.3);
+  cursor: pointer;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.flight-roll-button:disabled,
+.flight-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.flight-task-card {
+  min-height: 180px;
+}
+
+.flight-task-card h3 {
+  margin: 8px 0 10px;
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.25;
+}
+
+.flight-task-card p {
+  margin: 0;
+  color: var(--text-main);
+  line-height: 1.75;
+  white-space: pre-line;
+}
+
+.flight-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.flight-actions button {
+  min-height: 48px;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .flight-game-shell {
+    display: none;
+  }
+
+  .flight-landscape-warning {
+    display: grid;
+  }
+}
+
+@media (max-width: 940px) and (orientation: landscape) {
+  .site-header {
+    padding: 10px 0 8px;
+  }
+
+  .app-shell {
+    width: min(100% - 18px, 980px);
+    padding: 10px 0 max(10px, env(safe-area-inset-bottom));
+  }
+
+  .flight-game-step {
+    min-height: calc(100svh - 38px);
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .flight-game-step .panel-topline {
+    margin-bottom: 8px;
+  }
+
+  .flight-game-shell {
+    gap: 8px;
+  }
+
+  .flight-game-head {
+    align-items: center;
+  }
+
+  .flight-game-head h2 {
+    margin-bottom: 2px;
+    font-size: clamp(22px, 4.8vw, 34px);
+  }
+
+  .flight-game-head .setup-note {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .flight-player-status {
+    gap: 8px;
+  }
+
+  .flight-player-card {
+    padding: 8px 10px;
+    grid-template-columns: 34px minmax(0, 1fr);
+    border-radius: 14px;
+  }
+
+  .flight-player-marker {
+    width: 34px;
+    height: 34px;
+  }
+
+  .flight-play-area {
+    grid-template-columns: minmax(0, 1fr) minmax(196px, 0.38fr);
+    gap: 10px;
+  }
+
+  .flight-board {
+    padding: 8px;
+    gap: 6px;
+    border-radius: 18px;
+  }
+
+  .flight-cell {
+    min-height: 46px;
+    padding: 5px;
+    border-radius: 12px;
+  }
+
+  .flight-cell-number {
+    font-size: 8px;
+  }
+
+  .flight-cell strong {
+    font-size: clamp(13px, 2.6vw, 18px);
+  }
+
+  .flight-piece {
+    width: 21px;
+    height: 21px;
+    font-size: 10px;
+  }
+
+  .flight-control-panel {
+    gap: 8px;
+  }
+
+  .flight-turn-card,
+  .flight-task-card {
+    padding: 10px;
+    border-radius: 16px;
+  }
+
+  .flight-turn-card {
+    gap: 6px;
+  }
+
+  .flight-turn-card strong {
+    min-height: 48px;
+    font-size: clamp(36px, 7vw, 54px);
+  }
+
+  .flight-roll-button {
+    min-height: 44px;
+    border-radius: 14px;
+    font-size: 15px;
+  }
+
+  .flight-task-card {
+    min-height: 124px;
+  }
+
+  .flight-task-card h3 {
+    margin: 5px 0 6px;
+    font-size: clamp(16px, 3vw, 22px);
+  }
+
+  .flight-task-card p {
+    max-height: 74px;
+    overflow: auto;
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .flight-actions {
+    gap: 8px;
+  }
+
+  .flight-actions button {
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+}
+
 .plan-gate-modal {
   position: fixed;
   z-index: 40;
@@ -2775,18 +3275,21 @@ body {
 
   .mode-zones,
   .classic-buttons,
-  .special-buttons {
+  .special-buttons,
+  .flight-mode-grid {
     grid-template-columns: 1fr;
   }
 
-  .mode-button {
+  .mode-button,
+  .flight-mode-card {
     min-height: 68px;
     padding: 12px;
     grid-template-columns: 26px 1fr;
     border-radius: 16px;
   }
 
-  .mode-button > span {
+  .mode-button > span,
+  .flight-mode-card > span {
     width: 26px;
     height: 26px;
   }

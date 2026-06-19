@@ -378,6 +378,65 @@ const decks = {
   },
 };
 
+const FLIGHT_BOARD_SIZE = 24;
+const FLIGHT_LAST_CELL = FLIGHT_BOARD_SIZE - 1;
+
+const flightCellPattern = {
+  dare: ["dare", "bonus", "dare", "penalty", "dare", "rest", "dare", "bonus"],
+  truth: ["truth", "bonus", "truth", "penalty", "truth", "rest", "truth", "bonus"],
+  mixed: ["truth", "dare", "bonus", "truth", "penalty", "dare", "rest", "truth"],
+  circle: ["circle", "truth", "bonus", "circle", "penalty", "dare", "rest", "circle"],
+};
+
+const flightCellCopy = {
+  start: { short: "起", label: "起点" },
+  truth: { short: "真", label: "真心话" },
+  dare: { short: "冒", label: "大冒险" },
+  circle: { short: "圈", label: "小圈" },
+  bonus: { short: "+2", label: "前进" },
+  penalty: { short: "-2", label: "后退" },
+  rest: { short: "歇", label: "确认" },
+  finish: { short: "终", label: "终点" },
+};
+
+const flightModeConfigs = {
+  dare: {
+    title: "大冒险飞行棋",
+    description: "行动任务为主。落地就执行，做不到可以撒娇跳过一次。",
+    taskPools: {
+      dare: dareQuestions,
+      default: dareQuestions,
+    },
+  },
+  truth: {
+    title: "真心话飞行棋",
+    description: "回答问题为主。答案可以短，但不许用“还好吧”糊弄。",
+    taskPools: {
+      truth: truthQuestions,
+      default: truthQuestions,
+    },
+  },
+  mixed: {
+    title: "真心话 & 大冒险飞行棋",
+    description: "推荐默认模式。真心话和大冒险混合出现，谁先到终点谁赢。",
+    taskPools: {
+      truth: truthQuestions,
+      dare: dareQuestions,
+      default: [...truthQuestions, ...dareQuestions],
+    },
+  },
+  circle: {
+    title: "小圈专属飞行棋",
+    description: "参考小圈专属题库。先确认边界和安全词，任何一方都可以随时停止。",
+    taskPools: {
+      truth: circleTruthQuestions,
+      dare: circleDareQuestions,
+      circle: [...circleTruthQuestions, ...circleDareQuestions],
+      default: [...circleTruthQuestions, ...circleDareQuestions],
+    },
+  },
+};
+
 const playerCopy = {
   李家鑫: {
     recipient: "TO 李家鑫",
@@ -414,11 +473,14 @@ const elements = {
   gameFlow: document.querySelector("#game-flow"),
   modeStep: document.querySelector("#mode-step"),
   specialStep: document.querySelector("#special-step"),
+  flightModeStep: document.querySelector("#flight-mode-step"),
+  flightGameStep: document.querySelector("#flight-game-step"),
   playStep: document.querySelector("#play-step"),
   letterStep: document.querySelector("#letter-step"),
   planStep: document.querySelector("#plan-step"),
   openSpecialStepButton: document.querySelector("#open-special-step-button"),
   openPlanButton: document.querySelector("#open-plan-button"),
+  openFlightButton: document.querySelector("#open-flight-button"),
   specialBoundaryPanel: document.querySelector("#special-boundary-panel"),
   confirmBoundaryButton: document.querySelector("#confirm-boundary-button"),
   specialLockPanel: document.querySelector("#special-lock-panel"),
@@ -430,6 +492,23 @@ const elements = {
   backToModeFromSpecialButton: document.querySelector(
     "#back-to-mode-from-special-button",
   ),
+  backFromFlightModeButton: document.querySelector("#back-from-flight-mode-button"),
+  backFromFlightGameButton: document.querySelector("#back-from-flight-game-button"),
+  flightModeButtons: [...document.querySelectorAll("[data-flight-mode]")],
+  flightRoomBadge: document.querySelector("#flight-room-badge"),
+  flightGameTitle: document.querySelector("#flight-game-title"),
+  flightGameDescription: document.querySelector("#flight-game-description"),
+  flightPlayerStatus: document.querySelector("#flight-player-status"),
+  flightBoard: document.querySelector("#flight-board"),
+  flightTurnLabel: document.querySelector("#flight-turn-label"),
+  flightDiceValue: document.querySelector("#flight-dice-value"),
+  flightRollButton: document.querySelector("#flight-roll-button"),
+  flightTaskType: document.querySelector("#flight-task-type"),
+  flightTaskTitle: document.querySelector("#flight-task-title"),
+  flightTaskText: document.querySelector("#flight-task-text"),
+  flightCompleteButton: document.querySelector("#flight-complete-button"),
+  flightSkipButton: document.querySelector("#flight-skip-button"),
+  flightResetButton: document.querySelector("#flight-reset-button"),
   backToModeButton: document.querySelector("#back-to-mode-button"),
   backFromLetterButton: document.querySelector("#back-from-letter-button"),
   backFromPlanButton: document.querySelector("#back-from-plan-button"),
@@ -511,6 +590,58 @@ let planGateIndex = 0;
 let planEditable = false;
 let siteDialogResolver = null;
 
+function createDefaultFlightState(mode = "mixed") {
+  return {
+    mode: flightModeConfigs[mode] ? mode : "mixed",
+    players: [
+      { id: "ljx", name: "李家鑫", marker: "鑫" },
+      { id: "ww", name: "婉婉", marker: "婉" },
+    ],
+    currentTurn: 1,
+    positions: [0, 0],
+    roomId: `local-${Date.now().toString(36)}`,
+    onlineMode: false,
+    dice: null,
+    currentTask: null,
+    awaitingTask: false,
+    winner: null,
+    turnCount: 0,
+  };
+}
+
+function normalizeFlightState(value) {
+  const fallback = createDefaultFlightState();
+  if (!value || typeof value !== "object") return fallback;
+  const players = Array.isArray(value.players) && value.players.length >= 2
+    ? value.players.slice(0, 2).map((player, index) => ({
+        id: typeof player.id === "string" ? player.id : fallback.players[index].id,
+        name: typeof player.name === "string" ? player.name : fallback.players[index].name,
+        marker: typeof player.marker === "string" ? player.marker : fallback.players[index].marker,
+      }))
+    : fallback.players;
+  return {
+    ...fallback,
+    ...value,
+    mode: flightModeConfigs[value.mode] ? value.mode : fallback.mode,
+    players,
+    currentTurn: Number.isInteger(value.currentTurn) && value.currentTurn >= 0
+      ? value.currentTurn % players.length
+      : fallback.currentTurn,
+    positions: players.map((_, index) => {
+      const position = Number(value.positions?.[index]);
+      if (!Number.isFinite(position)) return 0;
+      return Math.max(0, Math.min(FLIGHT_LAST_CELL, Math.round(position)));
+    }),
+    roomId: typeof value.roomId === "string" && value.roomId ? value.roomId : fallback.roomId,
+    onlineMode: Boolean(value.onlineMode),
+    dice: Number.isInteger(value.dice) ? value.dice : null,
+    currentTask: value.currentTask && typeof value.currentTask === "object" ? value.currentTask : null,
+    awaitingTask: Boolean(value.awaitingTask),
+    winner: Number.isInteger(value.winner) ? value.winner : null,
+    turnCount: Number.isInteger(value.turnCount) ? value.turnCount : 0,
+  };
+}
+
 function createDefaultState() {
   return {
     mode: "mixed",
@@ -531,6 +662,7 @@ function createDefaultState() {
     history: [],
     usedCardIds: [],
     currentCard: null,
+    flight: createDefaultFlightState(),
   };
 }
 
@@ -553,6 +685,7 @@ function loadState() {
           : fallback.secretLetter,
       planBook: typeof stored.planBook === "string" ? stored.planBook : "",
       planNotes: normalizePlanNotes(stored.planNotes),
+      flight: normalizeFlightState(stored.flight),
       currentCard: null,
     };
   } catch {
@@ -568,6 +701,7 @@ function saveState() {
     secretLetter: state.secretLetter,
     planBook: state.planBook,
     planNotes: state.planNotes,
+    flight: state.flight,
     history: state.history,
     usedCardIds: state.usedCardIds,
   };
@@ -677,6 +811,9 @@ function cloudDataFromState() {
     planNotes: normalizePlanNotes(state.planNotes),
     history: state.history,
     updatedAt: now,
+    app: {
+      flight: normalizeFlightState(state.flight),
+    },
   };
 }
 
@@ -697,6 +834,7 @@ function applyCloudData(data) {
     planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
+    flight: normalizeFlightState(data.app?.flight || state.flight),
     usedCardIds: normalizeUsedCardIds(
       data.drawnCards || data.usedCardIds || state.usedCardIds,
       fallback.mode,
@@ -1065,10 +1203,258 @@ function renderPlanNotes() {
   elements.planNotesEmpty.hidden = notes.length > 0;
 }
 
+function flightConfig() {
+  return flightModeConfigs[state.flight?.mode] || flightModeConfigs.mixed;
+}
+
+function flightCellType(index, mode = state.flight?.mode || "mixed") {
+  if (index === 0) return "start";
+  if (index === FLIGHT_LAST_CELL) return "finish";
+  const pattern = flightCellPattern[mode] || flightCellPattern.mixed;
+  return pattern[(index - 1) % pattern.length];
+}
+
+function flightTaskPool(type) {
+  const config = flightConfig();
+  return config.taskPools[type] || config.taskPools.default || [];
+}
+
+function randomFlightTask(type) {
+  const pool = flightTaskPool(type);
+  if (!pool.length) return "这一格先放过你们，认真看对方三秒就算过。";
+  return pool[secureRandomIndex(pool.length)];
+}
+
+function nextFlightTaskType(cellType) {
+  if (cellType === "truth" || cellType === "dare" || cellType === "circle") {
+    return cellType;
+  }
+  const mode = state.flight.mode;
+  if (mode === "truth") return "truth";
+  if (mode === "dare") return "dare";
+  if (mode === "circle") return "circle";
+  return secureRandomIndex(2) === 0 ? "truth" : "dare";
+}
+
+function createFlightTask(player, dice, startPosition, landedPosition) {
+  let finalPosition = landedPosition;
+  let cellType = flightCellType(finalPosition);
+  let effect = "";
+
+  if (cellType === "bonus") {
+    const nextPosition = Math.min(FLIGHT_LAST_CELL, finalPosition + 2);
+    effect = `奖励前进到第 ${nextPosition} 格。`;
+    finalPosition = nextPosition;
+    state.flight.positions[state.flight.currentTurn] = finalPosition;
+    cellType = flightCellType(finalPosition);
+  }
+
+  if (cellType === "penalty") {
+    const nextPosition = Math.max(0, finalPosition - 2);
+    effect = `小小后退到第 ${nextPosition} 格。`;
+    finalPosition = nextPosition;
+    state.flight.positions[state.flight.currentTurn] = finalPosition;
+    cellType = flightCellType(finalPosition);
+  }
+
+  if (finalPosition >= FLIGHT_LAST_CELL) {
+    state.flight.winner = state.flight.currentTurn;
+    return {
+      type: "抵达终点",
+      title: `${player.name}到终点啦`,
+      text: `${player.name}先飞到终点。今晚这一局，可以让对方给你一个小奖励。`,
+      cell: finalPosition,
+      dice,
+      effect,
+      finished: true,
+    };
+  }
+
+  if (cellType === "rest") {
+    return {
+      type: "确认格",
+      title: `${player.name}停在确认格`,
+      text: `${effect ? `${effect}\n` : ""}先确认一下：现在还想继续吗？想继续就点“完成任务，下一位”。`,
+      cell: finalPosition,
+      dice,
+      effect,
+      finished: false,
+    };
+  }
+
+  const taskType = nextFlightTaskType(cellType);
+  const typeCopy = flightCellCopy[taskType] || flightCellCopy[cellType] || flightCellCopy.dare;
+  return {
+    type: typeCopy.label,
+    title: `${player.name}掷出 ${dice} 点`,
+    text: `${effect ? `${effect}\n` : ""}${randomFlightTask(taskType)}`,
+    cell: finalPosition,
+    dice,
+    effect,
+    finished: false,
+  };
+}
+
+function renderFlightModeSelection() {
+  elements.flightModeButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.flightMode === state.flight.mode);
+  });
+}
+
+function renderFlightPlayerStatus() {
+  const { players, positions, currentTurn, winner } = state.flight;
+  elements.flightPlayerStatus.replaceChildren(
+    ...players.map((player, index) => {
+      const card = document.createElement("article");
+      card.className = "flight-player-card";
+      card.classList.toggle("active", index === currentTurn && winner === null);
+      card.classList.toggle("winner", index === winner);
+
+      const marker = document.createElement("span");
+      marker.className = "flight-player-marker";
+      marker.textContent = player.marker;
+
+      const name = document.createElement("strong");
+      name.textContent = player.name;
+
+      const position = document.createElement("small");
+      position.textContent = index === winner ? "已到终点" : `第 ${positions[index]} 格`;
+
+      card.append(marker, name, position);
+      return card;
+    }),
+  );
+}
+
+function renderFlightBoard() {
+  const { players, positions } = state.flight;
+  const cells = Array.from({ length: FLIGHT_BOARD_SIZE }, (_, index) => {
+    const cellType = flightCellType(index);
+    const copy = flightCellCopy[cellType] || flightCellCopy.dare;
+    const item = document.createElement("li");
+    item.className = `flight-cell flight-cell-${cellType}`;
+    item.dataset.cellType = cellType;
+
+    const number = document.createElement("span");
+    number.className = "flight-cell-number";
+    number.textContent = index === 0 ? "START" : index === FLIGHT_LAST_CELL ? "FINISH" : String(index);
+
+    const label = document.createElement("strong");
+    label.textContent = copy.short;
+
+    const markers = document.createElement("div");
+    markers.className = "flight-cell-markers";
+    players.forEach((player, playerIndex) => {
+      if (positions[playerIndex] !== index) return;
+      const marker = document.createElement("span");
+      marker.className = `flight-piece flight-piece-${playerIndex}`;
+      marker.textContent = player.marker;
+      markers.append(marker);
+    });
+
+    item.append(number, label, markers);
+    return item;
+  });
+  elements.flightBoard.replaceChildren(...cells);
+}
+
+function renderFlightTask() {
+  const { currentTask, currentTurn, players, dice, awaitingTask, winner } = state.flight;
+  const currentPlayer = players[currentTurn];
+  elements.flightTurnLabel.textContent =
+    winner === null ? `轮到${currentPlayer.name}` : `${players[winner].name}赢啦`;
+  elements.flightDiceValue.textContent = dice || "?";
+  elements.flightRollButton.disabled = awaitingTask || winner !== null;
+  elements.flightCompleteButton.disabled = !awaitingTask || winner !== null;
+  elements.flightSkipButton.disabled = !awaitingTask || winner !== null;
+
+  if (!currentTask) {
+    elements.flightTaskType.textContent = "等待起飞";
+    elements.flightTaskTitle.textContent = "点击掷骰子开始";
+    elements.flightTaskText.textContent = "同屏双人轮流游玩，当前版本不会在线联机。";
+    return;
+  }
+
+  elements.flightTaskType.textContent = currentTask.type;
+  elements.flightTaskTitle.textContent = currentTask.title;
+  elements.flightTaskText.textContent = currentTask.text;
+}
+
+function renderFlightGame() {
+  state.flight = normalizeFlightState(state.flight);
+  const config = flightConfig();
+  elements.flightGameTitle.textContent = config.title;
+  elements.flightGameDescription.textContent = config.description;
+  elements.flightRoomBadge.textContent = state.flight.onlineMode
+    ? `ROOM ${state.flight.roomId}`
+    : "LOCAL";
+  renderFlightModeSelection();
+  renderFlightPlayerStatus();
+  renderFlightBoard();
+  renderFlightTask();
+}
+
+function resetFlightGame(mode = state.flight.mode) {
+  state.flight = createDefaultFlightState(mode);
+  saveState();
+  renderFlightGame();
+}
+
+function openFlightModeStep() {
+  renderFlightModeSelection();
+  openStep("flight-mode");
+}
+
+function startFlightGame(mode) {
+  resetFlightGame(mode);
+  openStep("flight-game");
+}
+
+function rollFlightDice() {
+  if (state.flight.awaitingTask) {
+    showToast("先完成当前任务，再交给下一位");
+    return;
+  }
+  if (state.flight.winner !== null) {
+    showToast("这一局已经到终点啦，可以重开一局");
+    return;
+  }
+
+  const dice = secureRandomIndex(6) + 1;
+  const player = state.flight.players[state.flight.currentTurn];
+  const startPosition = state.flight.positions[state.flight.currentTurn];
+  const landedPosition = Math.min(FLIGHT_LAST_CELL, startPosition + dice);
+  state.flight.dice = dice;
+  state.flight.positions[state.flight.currentTurn] = landedPosition;
+  state.flight.currentTask = createFlightTask(player, dice, startPosition, landedPosition);
+  state.flight.awaitingTask = !state.flight.currentTask.finished;
+  state.flight.turnCount += 1;
+  saveState();
+  renderFlightGame();
+}
+
+function finishFlightTurn(skipped = false) {
+  if (!state.flight.awaitingTask) return;
+  state.flight.awaitingTask = false;
+  state.flight.currentTask = {
+    type: skipped ? "已跳过" : "已完成",
+    title: skipped ? "这一格先跳过" : "任务完成",
+    text: skipped ? "轮到下一位。跳过可以，但不许一直赖皮。" : "很好，下一位继续起飞。",
+    cell: state.flight.positions[state.flight.currentTurn],
+    dice: state.flight.dice,
+    skipped,
+  };
+  state.flight.currentTurn = (state.flight.currentTurn + 1) % state.flight.players.length;
+  saveState();
+  renderFlightGame();
+}
+
 function renderFlow() {
   const inIntro = state.currentStep === "intro";
   const inMode = state.currentStep === "mode";
   const inSpecial = state.currentStep === "special";
+  const inFlightMode = state.currentStep === "flight-mode";
+  const inFlightGame = state.currentStep === "flight-game";
   const inPlay = state.currentStep === "play";
   const inLetter = state.currentStep === "letter";
   const inPlan = state.currentStep === "plan";
@@ -1078,6 +1464,8 @@ function renderFlow() {
   elements.gameFlow.hidden = inIntro;
   elements.modeStep.hidden = !inMode;
   elements.specialStep.hidden = !inSpecial;
+  elements.flightModeStep.hidden = !inFlightMode;
+  elements.flightGameStep.hidden = !inFlightGame;
   elements.playStep.hidden = !inPlay;
   elements.letterStep.hidden = !inLetter;
   elements.planStep.hidden = !inPlan;
@@ -1085,6 +1473,8 @@ function renderFlow() {
   renderSpecialAccess();
   renderLetter();
   renderPlan();
+  renderFlightModeSelection();
+  renderFlightGame();
 }
 
 function renderDeckPanel() {
@@ -1103,6 +1493,12 @@ function openStep(step) {
   }
   if (step === "special") {
     elements.specialStep.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (step === "flight-mode") {
+    elements.flightModeStep.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  if (step === "flight-game") {
+    elements.flightGameStep.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   if (step === "play") {
     elements.playStep.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1584,6 +1980,7 @@ elements.openSpecialStepButton.addEventListener("click", () => {
 });
 
 elements.openPlanButton.addEventListener("click", openPlanGate);
+elements.openFlightButton.addEventListener("click", openFlightModeStep);
 
 elements.closePlanGateButton.addEventListener("click", closePlanGate);
 
@@ -1606,6 +2003,35 @@ elements.confirmBoundaryButton.addEventListener("click", () => {
 
 elements.backToModeFromSpecialButton.addEventListener("click", () => {
   openStep("mode");
+});
+
+elements.backFromFlightModeButton.addEventListener("click", () => {
+  openStep("special");
+});
+
+elements.backFromFlightGameButton.addEventListener("click", () => {
+  openStep("flight-mode");
+});
+
+elements.flightModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    startFlightGame(button.dataset.flightMode);
+  });
+});
+
+elements.flightRollButton.addEventListener("click", rollFlightDice);
+
+elements.flightCompleteButton.addEventListener("click", () => {
+  finishFlightTurn(false);
+});
+
+elements.flightSkipButton.addEventListener("click", () => {
+  finishFlightTurn(true);
+});
+
+elements.flightResetButton.addEventListener("click", () => {
+  resetFlightGame(state.flight.mode);
+  showToast("飞行棋已重开");
 });
 
 elements.backToModeButton.addEventListener("click", () => {
