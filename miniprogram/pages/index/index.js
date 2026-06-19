@@ -1,6 +1,7 @@
 const CLOUD_BASE = "https://peiwanjie.pages.dev";
 const LOAD_URL = `${CLOUD_BASE}/api/load-state`;
 const SAVE_URL = `${CLOUD_BASE}/api/save-state`;
+const ENTRANCE_PASSWORD = "080831";
 const PLAN_EDIT_PASSWORD = "050116";
 
 const defaultTruth = [
@@ -84,19 +85,26 @@ function formatTime(value) {
 
 Page({
   data: {
-    view: "home",
+    view: "gate",
     syncStatus: "正在同步...",
     toastText: "",
+    entrancePassword: "",
+    entranceError: false,
     mode: "both",
     player: "婉婉",
     randomHint: "不许耍赖，抽到就算数。",
     currentCard: "",
+    currentModeLabel: "",
+    deckTitle: "真心话题库",
     showBank: false,
     newCardText: "",
     newNoteText: "",
     passwordModal: false,
     passwordValue: "",
     planEditing: false,
+    planDocumentOpen: false,
+    letterHidden: false,
+    letterReturnView: "intro",
     truth: defaultTruth,
     dare: defaultDare,
     custom: [],
@@ -112,25 +120,66 @@ Page({
     this.loadCloudState();
   },
 
+  onEntranceInput(event) {
+    this.setData({ entrancePassword: event.detail.value, entranceError: false });
+  },
+
+  checkEntrance() {
+    if ((this.data.entrancePassword || "").trim() !== ENTRANCE_PASSWORD) {
+      this.setData({ entranceError: true });
+      return;
+    }
+    this.setData({ view: "intro", entrancePassword: "", entranceError: false });
+  },
+
+  goIntro() {
+    this.setData({ view: "intro", planEditing: false, showBank: false });
+  },
+
+  goMode() {
+    this.setData({ view: "mode", planEditing: false, showBank: false });
+    this.updateDeckTitle();
+  },
+
+  goSpecial() {
+    this.setData({ view: "special", planEditing: false, planDocumentOpen: false });
+  },
+
   goHome() {
-    this.setData({ view: "home", planEditing: false, showBank: false });
+    this.goIntro();
   },
 
   goDraw() {
-    this.setData({ view: "draw" });
+    this.setData({ view: "play" });
     this.updateAvailableCount();
   },
 
   goPlan() {
-    this.setData({ view: "plan" });
+    this.setData({ view: "plan", planEditing: false, planDocumentOpen: true });
   },
 
   openLetter() {
-    this.setData({ view: "letter" });
+    this.setData({ view: "letter", letterReturnView: this.data.view, letterHidden: false });
+  },
+
+  openLetterFromPlay() {
+    this.setData({ view: "letter", letterReturnView: "play", letterHidden: false });
+  },
+
+  backFromLetter() {
+    this.setData({ view: this.data.letterReturnView || "intro", letterHidden: false });
+  },
+
+  chooseModeAndPlay(event) {
+    const mode = event.currentTarget.dataset.mode || "both";
+    this.setData({ mode, view: "play" });
+    this.updateDeckTitle();
+    this.updateAvailableCount();
   },
 
   setMode(event) {
     this.setData({ mode: event.currentTarget.dataset.mode });
+    this.updateDeckTitle();
     this.updateAvailableCount();
   },
 
@@ -140,6 +189,26 @@ Page({
 
   toggleBank() {
     this.setData({ showBank: !this.data.showBank });
+  },
+
+  updateDeckTitle() {
+    const titleMap = {
+      truth: "真心话题库",
+      dare: "大冒险题库",
+      both: "混合题库"
+    };
+    this.setData({ deckTitle: titleMap[this.data.mode] || "混合题库" });
+  },
+
+  fillTemplate(event) {
+    const template = event.currentTarget.dataset.template;
+    const textMap = {
+      "温柔一点": "真心话：说一件今晚让你觉得被认真对待的小事。",
+      "搞笑一点": "大冒险：模仿自己害羞时嘴硬的样子十秒。",
+      "害羞一点": "真心话：说一句你不好意思当面说但想让对方知道的话。",
+      "大胆一点": "大冒险：认真看着对方，说一句今晚限定的偏爱。"
+    };
+    this.setData({ newCardText: textMap[template] || "" });
   },
 
   onNewCardInput(event) {
@@ -172,6 +241,7 @@ Page({
           ...state,
           syncStatus: "已同步"
         });
+        this.updateDeckTitle();
         this.updateAvailableCount();
       },
       fail: () => {
@@ -181,6 +251,7 @@ Page({
           ...state,
           syncStatus: "离线模式"
         });
+        this.updateDeckTitle();
         this.updateAvailableCount();
       }
     });
@@ -254,6 +325,7 @@ Page({
 
     this.setData({
       currentCard: card,
+      currentModeLabel: labelOf(mode),
       drawnCards: [...this.data.drawnCards, key],
       history: [historyItem, ...this.data.history].slice(0, 20),
       randomHint: "婉婉不许耍赖，李家鑫也不许。"
@@ -266,11 +338,24 @@ Page({
     this.setData({
       drawnCards: [],
       currentCard: "",
+      currentModeLabel: "",
       history: []
     });
     this.updateAvailableCount();
     this.saveCloudState(false);
     this.showToast("本轮已重置");
+  },
+
+  skipCard() {
+    if (!this.data.currentCard) {
+      this.showToast("还没抽卡呢");
+      return;
+    }
+    this.setData({
+      currentCard: "",
+      currentModeLabel: "",
+      randomHint: "这一张先放过你，下一张可不一定。"
+    });
   },
 
   clearHistory() {
@@ -315,6 +400,10 @@ Page({
     this.saveCloudState();
   },
 
+  toggleLetterVisibility() {
+    this.setData({ letterHidden: !this.data.letterHidden });
+  },
+
   requestPlanEdit() {
     if (this.data.planEditing) {
       this.setData({ planEditing: false });
@@ -332,13 +421,22 @@ Page({
       this.showToast("密码不对哦");
       return;
     }
-    this.setData({ passwordModal: false, passwordValue: "", planEditing: true });
+    this.setData({ passwordModal: false, passwordValue: "", planEditing: true, planDocumentOpen: false });
     this.showToast("可以修改啦");
   },
 
   savePlan() {
-    this.setData({ planEditing: false });
+    this.setData({ planEditing: false, planDocumentOpen: true });
     this.saveCloudState();
+  },
+
+  togglePlanDocument() {
+    if (this.data.planEditing) return;
+    this.setData({ planDocumentOpen: !this.data.planDocumentOpen });
+  },
+
+  openFlight() {
+    this.showToast("飞行棋入口已保留，小程序版暂不支持外链打开");
   },
 
   addNote() {
