@@ -1,6 +1,7 @@
 node_modules/
 .netlify/
 .wrangler/
+project.private.config.json
 site/.server.pid
 site/.tunnel.pid
 site/.tunnel.err.log
