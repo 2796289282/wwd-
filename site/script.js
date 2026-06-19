@@ -391,7 +391,6 @@ const elements = {
   entrancePassword: document.querySelector("#entrance-password"),
   entranceError: document.querySelector("#entrance-error"),
   footer: document.querySelector("footer"),
-  installAppButton: document.querySelector("#install-app-button"),
   brand: document.querySelector(".brand"),
   brandMark: document.querySelector("#brand-mark"),
   brandText: document.querySelector("#brand-text"),
@@ -497,7 +496,20 @@ let planReturnStep = "special";
 let planGateIndex = 0;
 let planEditable = false;
 let siteDialogResolver = null;
-let deferredInstallPrompt = null;
+
+function cleanupLegacyPwa() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations?.()
+      .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+      .catch(() => {});
+  }
+  if ("caches" in window) {
+    caches.keys()
+      .then((keys) => keys.filter((key) => key.startsWith("wanwan-picker-")))
+      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+      .catch(() => {});
+  }
+}
 
 function createDefaultState() {
   return {
@@ -1235,40 +1247,6 @@ function delay(milliseconds) {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }
 
-function isAppInstalled() {
-  return (
-    window.matchMedia?.("(display-mode: standalone)")?.matches ||
-    window.navigator.standalone === true
-  );
-}
-
-function renderInstallButton() {
-  if (!elements.installAppButton) return;
-  elements.installAppButton.hidden = !deferredInstallPrompt || isAppInstalled();
-}
-
-function registerPwa() {
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/sw.js").catch((error) => {
-        console.error("service worker registration failed", error);
-      });
-    });
-  }
-
-  window.addEventListener("beforeinstallprompt", (event) => {
-    event.preventDefault();
-    deferredInstallPrompt = event;
-    renderInstallButton();
-  });
-
-  window.addEventListener("appinstalled", () => {
-    deferredInstallPrompt = null;
-    renderInstallButton();
-    showToast("已安装到本地");
-  });
-}
-
 async function pickRandomOption() {
   const pool = availableOptions();
   if (isPicking || !pool.length) {
@@ -1605,17 +1583,6 @@ elements.brandText.addEventListener("click", (event) => {
   handleHiddenEntryTap("text");
 });
 
-elements.installAppButton?.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) {
-    showToast("如果没有弹出安装按钮，可以用浏览器菜单里的“添加到主屏幕”");
-    return;
-  }
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice.catch(() => null);
-  deferredInstallPrompt = null;
-  renderInstallButton();
-});
-
 elements.backToIntroButton.addEventListener("click", () => {
   openStep("intro");
 });
@@ -1806,7 +1773,7 @@ elements.openLetterPromptButton.addEventListener("click", () => {
 });
 
 async function initApp() {
-  registerPwa();
+  cleanupLegacyPwa();
   const cloudData = await loadCloudState();
   await migrateLocalStorageToCloud(cloudData);
   resetVolatileFlow();
