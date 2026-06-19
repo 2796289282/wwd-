@@ -1016,10 +1016,9 @@ function renderPlayer() {
 }
 
 function renderSpecialAccess() {
-  const canEnterSpecial = specialBoundaryConfirmed || specialUnlocked;
-  elements.specialBoundaryPanel.hidden = canEnterSpecial;
+  elements.specialBoundaryPanel.hidden = true;
   elements.specialLockPanel.hidden = true;
-  elements.specialContent.hidden = !canEnterSpecial;
+  elements.specialContent.hidden = false;
   elements.specialPasswordHint.hidden = true;
   elements.specialPasswordInput.value = "";
 }
@@ -1633,12 +1632,12 @@ elements.backToIntroButton.addEventListener("click", () => {
 });
 
 elements.openSpecialStepButton.addEventListener("click", () => {
-  specialBoundaryConfirmed = false;
-  specialUnlocked = false;
+  specialBoundaryConfirmed = true;
+  specialUnlocked = true;
   openStep("special");
 });
 
-elements.openPlanButton.addEventListener("click", openPlanGate);
+elements.openPlanButton.addEventListener("click", unlockPlanStep);
 elements.openFlightButton.addEventListener("click", () => {
   window.location.href = FLIGHT_REDIRECT_URL;
 });
@@ -1653,13 +1652,6 @@ elements.planGateModal.addEventListener("click", (event) => {
 
 elements.planGateButtons.forEach((button) => {
   button.addEventListener("click", () => handlePlanGateClick(button.dataset.planWord, button));
-});
-
-elements.confirmBoundaryButton.addEventListener("click", () => {
-  specialBoundaryConfirmed = true;
-  specialUnlocked = true;
-  renderSpecialAccess();
-  showToast("独立专区已打开");
 });
 
 elements.backToModeFromSpecialButton.addEventListener("click", () => {
