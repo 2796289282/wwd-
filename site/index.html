@@ -425,16 +425,28 @@
 
             <article class="secret-letter plan-letter" aria-label="神秘计划书">
               <div class="letter-stamp">PLAN</div>
-              <h3 class="plan-document-title">婉婉挨揍计划</h3>
-              <label class="sr-only" for="plan-input">计划书内容</label>
-              <textarea
-                id="plan-input"
-                class="letter-input plan-input"
-                rows="10"
-                maxlength="12000"
-                placeholder="把计划书写在这里"
-                readonly
-              ></textarea>
+              <button
+                id="plan-document-entry-button"
+                class="plan-document-entry-button"
+                type="button"
+                aria-expanded="false"
+              >
+                <span>打开计划书</span>
+                <strong>婉婉挨揍计划书</strong>
+                <small>点击查看完整 Word 文档版</small>
+              </button>
+              <div id="plan-document-view" class="plan-document-view" aria-label="计划书文档展示" hidden></div>
+              <div id="plan-editor-panel" class="plan-editor-panel" hidden>
+                <label class="sr-only" for="plan-input">计划书内容</label>
+                <textarea
+                  id="plan-input"
+                  class="letter-input plan-input"
+                  rows="10"
+                  maxlength="12000"
+                  placeholder="把计划书写在这里"
+                  readonly
+                ></textarea>
+              </div>
               <div class="plan-notes-block">
                 <div class="plan-notes-head">
                   <span class="plan-notes-label">婉婉挨揍凭证</span>
@@ -500,6 +512,7 @@
         </div>
       </form>
     </div>
+    <script src="plan-document.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

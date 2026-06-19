@@ -429,6 +429,9 @@ const elements = {
   planGateButtons: [...document.querySelectorAll("[data-plan-word]")],
   planGateUnlocked: document.querySelector("#plan-gate-unlocked"),
   enterPlanButton: document.querySelector("#enter-plan-button"),
+  planDocumentEntryButton: document.querySelector("#plan-document-entry-button"),
+  planDocumentView: document.querySelector("#plan-document-view"),
+  planEditorPanel: document.querySelector("#plan-editor-panel"),
   planInput: document.querySelector("#plan-input"),
   planNoteForm: document.querySelector("#plan-note-form"),
   planNoteInput: document.querySelector("#plan-note-input"),
@@ -496,6 +499,7 @@ let letterHidden = false;
 let planReturnStep = "special";
 let planGateIndex = 0;
 let planEditable = false;
+let planDocumentOpen = false;
 let siteDialogResolver = null;
 
 function cleanupLegacyPwa() {
@@ -1023,6 +1027,13 @@ function renderPlan() {
   elements.planCount.textContent = `${elements.planInput.value.length} / ${PLAN_BOOK_LIMIT}`;
   elements.planInput.readOnly = !planEditable;
   elements.planInput.classList.toggle("is-editing", planEditable);
+  elements.planEditorPanel.hidden = !planEditable;
+  elements.planDocumentView.hidden = !planDocumentOpen || planEditable;
+  elements.planDocumentEntryButton.setAttribute("aria-expanded", String(planDocumentOpen));
+  elements.planDocumentEntryButton.classList.toggle("is-open", planDocumentOpen);
+  if (!elements.planDocumentView.innerHTML && window.PLAN_DOCUMENT_HTML) {
+    elements.planDocumentView.innerHTML = window.PLAN_DOCUMENT_HTML;
+  }
   elements.editPlanButton.hidden = planEditable;
   elements.savePlanButton.hidden = !planEditable;
   renderPlanNotes();
@@ -1464,6 +1475,7 @@ function unlockPlanStep() {
   planReturnStep = state.currentStep === "plan" ? "special" : state.currentStep;
   closePlanGate();
   planEditable = false;
+  planDocumentOpen = false;
   openStep("plan");
 }
 
@@ -1485,6 +1497,7 @@ async function unlockPlanEditing() {
     return;
   }
   planEditable = true;
+  planDocumentOpen = false;
   renderPlan();
   elements.planInput.focus();
 }
@@ -1524,6 +1537,7 @@ function savePlan() {
       .filter(Boolean);
   }
   planEditable = false;
+  planDocumentOpen = true;
   saveState();
   renderPlan();
   showToast("已保存");
@@ -1636,6 +1650,7 @@ elements.backFromLetterButton.addEventListener("click", () => {
 
 elements.backFromPlanButton.addEventListener("click", () => {
   planEditable = false;
+  planDocumentOpen = false;
   renderPlan();
   openStep(planReturnStep);
 });
@@ -1646,6 +1661,15 @@ elements.letterInput.addEventListener("input", () => {
 
 elements.planInput.addEventListener("input", () => {
   elements.planCount.textContent = `${elements.planInput.value.length} / ${PLAN_BOOK_LIMIT}`;
+});
+
+elements.planDocumentEntryButton.addEventListener("click", () => {
+  planDocumentOpen = !planDocumentOpen;
+  planEditable = false;
+  renderPlan();
+  if (planDocumentOpen) {
+    elements.planDocumentView.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 });
 
 elements.editPlanButton.addEventListener("click", unlockPlanEditing);
