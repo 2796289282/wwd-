@@ -631,7 +631,7 @@ button {
 }
 
 .special-buttons {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .classic-buttons {
@@ -1916,9 +1916,12 @@ footer,
     font-size: 22px;
   }
 
-  .special-buttons,
   .classic-buttons {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .special-buttons {
+    grid-template-columns: 1fr;
   }
 
   .mode-button {
@@ -3243,7 +3246,7 @@ body {
   }
 
   .special-buttons {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .mode-button {

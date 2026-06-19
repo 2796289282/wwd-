@@ -501,6 +501,16 @@ let planGateIndex = 0;
 let planEditable = false;
 let planDocumentOpen = false;
 let siteDialogResolver = null;
+let browserHistoryReady = false;
+
+const stepTargets = {
+  intro: () => elements.introSection,
+  mode: () => elements.modeStep,
+  special: () => elements.specialStep,
+  play: () => elements.playStep,
+  letter: () => elements.letterStep,
+  plan: () => elements.planStep,
+};
 
 function cleanupLegacyPwa() {
   if ("serviceWorker" in navigator) {
@@ -1117,24 +1127,44 @@ function renderDeckPanel() {
   elements.pickerCard.classList.toggle("deck-collapsed", !deckOpen);
 }
 
-function openStep(step) {
+function syncBrowserHistory(step, { replace = false } = {}) {
+  if (!browserHistoryReady) return;
+  const payload = { wanwanStep: step };
+  const title = document.title;
+  if (replace) {
+    window.history.replaceState(payload, title);
+    return;
+  }
+  if (window.history.state?.wanwanStep === step) return;
+  window.history.pushState(payload, title);
+}
+
+function scrollToStep(step) {
+  const target = stepTargets[step]?.();
+  if (target && !target.hidden) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function openStep(step, { pushHistory = true, replaceHistory = false } = {}) {
   state.currentStep = step;
   renderFlow();
-  if (step === "mode") {
-    elements.modeStep.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (pushHistory) {
+    syncBrowserHistory(step, { replace: replaceHistory });
   }
-  if (step === "special") {
-    elements.specialStep.scrollIntoView({ behavior: "smooth", block: "start" });
+  scrollToStep(step);
+}
+
+function replaceStep(step) {
+  openStep(step, { replaceHistory: true });
+}
+
+function backToStep(fallbackStep) {
+  if (browserHistoryReady && window.history.state?.wanwanStep && window.history.length > 1) {
+    window.history.back();
+    return;
   }
-  if (step === "play") {
-    elements.playStep.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-  if (step === "letter") {
-    elements.letterStep.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-  if (step === "plan") {
-    elements.planStep.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  replaceStep(fallbackStep);
 }
 
 function resetHiddenEntrySequence() {
@@ -1599,7 +1629,7 @@ elements.brandText.addEventListener("click", (event) => {
 });
 
 elements.backToIntroButton.addEventListener("click", () => {
-  openStep("intro");
+  backToStep("intro");
 });
 
 elements.openSpecialStepButton.addEventListener("click", () => {
@@ -1633,26 +1663,26 @@ elements.confirmBoundaryButton.addEventListener("click", () => {
 });
 
 elements.backToModeFromSpecialButton.addEventListener("click", () => {
-  openStep("mode");
+  backToStep("mode");
 });
 
 elements.backToModeButton.addEventListener("click", () => {
-  openStep("mode");
+  backToStep("mode");
 });
 
 elements.resultBackModeButton.addEventListener("click", () => {
-  openStep("mode");
+  backToStep("mode");
 });
 
 elements.backFromLetterButton.addEventListener("click", () => {
-  openStep(letterReturnStep);
+  backToStep(letterReturnStep);
 });
 
 elements.backFromPlanButton.addEventListener("click", () => {
   planEditable = false;
   planDocumentOpen = false;
   renderPlan();
-  openStep(planReturnStep);
+  backToStep(planReturnStep);
 });
 
 elements.letterInput.addEventListener("input", () => {
@@ -1797,6 +1827,14 @@ elements.openLetterPromptButton.addEventListener("click", () => {
   unlockLetterStep();
 });
 
+window.addEventListener("popstate", (event) => {
+  const step = event.state?.wanwanStep;
+  if (!step || !stepTargets[step]) return;
+  planEditable = false;
+  planDocumentOpen = false;
+  openStep(step, { pushHistory: false });
+});
+
 async function initApp() {
   cleanupLegacyPwa();
   const cloudData = await loadCloudState();
@@ -1804,6 +1842,8 @@ async function initApp() {
   resetVolatileFlow();
   saveState();
   renderFromState();
+  browserHistoryReady = true;
+  syncBrowserHistory(state.currentStep, { replace: true });
 }
 
 void initApp();
