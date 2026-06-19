@@ -312,20 +312,6 @@ const shameDareQuestions = [
 ];
 
 const funnyCaptions = {
-  mixed: [
-    "婉婉不许耍赖，李家鑫也不许偷偷加码",
-    "先确认边界，再开始今晚的小圈仪式",
-    "安全词永远最大，谁喊停谁就是规则",
-    "乖一点，也要清醒一点",
-    "抽到这张，先问一句：还舒服吗？",
-  ],
-  shame: [
-    "婉婉不许装淡定",
-    "李家鑫别笑，轮到你也一样",
-    "脸红不算输，嘴硬才算",
-    "这张卡很轻，但很会让人害羞",
-    "读出来，别只在心里承认",
-  ],
   truth: [
     "说真话，婉婉会听得很认真",
     "不许用“还好吧”糊弄过去",
@@ -349,27 +335,25 @@ const funnyCaptions = {
   ],
 };
 
+const mergedTruthQuestions = mergeUniqueCards(truthQuestions, [
+  ...circleTruthQuestions,
+  ...shameTruthQuestions,
+]);
+const mergedDareQuestions = mergeUniqueCards(dareQuestions, [
+  ...circleDareQuestions,
+  ...shameDareQuestions,
+]);
+
 const decks = {
-  mixed: {
-    title: "小圈专属题库",
-    description:
-      "仅限成年人双方自愿。先确认边界与安全词，任何一方都可随时拒绝或停止。",
-    options: [...circleTruthQuestions, ...circleDareQuestions],
-  },
-  shame: {
-    title: "羞耻版题库",
-    description: "害羞、嘴硬、限定称呼和轻微社死。所有内容都可以跳过。",
-    options: [...shameTruthQuestions, ...shameDareQuestions],
-  },
   truth: {
     title: "真心话题库",
-    description: "30 道真心话，没有标准答案，但要认真回答。",
-    options: [...truthQuestions],
+    description: "真心话已融合原本的专属题库，没有标准答案，但要认真回答。",
+    options: [...mergedTruthQuestions],
   },
   dare: {
     title: "大冒险题库",
-    description: "30 道轻松大冒险，做不到可以直接跳过。",
-    options: [...dareQuestions],
+    description: "大冒险已融合原本的专属题库，做不到可以直接跳过。",
+    options: [...mergedDareQuestions],
   },
   custom: {
     title: "自定义题库",
@@ -385,14 +369,12 @@ const flightCellPattern = {
   dare: ["dare", "bonus", "dare", "penalty", "dare", "rest", "dare", "bonus"],
   truth: ["truth", "bonus", "truth", "penalty", "truth", "rest", "truth", "bonus"],
   mixed: ["truth", "dare", "bonus", "truth", "penalty", "dare", "rest", "truth"],
-  circle: ["circle", "truth", "bonus", "circle", "penalty", "dare", "rest", "circle"],
 };
 
 const flightCellCopy = {
   start: { short: "起", label: "起点" },
   truth: { short: "真", label: "真心话" },
   dare: { short: "冒", label: "大冒险" },
-  circle: { short: "圈", label: "小圈" },
   bonus: { short: "+2", label: "前进" },
   penalty: { short: "-2", label: "后退" },
   rest: { short: "歇", label: "确认" },
@@ -404,35 +386,25 @@ const flightModeConfigs = {
     title: "大冒险飞行棋",
     description: "行动任务为主。落地就执行，做不到可以撒娇跳过一次。",
     taskPools: {
-      dare: dareQuestions,
-      default: dareQuestions,
+      dare: mergedDareQuestions,
+      default: mergedDareQuestions,
     },
   },
   truth: {
     title: "真心话飞行棋",
     description: "回答问题为主。答案可以短，但不许用“还好吧”糊弄。",
     taskPools: {
-      truth: truthQuestions,
-      default: truthQuestions,
+      truth: mergedTruthQuestions,
+      default: mergedTruthQuestions,
     },
   },
   mixed: {
     title: "真心话 & 大冒险飞行棋",
     description: "推荐默认模式。真心话和大冒险混合出现，谁先到终点谁赢。",
     taskPools: {
-      truth: truthQuestions,
-      dare: dareQuestions,
-      default: [...truthQuestions, ...dareQuestions],
-    },
-  },
-  circle: {
-    title: "小圈专属飞行棋",
-    description: "参考小圈专属题库。先确认边界和安全词，任何一方都可以随时停止。",
-    taskPools: {
-      truth: circleTruthQuestions,
-      dare: circleDareQuestions,
-      circle: [...circleTruthQuestions, ...circleDareQuestions],
-      default: [...circleTruthQuestions, ...circleDareQuestions],
+      truth: mergedTruthQuestions,
+      dare: mergedDareQuestions,
+      default: [...mergedTruthQuestions, ...mergedDareQuestions],
     },
   },
 };
@@ -644,7 +616,7 @@ function normalizeFlightState(value) {
 
 function createDefaultState() {
   return {
-    mode: "mixed",
+    mode: "truth",
     player: "婉婉",
     drawType: "all",
     currentStep: "intro",
@@ -653,8 +625,6 @@ function createDefaultState() {
     planBook: "",
     planNotes: [],
     customDecks: {
-      mixed: [...decks.mixed.options],
-      shame: [...decks.shame.options],
       truth: [...decks.truth.options],
       dare: [...decks.dare.options],
       custom: [],
@@ -709,7 +679,7 @@ function saveState() {
 }
 
 function resetVolatileFlow() {
-  state.mode = "mixed";
+  state.mode = "truth";
   state.player = "婉婉";
   state.drawType = "all";
   state.currentStep = "intro";
@@ -727,12 +697,24 @@ function resetVolatileFlow() {
 function normalizeDeckMap(value) {
   const fallback = createDefaultState().customDecks;
   const incoming = value && typeof value === "object" ? value : {};
-  return Object.fromEntries(
-    Object.keys(fallback).map((mode) => [
-      mode,
-      Array.isArray(incoming[mode]) ? [...incoming[mode]] : [...fallback[mode]],
+  const legacySpecialCards = [
+    ...(Array.isArray(incoming.mixed) ? incoming.mixed : []),
+    ...(Array.isArray(incoming.shame) ? incoming.shame : []),
+  ];
+  const legacyTruthCards = legacySpecialCards.filter((card) => optionType(card) === "truth");
+  const legacyDareCards = legacySpecialCards.filter((card) => optionType(card) === "dare");
+
+  return {
+    truth: mergeUniqueCards(fallback.truth, [
+      ...(Array.isArray(incoming.truth) ? incoming.truth : []),
+      ...legacyTruthCards,
     ]),
-  );
+    dare: mergeUniqueCards(fallback.dare, [
+      ...(Array.isArray(incoming.dare) ? incoming.dare : []),
+      ...legacyDareCards,
+    ]),
+    custom: Array.isArray(incoming.custom) ? [...incoming.custom] : [...fallback.custom],
+  };
 }
 
 function normalizePlanNotes(value) {
@@ -1226,13 +1208,12 @@ function randomFlightTask(type) {
 }
 
 function nextFlightTaskType(cellType) {
-  if (cellType === "truth" || cellType === "dare" || cellType === "circle") {
+  if (cellType === "truth" || cellType === "dare") {
     return cellType;
   }
   const mode = state.flight.mode;
   if (mode === "truth") return "truth";
   if (mode === "dare") return "dare";
-  if (mode === "circle") return "circle";
   return secureRandomIndex(2) === 0 ? "truth" : "dare";
 }
 
