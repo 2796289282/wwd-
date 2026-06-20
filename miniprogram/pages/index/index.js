@@ -86,6 +86,7 @@ function formatTime(value) {
 Page({
   data: {
     view: "gate",
+    scrollTop: 0,
     syncStatus: "正在同步...",
     toastText: "",
     entrancePassword: "",
@@ -120,6 +121,17 @@ Page({
     this.loadCloudState();
   },
 
+  switchView(view, extra = {}) {
+    this.setData({
+      ...extra,
+      view,
+      scrollTop: this.data.scrollTop === 0 ? 1 : 0
+    });
+    wx.nextTick(() => {
+      this.setData({ scrollTop: 0 });
+    });
+  },
+
   onEntranceInput(event) {
     this.setData({ entrancePassword: event.detail.value, entranceError: false });
   },
@@ -129,20 +141,20 @@ Page({
       this.setData({ entranceError: true });
       return;
     }
-    this.setData({ view: "intro", entrancePassword: "", entranceError: false });
+    this.switchView("intro", { entrancePassword: "", entranceError: false });
   },
 
   goIntro() {
-    this.setData({ view: "intro", planEditing: false, showBank: false });
+    this.switchView("intro", { planEditing: false, showBank: false });
   },
 
   goMode() {
-    this.setData({ view: "mode", planEditing: false, showBank: false });
+    this.switchView("mode", { planEditing: false, showBank: false });
     this.updateDeckTitle();
   },
 
   goSpecial() {
-    this.setData({ view: "special", planEditing: false, planDocumentOpen: false });
+    this.switchView("special", { planEditing: false, planDocumentOpen: false });
   },
 
   goHome() {
@@ -150,29 +162,29 @@ Page({
   },
 
   goDraw() {
-    this.setData({ view: "play" });
+    this.switchView("play");
     this.updateAvailableCount();
   },
 
   goPlan() {
-    this.setData({ view: "plan", planEditing: false, planDocumentOpen: true });
+    this.switchView("plan", { planEditing: false, planDocumentOpen: true });
   },
 
   openLetter() {
-    this.setData({ view: "letter", letterReturnView: this.data.view, letterHidden: false });
+    this.switchView("letter", { letterReturnView: this.data.view, letterHidden: false });
   },
 
   openLetterFromPlay() {
-    this.setData({ view: "letter", letterReturnView: "play", letterHidden: false });
+    this.switchView("letter", { letterReturnView: "play", letterHidden: false });
   },
 
   backFromLetter() {
-    this.setData({ view: this.data.letterReturnView || "intro", letterHidden: false });
+    this.switchView(this.data.letterReturnView || "intro", { letterHidden: false });
   },
 
   chooseModeAndPlay(event) {
     const mode = event.currentTarget.dataset.mode || "both";
-    this.setData({ mode, view: "play" });
+    this.switchView("play", { mode });
     this.updateDeckTitle();
     this.updateAvailableCount();
   },

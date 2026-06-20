@@ -3,18 +3,21 @@
   <view class="floating-star star-one">✦</view>
   <view class="floating-star star-two">✦</view>
 
-  <view wx:if="{{view === 'gate'}}" class="entrance-screen">
-    <view class="entrance-card">
-      <view class="step-label">PRIVATE ENTRANCE</view>
-      <view class="entrance-title">婉婉的抽签机</view>
-      <view class="entrance-copy">请输入专属密码，进入游戏吧</view>
-      <input class="entrance-input" password placeholder="输入我们的暗号" value="{{entrancePassword}}" bindinput="onEntranceInput" />
-      <button class="start-game-button" bindtap="checkEntrance">进入今晚</button>
-      <view wx:if="{{entranceError}}" class="entrance-error">暗号不对，再试一次。</view>
+  <scroll-view wx:if="{{view === 'gate'}}" class="page-scroll" scroll-y enhanced="{{true}}" enable-flex="{{true}}" show-scrollbar="{{false}}" scroll-top="{{scrollTop}}" scroll-with-animation="{{true}}">
+    <view class="entrance-screen screen-animate">
+      <view class="entrance-card card-animate">
+        <view class="step-label">PRIVATE ENTRANCE</view>
+        <view class="entrance-title">婉婉的抽签机</view>
+        <view class="entrance-copy">请输入专属密码，进入游戏吧</view>
+        <input class="entrance-input" password placeholder="输入我们的暗号" value="{{entrancePassword}}" bindinput="onEntranceInput" />
+        <button class="start-game-button" bindtap="checkEntrance">进入今晚</button>
+        <view wx:if="{{entranceError}}" class="entrance-error">暗号不对，再试一次。</view>
+      </view>
     </view>
-  </view>
+  </scroll-view>
 
-  <view wx:else class="app-content">
+  <scroll-view wx:else class="page-scroll" scroll-y enhanced="{{true}}" enable-flex="{{true}}" show-scrollbar="{{false}}" scroll-top="{{scrollTop}}" scroll-with-animation="{{true}}">
+    <view class="app-content">
     <view class="site-header">
       <view class="brand" bindtap="goIntro">
         <view class="brand-mark">裴</view>
@@ -23,7 +26,7 @@
       <view class="header-note">{{syncStatus}} · 今晚的答案，不许说“随便”。</view>
     </view>
 
-    <view wx:if="{{view === 'intro'}}" class="intro screen">
+    <view wx:if="{{view === 'intro'}}" class="intro screen screen-animate">
       <view class="eyebrow"><text></text> JUST FOR WANWAN</view>
       <view class="intro-title">小裴同学，<text>敢不敢抽一张？</text></view>
       <view class="intro-copy">真心话要认真回答，大冒险要说到做到。赖皮的婉婉要被记一笔哦。</view>
@@ -40,7 +43,7 @@
       <view class="footer-copy">MADE FOR WANWAN, WITH A LITTLE COURAGE</view>
     </view>
 
-    <view wx:elif="{{view === 'mode'}}" class="screen flow-panel">
+    <view wx:elif="{{view === 'mode'}}" class="screen flow-panel screen-animate">
       <view class="panel-topline">
         <button class="ghost-back-button" bindtap="goIntro">返回上一级</button>
         <view class="flow-badge">STEP 02</view>
@@ -87,7 +90,7 @@
       </view>
     </view>
 
-    <view wx:elif="{{view === 'special'}}" class="screen flow-panel">
+    <view wx:elif="{{view === 'special'}}" class="screen flow-panel screen-animate">
       <view class="panel-topline">
         <button class="ghost-back-button" bindtap="goMode">返回上一级</button>
         <view class="flow-badge">STEP 02.5</view>
@@ -109,7 +112,7 @@
       </view>
     </view>
 
-    <view wx:elif="{{view === 'play'}}" class="screen flow-panel play-step">
+    <view wx:elif="{{view === 'play'}}" class="screen flow-panel play-step screen-animate">
       <view class="panel-topline">
         <button class="ghost-back-button" bindtap="goMode">返回上一级</button>
         <view class="flow-badge">STEP 03</view>
@@ -230,7 +233,7 @@
       </view>
     </view>
 
-    <view wx:elif="{{view === 'letter'}}" class="screen flow-panel letter-step">
+    <view wx:elif="{{view === 'letter'}}" class="screen flow-panel letter-step screen-animate">
       <view class="panel-topline">
         <button class="ghost-back-button" bindtap="backFromLetter">返回上一层</button>
         <view class="flow-badge">LETTER</view>
@@ -253,7 +256,7 @@
       </view>
     </view>
 
-    <view wx:elif="{{view === 'plan'}}" class="screen flow-panel plan-step">
+    <view wx:elif="{{view === 'plan'}}" class="screen flow-panel plan-step screen-animate">
       <view class="panel-topline">
         <button class="ghost-back-button" bindtap="goSpecial">返回上一层</button>
         <view class="flow-badge">PLAN</view>
@@ -299,7 +302,8 @@
         </view>
       </view>
     </view>
-  </view>
+    </view>
+  </scroll-view>
 
   <view wx:if="{{toastText}}" class="toast">{{toastText}}</view>
   <view wx:if="{{passwordModal}}" class="modal-mask">

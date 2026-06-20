@@ -34,7 +34,10 @@ button::after {
 
 .noise {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   opacity: 0.12;
   pointer-events: none;
   background-image: radial-gradient(rgba(255,255,255,.28) 1rpx, transparent 1rpx);
@@ -387,13 +390,14 @@ button::after {
 }
 
 .mode-buttons {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 16rpx;
   margin-top: 20rpx;
 }
 
 .classic-buttons {
-  grid-template-columns: repeat(3, 1fr);
+  flex-direction: row;
 }
 
 .mode-button {
@@ -463,7 +467,7 @@ button::after {
 .picker-card {
   margin-top: 18rpx;
   border-radius: 38rpx;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .options-panel,
@@ -844,7 +848,10 @@ button::after {
 
 .modal-mask {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 40;
   display: flex;
   align-items: center;
@@ -870,4 +877,441 @@ button::after {
   margin-top: 12rpx;
   color: #b9aecb;
   font-size: 26rpx;
+}
+
+/* Mobile adaptation hardening for WeChat Mini Program real devices. */
+page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+view,
+text,
+input,
+textarea,
+button,
+scroll-view {
+  box-sizing: border-box;
+}
+
+.page {
+  height: 100vh;
+  min-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.page-scroll {
+  position: relative;
+  z-index: 1;
+  height: 100vh;
+  width: 100%;
+}
+
+.app-content,
+.entrance-screen {
+  min-height: 100vh;
+  padding: 28rpx 28rpx calc(42rpx + constant(safe-area-inset-bottom));
+  padding: 28rpx 28rpx calc(42rpx + env(safe-area-inset-bottom));
+}
+
+.entrance-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entrance-card {
+  max-width: 686rpx;
+  padding: 46rpx 34rpx;
+}
+
+.entrance-title {
+  font-size: 52rpx;
+  line-height: 1.18;
+  word-break: break-word;
+}
+
+.screen {
+  width: 100%;
+  min-width: 0;
+}
+
+.screen-animate {
+  animation: pageFadeUp 220ms ease-out both;
+}
+
+.card-animate,
+.modal-mask .site-dialog-card {
+  animation: softPop 180ms ease-out both;
+}
+
+button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80rpx;
+  min-width: 0;
+  line-height: 1.22;
+  transition: transform 120ms ease, opacity 120ms ease, background-color 160ms ease;
+}
+
+button:active,
+.mode-button:active,
+.special-entry-button:active,
+.plan-document-entry-button:active {
+  transform: scale(0.975);
+  opacity: 0.9;
+}
+
+input,
+textarea {
+  max-width: 100%;
+}
+
+.entrance-input,
+.site-dialog-input,
+.option-input,
+.letter-input,
+.plan-note-input {
+  min-width: 0;
+}
+
+.noise,
+.floating-star {
+  pointer-events: none;
+}
+
+.floating-star {
+  max-width: 80rpx;
+  overflow: hidden;
+}
+
+.star-one {
+  top: 110rpx;
+  right: 34rpx;
+}
+
+.star-two {
+  left: 32rpx;
+  bottom: calc(96rpx + constant(safe-area-inset-bottom));
+  bottom: calc(96rpx + env(safe-area-inset-bottom));
+}
+
+.site-header {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14rpx;
+  padding-top: 2rpx;
+}
+
+.brand {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.brand-text {
+  max-width: 360rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-note {
+  min-width: 260rpx;
+  word-break: break-word;
+}
+
+.intro-title {
+  font-size: 58rpx;
+  word-break: break-word;
+}
+
+.flow-panel {
+  width: 100%;
+  padding: 22rpx;
+  overflow: visible;
+}
+
+.panel-topline,
+.panel-heading,
+.result-toolbar,
+.history-heading {
+  align-items: flex-start;
+}
+
+.ghost-back-button {
+  flex-shrink: 0;
+  max-width: 260rpx;
+}
+
+.flow-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.flow-title,
+.section-title,
+.zone-title,
+.deck-title,
+.result-title,
+.landing-main {
+  word-break: break-word;
+}
+
+.mode-zone,
+.turn-selector,
+.draw-selector,
+.little-note,
+.history-section,
+.secret-letter {
+  overflow: visible;
+}
+
+.classic-buttons {
+  display: flex;
+  flex-direction: row;
+}
+
+.mode-button {
+  height: auto;
+  min-width: 0;
+  min-height: 166rpx;
+  padding: 18rpx 10rpx;
+  overflow: visible;
+}
+
+.classic-buttons .mode-button {
+  flex: 1;
+}
+
+.special-buttons {
+  display: flex;
+  flex-direction: column;
+}
+
+.special-buttons .mode-button {
+  width: 100%;
+}
+
+.template-buttons button {
+  min-height: 66rpx;
+  padding: 8rpx 18rpx;
+  line-height: 1.2;
+}
+
+.mode-name,
+.mode-desc,
+.entry-strong,
+.entry-small {
+  display: block;
+  max-width: 100%;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.player-switch,
+.draw-switch,
+.draw-actions,
+.letter-actions,
+.site-dialog-actions,
+.plan-note-form,
+.letter-prompt {
+  flex-wrap: wrap;
+}
+
+.player-switch button,
+.draw-switch button {
+  display: flex;
+  min-width: 0;
+  min-height: 72rpx;
+  padding: 10rpx 8rpx;
+  line-height: 1.22;
+  white-space: normal;
+}
+
+.picker-card {
+  overflow: visible;
+}
+
+.options-panel {
+  border-radius: 36rpx 36rpx 0 0;
+}
+
+.result-panel {
+  border-radius: 34rpx;
+}
+
+.result-toolbar {
+  flex-wrap: wrap;
+}
+
+.deck-preview {
+  min-width: 0;
+  flex: 1;
+}
+
+.result-toolbar .secondary-button {
+  flex-shrink: 0;
+  width: auto;
+  min-width: 180rpx;
+}
+
+.result-stage {
+  min-height: 360rpx;
+  margin: 18rpx 0 20rpx;
+  overflow: visible;
+}
+
+.orbit {
+  width: 82%;
+  max-width: 430rpx;
+  height: 230rpx;
+}
+
+.result-ticket {
+  width: 94%;
+  min-height: 270rpx;
+  padding: 28rpx 22rpx;
+  transform: rotate(-1deg);
+}
+
+.ticket-recipient,
+.result-type-tag {
+  max-width: 100%;
+  margin: 0 4rpx 8rpx;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.result-type-tag {
+  margin-left: 4rpx;
+}
+
+.result-kicker {
+  margin-top: 22rpx;
+}
+
+.result-text {
+  font-size: 38rpx;
+  line-height: 1.34;
+  word-break: break-word;
+}
+
+.pick-button {
+  min-height: 94rpx;
+}
+
+.button-label {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+  word-break: break-word;
+}
+
+.button-icon {
+  flex-shrink: 0;
+}
+
+.draw-actions .secondary-button,
+.letter-actions .secondary-button,
+.letter-actions .special-password-button,
+.site-dialog-actions .secondary-button,
+.site-dialog-actions .special-password-button {
+  min-width: 220rpx;
+}
+
+.letter-prompt text {
+  flex: 1;
+  min-width: 260rpx;
+}
+
+.letter-prompt .secondary-button {
+  flex: 1;
+  min-width: 220rpx;
+}
+
+.letter-input {
+  min-height: 430rpx;
+  max-height: 68vh;
+}
+
+.plan-input {
+  min-height: 480rpx;
+  max-height: 70vh;
+}
+
+.letter-actions .letter-count,
+.plan-actions .letter-count {
+  flex: 1 0 100%;
+  min-height: 42rpx;
+  line-height: 42rpx;
+}
+
+.plan-document-view {
+  max-width: 100%;
+  overflow: visible;
+}
+
+.plan-document-text,
+.history-main,
+.plan-note-text,
+.quote {
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.plan-note-form .secondary-button {
+  flex-shrink: 0;
+  width: 150rpx;
+}
+
+.toast {
+  bottom: calc(42rpx + constant(safe-area-inset-bottom));
+  bottom: calc(42rpx + env(safe-area-inset-bottom));
+  max-width: calc(100vw - 64rpx);
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
+}
+
+.modal-mask {
+  padding: 32rpx 32rpx calc(32rpx + constant(safe-area-inset-bottom));
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+  overflow: auto;
+}
+
+.site-dialog-card {
+  width: 100%;
+  max-width: 686rpx;
+  max-height: 76vh;
+  max-height: calc(100vh - 168rpx - constant(safe-area-inset-bottom));
+  max-height: calc(100vh - 168rpx - env(safe-area-inset-bottom));
+  overflow: auto;
+}
+
+.site-dialog-actions button {
+  margin-top: 0;
+}
+
+@keyframes pageFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(18rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes softPop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
