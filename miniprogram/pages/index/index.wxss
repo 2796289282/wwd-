@@ -218,22 +218,29 @@ button::after {
 
 .intro-letter-button {
   position: absolute;
-  top: 196rpx;
-  right: 10rpx;
+  top: 204rpx;
+  right: 12rpx;
   z-index: 2;
-  width: auto;
-  min-width: 0;
-  height: 54rpx;
-  min-height: 54rpx;
-  padding: 0 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92rpx;
+  height: 42rpx;
+  min-height: 42rpx;
+  padding: 0;
   border: 1rpx solid rgba(255, 143, 199, 0.28);
   border-radius: 999rpx;
   background: rgba(255, 143, 199, 0.14);
   color: #ffd6ea;
-  font-size: 23rpx;
+  font-size: 20rpx;
   font-weight: 900;
-  line-height: 54rpx;
-  box-shadow: 0 0 24rpx rgba(255, 143, 199, 0.16);
+  line-height: 1;
+  box-shadow: 0 0 18rpx rgba(255, 143, 199, 0.14);
+}
+
+.intro-letter-button-press {
+  transform: scale(0.96);
+  opacity: 0.9;
 }
 
 .intro {
@@ -1511,13 +1518,14 @@ textarea {
 
 @media (max-width: 360px) {
   .intro-letter-button {
-    top: 184rpx;
+    top: 192rpx;
     right: 4rpx;
-    height: 50rpx;
-    min-height: 50rpx;
-    padding: 0 16rpx;
-    font-size: 22rpx;
-    line-height: 50rpx;
+    width: 88rpx;
+    height: 40rpx;
+    min-height: 40rpx;
+    padding: 0;
+    font-size: 19rpx;
+    line-height: 1;
   }
 
   .intro-title .hero-title-main {

@@ -32,7 +32,7 @@
         <text class="hero-title-main">小裴同学，</text>
         <text class="hero-title-accent">敢不敢抽一张？</text>
       </view>
-      <button class="intro-letter-button" bindtap="openLetter">小纸条</button>
+      <view class="intro-letter-button" hover-class="intro-letter-button-press" hover-stay-time="80" bindtap="openLetter">小纸条</view>
       <view class="hero-underline"></view>
       <view class="intro-copy">真心话要认真回答，大冒险要说到做到。赖皮的婉婉要被记一笔哦。</view>
       <view class="doodle-arrow">
