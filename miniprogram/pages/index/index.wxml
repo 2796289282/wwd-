@@ -24,7 +24,6 @@
         <view class="brand-text">婉婉的抽签机</view>
       </view>
       <view class="header-note">{{syncStatus}} · 今晚的答案，不许说“随便”。</view>
-      <button wx:if="{{view === 'intro'}}" class="header-letter-button" bindtap="openLetter">小纸条</button>
     </view>
 
     <view wx:if="{{view === 'intro'}}" class="intro screen screen-animate">
@@ -33,6 +32,7 @@
         <text class="hero-title-main">小裴同学，</text>
         <text class="hero-title-accent">敢不敢抽一张？</text>
       </view>
+      <button class="intro-letter-button" bindtap="openLetter">小纸条</button>
       <view class="hero-underline"></view>
       <view class="intro-copy">真心话要认真回答，大冒险要说到做到。赖皮的婉婉要被记一笔哦。</view>
       <view class="doodle-arrow">
