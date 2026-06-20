@@ -6,6 +6,7 @@ const DEFAULT_DATA = {
   planBook: "",
   planNotes: [],
   diaryFilter: "month",
+  diaryDate: "",
   diaryEntries: [],
   history: [],
   updatedAt: "",

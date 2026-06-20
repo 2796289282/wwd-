@@ -2396,6 +2396,42 @@ footer,
   box-shadow: 0 10px 24px rgba(255, 143, 199, 0.16);
 }
 
+.diary-date-jump {
+  margin: -6px 0 18px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-sub);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+}
+
+.diary-date-jump label {
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.diary-date-jump input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: var(--text-main);
+  color-scheme: dark;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  outline: 0;
+}
+
+.diary-date-jump button {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
 .diary-list {
   display: grid;
   gap: 12px;
@@ -2733,6 +2769,19 @@ body.modal-open {
     margin-inline: -2px;
   }
 
+  .diary-date-jump {
+    grid-template-columns: 1fr auto;
+  }
+
+  .diary-date-jump label {
+    grid-column: 1 / -1;
+  }
+
+  .diary-date-jump .text-button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
   .diary-item {
     grid-template-columns: 48px minmax(0, 1fr);
     gap: 9px;
@@ -2878,6 +2927,17 @@ body {
   .diary-filter button {
     min-height: 34px;
     padding-inline: 10px;
+  }
+
+  .diary-date-jump {
+    gap: 7px;
+    padding: 9px;
+  }
+
+  .diary-date-jump input,
+  .diary-date-jump button {
+    min-height: 38px;
+    font-size: 12px;
   }
 
   .diary-item {

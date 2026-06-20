@@ -563,6 +563,9 @@ const elements = {
   diaryEmpty: document.querySelector("#diary-empty"),
   diaryCount: document.querySelector("#diary-count"),
   diaryFilterButtons: [...document.querySelectorAll(".diary-filter button")],
+  diaryDateForm: document.querySelector("#diary-date-form"),
+  diaryDateInput: document.querySelector("#diary-date-input"),
+  diaryDateClearButton: document.querySelector("#diary-date-clear-button"),
   diaryEditorModal: document.querySelector("#diary-editor-modal"),
   diaryDetailModal: document.querySelector("#diary-detail-modal"),
   diaryForm: document.querySelector("#diary-form"),
@@ -647,6 +650,7 @@ function createDefaultState() {
     planBook: "",
     planNotes: [],
     diaryFilter: "month",
+    diaryDate: "",
     diaryEntries: [],
     customDecks: {
       truth: [...decks.truth.options],
@@ -679,6 +683,7 @@ function loadState() {
       planBook: typeof stored.planBook === "string" ? stored.planBook : "",
       planNotes: normalizePlanNotes(stored.planNotes),
       diaryFilter: typeof stored.diaryFilter === "string" ? stored.diaryFilter : fallback.diaryFilter,
+      diaryDate: typeof stored.diaryDate === "string" ? stored.diaryDate : "",
       diaryEntries: normalizeDiaryEntries(stored.diaryEntries),
       currentCard: null,
     };
@@ -696,6 +701,7 @@ function saveState() {
     planBook: state.planBook,
     planNotes: state.planNotes,
     diaryFilter: state.diaryFilter,
+    diaryDate: state.diaryDate,
     diaryEntries: state.diaryEntries,
     history: state.history,
     usedCardIds: state.usedCardIds,
@@ -796,7 +802,7 @@ function normalizeDiaryEntries(value) {
             : `diary-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         title,
         body,
-        author: ["me", "ta", "memory"].includes(item.author) ? item.author : "me",
+        author: item.author === "ta" ? "ta" : "me",
         mood: typeof item.mood === "string" ? item.mood : "",
         image: typeof item.image === "string" ? item.image : "",
         favorite: Boolean(item.favorite),
@@ -862,6 +868,7 @@ function cloudDataFromState() {
     planBook: state.planBook || "",
     planNotes: normalizePlanNotes(state.planNotes),
     diaryFilter: state.diaryFilter || "month",
+    diaryDate: state.diaryDate || "",
     diaryEntries: normalizeDiaryEntries(state.diaryEntries),
     history: state.history,
     updatedAt: now,
@@ -885,7 +892,12 @@ function applyCloudData(data) {
     planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
     diaryEntries: mergeDiaryEntries(data.diaryEntries, state.diaryEntries),
     diaryFilter:
-      typeof data.diaryFilter === "string" ? data.diaryFilter : state.diaryFilter || "month",
+      data.diaryFilter === "date"
+        ? "date"
+        : typeof data.diaryFilter === "string" && data.diaryFilter !== "memory"
+          ? data.diaryFilter
+          : state.diaryFilter || "month",
+    diaryDate: typeof data.diaryDate === "string" ? data.diaryDate : state.diaryDate || "",
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
@@ -1298,7 +1310,6 @@ function formatDiaryDate(value) {
 
 function diaryAuthorLabel(author) {
   if (author === "ta") return "婉婉写的";
-  if (author === "memory") return "共同回忆";
   return "家鑫写的";
 }
 
@@ -1313,13 +1324,14 @@ function filteredDiaryEntries() {
   return normalizeDiaryEntries(state.diaryEntries)
     .filter((entry) => {
       const date = new Date(entry.createdAt);
+      const entryDate = date.toISOString().slice(0, 10);
+      if (filter === "date") return Boolean(state.diaryDate) && entryDate === state.diaryDate;
       if (filter === "month") {
         return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
       }
       if (filter === "favorite") return entry.favorite;
       if (filter === "me") return entry.author === "me";
       if (filter === "ta") return entry.author === "ta";
-      if (filter === "memory") return entry.author === "memory";
       return true;
     })
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -1370,7 +1382,12 @@ function createDiaryItem(entry, index) {
 function renderDiary() {
   if (!elements.diaryList) return;
   state.diaryEntries = normalizeDiaryEntries(state.diaryEntries);
-  elements.diaryTitle.textContent = diaryMonthTitle();
+  elements.diaryTitle.textContent =
+    state.diaryFilter === "date" && state.diaryDate
+      ? `${Number(state.diaryDate.slice(5, 7))}月${Number(state.diaryDate.slice(8, 10))}日`
+      : diaryMonthTitle();
+  elements.diaryDateInput.value = state.diaryDate || "";
+  elements.diaryDateClearButton.hidden = state.diaryFilter !== "date";
   elements.diaryFilterButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.diaryFilter === (state.diaryFilter || "month"));
   });
@@ -2164,10 +2181,33 @@ elements.newDiaryButton.addEventListener("click", () => openDiaryEditor());
 elements.diaryFilterButtons.forEach((button) => {
   button.addEventListener("click", () => {
     state.diaryFilter = button.dataset.diaryFilter;
+    state.diaryDate = "";
     saveState();
     renderDiary();
     void saveCloudState({ silent: true });
   });
+});
+
+elements.diaryDateForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const value = elements.diaryDateInput.value;
+  if (!value) {
+    showToast("先选择一个日期");
+    return;
+  }
+  state.diaryFilter = "date";
+  state.diaryDate = value;
+  saveState();
+  renderDiary();
+  void saveCloudState({ silent: true });
+});
+
+elements.diaryDateClearButton.addEventListener("click", () => {
+  state.diaryFilter = "month";
+  state.diaryDate = "";
+  saveState();
+  renderDiary();
+  void saveCloudState({ silent: true });
 });
 
 elements.diaryList.addEventListener("click", (event) => {

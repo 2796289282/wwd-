@@ -512,9 +512,17 @@
               <button type="button" data-diary-filter="all">全部</button>
               <button type="button" data-diary-filter="me">家鑫</button>
               <button type="button" data-diary-filter="ta">婉婉</button>
-              <button type="button" data-diary-filter="memory">共同回忆</button>
               <button type="button" data-diary-filter="favorite">喜欢</button>
             </div>
+
+            <form id="diary-date-form" class="diary-date-jump" autocomplete="off">
+              <label for="diary-date-input">跳转日期</label>
+              <input id="diary-date-input" type="date" />
+              <button class="secondary-button" type="submit">查看这天</button>
+              <button id="diary-date-clear-button" class="text-button" type="button" hidden>
+                返回本月
+              </button>
+            </form>
 
             <div id="diary-list" class="diary-list" aria-live="polite"></div>
             <div id="diary-empty" class="diary-empty" hidden>
@@ -558,7 +566,6 @@
             <select id="diary-author-input">
               <option value="me">家鑫</option>
               <option value="ta">婉婉</option>
-              <option value="memory">共同回忆</option>
             </select>
           </label>
           <label>
