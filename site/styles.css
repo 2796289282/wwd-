@@ -2377,8 +2377,9 @@ footer,
 }
 
 .diary-filter button {
+  flex: 0 0 72px;
   min-height: 38px;
-  padding: 0 14px;
+  padding: 0 10px;
   white-space: nowrap;
   color: var(--text-sub);
   background: transparent;
@@ -2885,7 +2886,7 @@ body {
   }
 
   .diary-filter button {
-    min-width: auto;
+    flex-basis: 64px;
     padding-inline: 12px;
     font-size: 12px;
   }
@@ -2925,8 +2926,9 @@ body {
   }
 
   .diary-filter button {
+    flex-basis: 58px;
     min-height: 34px;
-    padding-inline: 10px;
+    padding-inline: 8px;
   }
 
   .diary-date-jump {

@@ -1387,7 +1387,8 @@ function renderDiary() {
       ? `${Number(state.diaryDate.slice(5, 7))}月${Number(state.diaryDate.slice(8, 10))}日`
       : diaryMonthTitle();
   elements.diaryDateInput.value = state.diaryDate || "";
-  elements.diaryDateClearButton.hidden = state.diaryFilter !== "date";
+  elements.diaryDateForm.hidden = state.diaryFilter !== "date";
+  elements.diaryDateClearButton.hidden = state.diaryFilter !== "date" || !state.diaryDate;
   elements.diaryFilterButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.diaryFilter === (state.diaryFilter || "month"));
   });
@@ -2180,6 +2181,12 @@ elements.newDiaryButton.addEventListener("click", () => openDiaryEditor());
 
 elements.diaryFilterButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    if (button.dataset.diaryFilter === "date") {
+      state.diaryFilter = "date";
+      renderDiary();
+      window.setTimeout(() => elements.diaryDateInput.focus(), 0);
+      return;
+    }
     state.diaryFilter = button.dataset.diaryFilter;
     state.diaryDate = "";
     saveState();
