@@ -483,9 +483,11 @@ const elements = {
   playStep: document.querySelector("#play-step"),
   letterStep: document.querySelector("#letter-step"),
   planStep: document.querySelector("#plan-step"),
+  diaryStep: document.querySelector("#diary-step"),
   openSpecialStepButton: document.querySelector("#open-special-step-button"),
   openPlanButton: document.querySelector("#open-plan-button"),
   openFlightButton: document.querySelector("#open-flight-button"),
+  openDiaryButton: document.querySelector("#open-diary-button"),
   specialBoundaryPanel: document.querySelector("#special-boundary-panel"),
   confirmBoundaryButton: document.querySelector("#confirm-boundary-button"),
   specialLockPanel: document.querySelector("#special-lock-panel"),
@@ -500,6 +502,7 @@ const elements = {
   backToModeButton: document.querySelector("#back-to-mode-button"),
   backFromLetterButton: document.querySelector("#back-from-letter-button"),
   backFromPlanButton: document.querySelector("#back-from-plan-button"),
+  backFromDiaryButton: document.querySelector("#back-from-diary-button"),
   letterInput: document.querySelector("#letter-input"),
   letterCount: document.querySelector("#letter-count"),
   saveLetterButton: document.querySelector("#save-letter-button"),
@@ -554,6 +557,29 @@ const elements = {
   historyList: document.querySelector("#history-list"),
   historyEmpty: document.querySelector("#history-empty"),
   clearHistoryButton: document.querySelector("#clear-history-button"),
+  newDiaryButton: document.querySelector("#new-diary-button"),
+  diaryTitle: document.querySelector("#diary-title"),
+  diaryList: document.querySelector("#diary-list"),
+  diaryEmpty: document.querySelector("#diary-empty"),
+  diaryCount: document.querySelector("#diary-count"),
+  diaryFilterButtons: [...document.querySelectorAll(".diary-filter button")],
+  diaryEditorModal: document.querySelector("#diary-editor-modal"),
+  diaryDetailModal: document.querySelector("#diary-detail-modal"),
+  diaryForm: document.querySelector("#diary-form"),
+  diaryEditorTitle: document.querySelector("#diary-editor-title"),
+  diaryTitleInput: document.querySelector("#diary-title-input"),
+  diaryBodyInput: document.querySelector("#diary-body-input"),
+  diaryAuthorInput: document.querySelector("#diary-author-input"),
+  diaryMoodInput: document.querySelector("#diary-mood-input"),
+  diaryImageInput: document.querySelector("#diary-image-input"),
+  diaryFormError: document.querySelector("#diary-form-error"),
+  diaryDetailMeta: document.querySelector("#diary-detail-meta"),
+  diaryDetailTitle: document.querySelector("#diary-detail-title"),
+  diaryDetailBody: document.querySelector("#diary-detail-body"),
+  diaryDetailTags: document.querySelector("#diary-detail-tags"),
+  diaryFavoriteButton: document.querySelector("#diary-favorite-button"),
+  diaryEditButton: document.querySelector("#diary-edit-button"),
+  diaryDeleteButton: document.querySelector("#diary-delete-button"),
   letterPrompt: document.querySelector("#letter-prompt"),
   openLetterPromptButton: document.querySelector("#open-letter-prompt-button"),
   deckTitle: document.querySelector("#deck-title"),
@@ -577,11 +603,14 @@ let specialBoundaryConfirmed = false;
 let specialUnlocked = false;
 let letterHidden = false;
 let planReturnStep = "special";
+let diaryReturnStep = "special";
 let planGateIndex = 0;
 let planEditable = false;
 let planDocumentOpen = false;
 let siteDialogResolver = null;
 let browserHistoryReady = false;
+let editingDiaryId = null;
+let activeDiaryId = null;
 
 const stepTargets = {
   intro: () => elements.introSection,
@@ -590,6 +619,7 @@ const stepTargets = {
   play: () => elements.playStep,
   letter: () => elements.letterStep,
   plan: () => elements.planStep,
+  diary: () => elements.diaryStep,
 };
 
 function cleanupLegacyPwa() {
@@ -616,6 +646,8 @@ function createDefaultState() {
     secretLetter: DEFAULT_SECRET_LETTER,
     planBook: "",
     planNotes: [],
+    diaryFilter: "month",
+    diaryEntries: [],
     customDecks: {
       truth: [...decks.truth.options],
       dare: [...decks.dare.options],
@@ -646,6 +678,8 @@ function loadState() {
           : fallback.secretLetter,
       planBook: typeof stored.planBook === "string" ? stored.planBook : "",
       planNotes: normalizePlanNotes(stored.planNotes),
+      diaryFilter: typeof stored.diaryFilter === "string" ? stored.diaryFilter : fallback.diaryFilter,
+      diaryEntries: normalizeDiaryEntries(stored.diaryEntries),
       currentCard: null,
     };
   } catch {
@@ -661,6 +695,8 @@ function saveState() {
     secretLetter: state.secretLetter,
     planBook: state.planBook,
     planNotes: state.planNotes,
+    diaryFilter: state.diaryFilter,
+    diaryEntries: state.diaryEntries,
     history: state.history,
     usedCardIds: state.usedCardIds,
   };
@@ -679,6 +715,7 @@ function resetVolatileFlow() {
   letterReturnStep = "intro";
   letterHidden = false;
   planReturnStep = "special";
+  diaryReturnStep = "special";
   planGateIndex = 0;
   planEditable = false;
 }
@@ -740,6 +777,50 @@ function normalizePlanNotes(value) {
   return [];
 }
 
+function normalizeDiaryEntries(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const title = typeof item.title === "string" ? item.title.trim() : "";
+      const body = typeof item.body === "string" ? item.body.trim() : "";
+      if (!title || !body) return null;
+      const createdAt =
+        typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+          ? item.createdAt
+          : new Date().toISOString();
+      return {
+        id:
+          typeof item.id === "string" && item.id
+            ? item.id
+            : `diary-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        title,
+        body,
+        author: ["me", "ta", "memory"].includes(item.author) ? item.author : "me",
+        mood: typeof item.mood === "string" ? item.mood : "",
+        image: typeof item.image === "string" ? item.image : "",
+        favorite: Boolean(item.favorite),
+        createdAt,
+        updatedAt:
+          typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt))
+            ? item.updatedAt
+            : createdAt,
+      };
+    })
+    .filter(Boolean);
+}
+
+function mergeDiaryEntries(primary = [], secondary = []) {
+  const seen = new Set();
+  return [...normalizeDiaryEntries(primary), ...normalizeDiaryEntries(secondary)]
+    .filter((entry) => {
+      if (seen.has(entry.id)) return false;
+      seen.add(entry.id);
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
 function mergeUniqueCards(primary = [], secondary = []) {
   const seen = new Set();
   return [...primary, ...secondary].filter((card) => {
@@ -780,6 +861,8 @@ function cloudDataFromState() {
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
     planBook: state.planBook || "",
     planNotes: normalizePlanNotes(state.planNotes),
+    diaryFilter: state.diaryFilter || "month",
+    diaryEntries: normalizeDiaryEntries(state.diaryEntries),
     history: state.history,
     updatedAt: now,
   };
@@ -800,6 +883,9 @@ function applyCloudData(data) {
         : state.secretLetter || fallback.secretLetter,
     planBook: typeof data.planBook === "string" ? data.planBook : state.planBook || "",
     planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
+    diaryEntries: mergeDiaryEntries(data.diaryEntries, state.diaryEntries),
+    diaryFilter:
+      typeof data.diaryFilter === "string" ? data.diaryFilter : state.diaryFilter || "month",
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
@@ -832,6 +918,7 @@ function isCloudStateEmpty(data) {
     !data.letter &&
     !data.planBook &&
     !(Array.isArray(data.planNotes) && data.planNotes.length) &&
+    !(Array.isArray(data.diaryEntries) && data.diaryEntries.length) &&
     !(Array.isArray(data.history) && data.history.length) &&
     !(Array.isArray(data.drawnCards) && data.drawnCards.length)
   );
@@ -855,6 +942,9 @@ function mergeLocalStateIntoCloud(localState) {
   }
   if (!state.planNotes.length && localState.planNotes) {
     state.planNotes = normalizePlanNotes(localState.planNotes);
+  }
+  if (!state.diaryEntries.length && localState.diaryEntries) {
+    state.diaryEntries = mergeDiaryEntries(state.diaryEntries, localState.diaryEntries);
   }
 
   const historyKeys = new Set(
@@ -952,6 +1042,11 @@ async function migrateLocalStorageToCloud(cloudData) {
     state.planNotes = normalizePlanNotes(localState.planNotes);
     changed = true;
   }
+  const mergedDiaryEntries = mergeDiaryEntries(state.diaryEntries, localState.diaryEntries);
+  if (mergedDiaryEntries.length !== state.diaryEntries.length) {
+    state.diaryEntries = mergedDiaryEntries;
+    changed = true;
+  }
   if (
     state.planBook &&
     (!cloudData || typeof cloudData.planBook !== "string" || !cloudData.planBook)
@@ -961,6 +1056,12 @@ async function migrateLocalStorageToCloud(cloudData) {
   if (
     state.planNotes.length &&
     (!cloudData || !Array.isArray(cloudData.planNotes) || !cloudData.planNotes.length)
+  ) {
+    changed = true;
+  }
+  if (
+    state.diaryEntries.length &&
+    (!cloudData || !Array.isArray(cloudData.diaryEntries) || !cloudData.diaryEntries.length)
   ) {
     changed = true;
   }
@@ -978,6 +1079,7 @@ function renderFromState() {
   renderFlow();
   renderDeckPanel();
   renderPlan();
+  renderDiary();
 }
 
 function renderEntranceGate() {
@@ -1176,6 +1278,229 @@ function renderPlanNotes() {
   elements.planNotesEmpty.hidden = notes.length > 0;
 }
 
+function diaryMonthTitle(date = new Date()) {
+  return new Intl.DateTimeFormat("zh-CN", { month: "long" }).format(date);
+}
+
+function formatDiaryDate(value) {
+  const date = new Date(value);
+  return {
+    week: new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(date),
+    day: `${date.getMonth() + 1}-${date.getDate()}`,
+    monthDay: `${date.getMonth() + 1}月${date.getDate()}日`,
+    time: new Intl.DateTimeFormat("zh-CN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }).format(date),
+  };
+}
+
+function diaryAuthorLabel(author) {
+  if (author === "ta") return "TA 写的";
+  if (author === "memory") return "共同回忆";
+  return "我写的";
+}
+
+function diarySummary(body) {
+  const text = String(body || "").replace(/\s+/g, " ").trim();
+  return text.length > 58 ? `${text.slice(0, 58)}...` : text;
+}
+
+function filteredDiaryEntries() {
+  const now = new Date();
+  const filter = state.diaryFilter || "month";
+  return normalizeDiaryEntries(state.diaryEntries)
+    .filter((entry) => {
+      const date = new Date(entry.createdAt);
+      if (filter === "month") {
+        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+      }
+      if (filter === "favorite") return entry.favorite;
+      if (filter === "me") return entry.author === "me";
+      if (filter === "ta") return entry.author === "ta";
+      if (filter === "memory") return entry.author === "memory";
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}
+
+function createDiaryItem(entry, index) {
+  const item = document.createElement("button");
+  item.className = `diary-item diary-author-${entry.author}`;
+  item.type = "button";
+  item.dataset.diaryId = entry.id;
+  item.style.setProperty("--delay", `${Math.min(index * 45, 240)}ms`);
+
+  const dateInfo = formatDiaryDate(entry.createdAt);
+  const dateBlock = document.createElement("span");
+  dateBlock.className = "diary-date-block";
+  dateBlock.innerHTML = `<small>${dateInfo.week}</small><strong>${dateInfo.day}</strong>`;
+
+  const card = document.createElement("span");
+  card.className = "diary-card";
+
+  const top = document.createElement("span");
+  top.className = "diary-card-top";
+  const title = document.createElement("strong");
+  title.textContent = entry.title || dateInfo.monthDay;
+  const time = document.createElement("small");
+  time.textContent = dateInfo.time;
+  top.append(title, time);
+
+  const summary = document.createElement("span");
+  summary.className = "diary-card-summary";
+  summary.textContent = diarySummary(entry.body) || "这一天被好好收起来了。";
+
+  const meta = document.createElement("span");
+  meta.className = "diary-card-meta";
+  [diaryAuthorLabel(entry.author), entry.mood, entry.favorite ? "已收藏" : ""]
+    .filter(Boolean)
+    .forEach((text) => {
+      const tag = document.createElement("em");
+      tag.textContent = text;
+      meta.append(tag);
+    });
+
+  card.append(top, summary, meta);
+  item.append(dateBlock, card);
+  return item;
+}
+
+function renderDiary() {
+  if (!elements.diaryList) return;
+  state.diaryEntries = normalizeDiaryEntries(state.diaryEntries);
+  elements.diaryTitle.textContent = diaryMonthTitle();
+  elements.diaryFilterButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.diaryFilter === (state.diaryFilter || "month"));
+  });
+  const entries = filteredDiaryEntries();
+  elements.diaryList.replaceChildren(...entries.map(createDiaryItem));
+  elements.diaryList.hidden = entries.length === 0;
+  elements.diaryEmpty.hidden = entries.length > 0;
+  elements.diaryCount.textContent = `${entries.length} 个记录`;
+}
+
+function openDiaryEditor(entry = null) {
+  editingDiaryId = entry?.id || null;
+  elements.diaryEditorTitle.textContent = entry ? "编辑这篇小日记" : "写一篇小日记";
+  elements.diaryTitleInput.value = entry?.title || "";
+  elements.diaryBodyInput.value = entry?.body || "";
+  elements.diaryAuthorInput.value = entry?.author || "me";
+  elements.diaryMoodInput.value = entry?.mood || "";
+  elements.diaryImageInput.value = entry?.image || "";
+  elements.diaryFormError.hidden = true;
+  elements.diaryEditorModal.hidden = false;
+  document.body.classList.add("modal-open");
+  window.setTimeout(() => elements.diaryTitleInput.focus(), 80);
+}
+
+function closeDiaryEditor() {
+  elements.diaryEditorModal.hidden = true;
+  editingDiaryId = null;
+  document.body.classList.remove("modal-open");
+}
+
+function openDiaryDetail(id) {
+  const entry = state.diaryEntries.find((item) => item.id === id);
+  if (!entry) return;
+  activeDiaryId = id;
+  const dateInfo = formatDiaryDate(entry.createdAt);
+  elements.diaryDetailMeta.textContent = `${diaryAuthorLabel(entry.author)} · ${dateInfo.monthDay} ${dateInfo.time}`;
+  elements.diaryDetailTitle.textContent = entry.title || dateInfo.monthDay;
+  elements.diaryDetailBody.textContent = entry.body;
+  elements.diaryDetailTags.replaceChildren(
+    ...[entry.mood, entry.image ? "有图片备注" : "", entry.favorite ? "已收藏" : ""]
+      .filter(Boolean)
+      .map((text) => {
+        const tag = document.createElement("span");
+        tag.textContent = text;
+        return tag;
+      }),
+  );
+  elements.diaryFavoriteButton.textContent = entry.favorite ? "取消收藏" : "收藏";
+  elements.diaryDetailModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeDiaryDetail() {
+  elements.diaryDetailModal.hidden = true;
+  activeDiaryId = null;
+  document.body.classList.remove("modal-open");
+}
+
+function saveDiaryFromForm(event) {
+  event.preventDefault();
+  const title = elements.diaryTitleInput.value.trim();
+  const body = elements.diaryBodyInput.value.trim();
+  if (!title || !body) {
+    elements.diaryFormError.textContent = "标题和正文都要写一点。";
+    elements.diaryFormError.hidden = false;
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const payload = {
+    title,
+    body,
+    author: elements.diaryAuthorInput.value,
+    mood: elements.diaryMoodInput.value,
+    image: elements.diaryImageInput.value.trim(),
+    updatedAt: now,
+  };
+
+  if (editingDiaryId) {
+    const index = state.diaryEntries.findIndex((entry) => entry.id === editingDiaryId);
+    if (index !== -1) {
+      state.diaryEntries[index] = { ...state.diaryEntries[index], ...payload };
+    }
+  } else {
+    state.diaryEntries.unshift({
+      id: `diary-${Date.now()}-${secureRandomIndex(100000)}`,
+      createdAt: now,
+      favorite: false,
+      ...payload,
+    });
+  }
+
+  saveState();
+  renderDiary();
+  closeDiaryEditor();
+  showToast("日记已保存");
+  void saveCloudState();
+}
+
+function editActiveDiary() {
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (!entry) return;
+  closeDiaryDetail();
+  openDiaryEditor(entry);
+}
+
+function toggleActiveDiaryFavorite() {
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (!entry) return;
+  entry.favorite = !entry.favorite;
+  entry.updatedAt = new Date().toISOString();
+  saveState();
+  renderDiary();
+  openDiaryDetail(entry.id);
+  void saveCloudState({ silent: true });
+}
+
+async function deleteActiveDiary() {
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (!entry) return;
+  const confirmed = await confirmInSiteDialog("确定要删除这篇日记吗？删除后不能恢复。", "删除日记");
+  if (!confirmed) return;
+  state.diaryEntries = state.diaryEntries.filter((item) => item.id !== activeDiaryId);
+  saveState();
+  renderDiary();
+  closeDiaryDetail();
+  showToast("日记已删除");
+  void saveCloudState();
+}
+
 function renderFlow() {
   const inIntro = state.currentStep === "intro";
   const inMode = state.currentStep === "mode";
@@ -1183,6 +1508,7 @@ function renderFlow() {
   const inPlay = state.currentStep === "play";
   const inLetter = state.currentStep === "letter";
   const inPlan = state.currentStep === "plan";
+  const inDiary = state.currentStep === "diary";
 
   document.body.dataset.currentStep = state.currentStep;
   elements.introSection.hidden = !inIntro;
@@ -1192,10 +1518,12 @@ function renderFlow() {
   elements.playStep.hidden = !inPlay;
   elements.letterStep.hidden = !inLetter;
   elements.planStep.hidden = !inPlan;
+  elements.diaryStep.hidden = !inDiary;
   elements.footer.hidden = !inIntro;
   renderSpecialAccess();
   renderLetter();
   renderPlan();
+  renderDiary();
 }
 
 function renderDeckPanel() {
@@ -1721,6 +2049,10 @@ elements.openPlanButton.addEventListener("click", unlockPlanStep);
 elements.openFlightButton.addEventListener("click", () => {
   window.location.href = FLIGHT_REDIRECT_URL;
 });
+elements.openDiaryButton.addEventListener("click", () => {
+  diaryReturnStep = state.currentStep === "diary" ? "special" : state.currentStep;
+  openStep("diary");
+});
 
 elements.closePlanGateButton.addEventListener("click", closePlanGate);
 
@@ -1755,6 +2087,10 @@ elements.backFromPlanButton.addEventListener("click", () => {
   planDocumentOpen = false;
   renderPlan();
   backToStep(planReturnStep);
+});
+
+elements.backFromDiaryButton.addEventListener("click", () => {
+  backToStep(diaryReturnStep);
 });
 
 elements.letterInput.addEventListener("input", () => {
@@ -1803,6 +2139,13 @@ elements.siteDialogCancel.addEventListener("click", () => {
   closeSiteDialog({ confirmed: false, value: "" });
 });
 
+elements.siteDialogConfirm.addEventListener("click", () => {
+  closeSiteDialog({
+    confirmed: true,
+    value: elements.siteDialogInput.hidden ? "" : elements.siteDialogInput.value,
+  });
+});
+
 elements.siteDialog.addEventListener("click", (event) => {
   if (event.target === elements.siteDialog) {
     closeSiteDialog({ confirmed: false, value: "" });
@@ -1815,6 +2158,37 @@ elements.toggleLetterVisibilityButton.addEventListener("click", () => {
 });
 
 elements.saveLetterButton.addEventListener("click", saveLetter);
+
+elements.newDiaryButton.addEventListener("click", () => openDiaryEditor());
+
+elements.diaryFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    state.diaryFilter = button.dataset.diaryFilter;
+    saveState();
+    renderDiary();
+    void saveCloudState({ silent: true });
+  });
+});
+
+elements.diaryList.addEventListener("click", (event) => {
+  const item = event.target.closest(".diary-item");
+  if (!item) return;
+  openDiaryDetail(item.dataset.diaryId);
+});
+
+elements.diaryForm.addEventListener("submit", saveDiaryFromForm);
+
+document.querySelectorAll("[data-close-diary-editor]").forEach((button) => {
+  button.addEventListener("click", closeDiaryEditor);
+});
+
+document.querySelectorAll("[data-close-diary-detail]").forEach((button) => {
+  button.addEventListener("click", closeDiaryDetail);
+});
+
+elements.diaryEditButton.addEventListener("click", editActiveDiary);
+elements.diaryFavoriteButton.addEventListener("click", toggleActiveDiaryFavorite);
+elements.diaryDeleteButton.addEventListener("click", deleteActiveDiary);
 
 elements.list.addEventListener("click", (event) => {
   const button = event.target.closest(".delete-option");

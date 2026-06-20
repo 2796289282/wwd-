@@ -3,6 +3,10 @@ const DEFAULT_DATA = {
   drawnCards: [],
   remainingCards: {},
   letter: "",
+  planBook: "",
+  planNotes: [],
+  diaryFilter: "month",
+  diaryEntries: [],
   history: [],
   updatedAt: "",
 };

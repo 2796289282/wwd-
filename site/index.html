@@ -187,6 +187,14 @@
                 <small>竖屏同屏双人，轮流掷骰</small>
               </button>
             </div>
+            <button id="open-diary-button" class="special-entry-button diary-entry-button" type="button">
+              <span class="special-entry-mark">记</span>
+              <span class="special-entry-copy">
+                <strong>专属小日记</strong>
+                <small>把属于李家鑫和婉婉的每一天，都悄悄收藏起来。</small>
+              </span>
+              <span class="special-entry-arrow" aria-hidden="true">→</span>
+            </button>
           </div>
         </section>
 
@@ -478,6 +486,44 @@
             </article>
           </div>
         </section>
+
+        <section id="diary-step" class="flow-panel diary-step" aria-labelledby="diary-title" hidden>
+          <div class="panel-topline">
+            <button id="back-from-diary-button" class="ghost-back-button" type="button">
+              返回上一层
+            </button>
+            <span class="flow-badge">DIARY</span>
+          </div>
+
+          <div class="diary-shell">
+            <div class="diary-hero">
+              <div>
+                <p class="step-label">PRIVATE DIARY</p>
+                <h2 id="diary-title">六月</h2>
+                <p class="setup-note">把今天也悄悄收藏起来</p>
+              </div>
+              <button id="new-diary-button" class="diary-write-button" type="button">
+                写日记
+              </button>
+            </div>
+
+            <div class="diary-filter" role="group" aria-label="筛选日记">
+              <button class="active" type="button" data-diary-filter="month">本月</button>
+              <button type="button" data-diary-filter="all">全部</button>
+              <button type="button" data-diary-filter="me">我的</button>
+              <button type="button" data-diary-filter="ta">TA 的</button>
+              <button type="button" data-diary-filter="memory">共同回忆</button>
+              <button type="button" data-diary-filter="favorite">喜欢</button>
+            </div>
+
+            <div id="diary-list" class="diary-list" aria-live="polite"></div>
+            <div id="diary-empty" class="diary-empty" hidden>
+              <span aria-hidden="true">♡</span>
+              <p>这里还没有小秘密，写下第一篇吧</p>
+            </div>
+            <p id="diary-count" class="diary-count">0 个记录</p>
+          </div>
+        </section>
       </div>
     </main>
 
@@ -488,6 +534,75 @@
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <div id="diary-editor-modal" class="diary-modal" hidden>
+      <div class="diary-modal-backdrop" data-close-diary-editor></div>
+      <form id="diary-form" class="diary-dialog" autocomplete="off">
+        <div class="diary-dialog-head">
+          <div>
+            <p class="step-label">WRITE TODAY</p>
+            <h2 id="diary-editor-title">写一篇小日记</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-diary-editor aria-label="关闭">×</button>
+        </div>
+        <label>
+          <span>标题</span>
+          <input id="diary-title-input" maxlength="40" placeholder="今天的小事" />
+        </label>
+        <label>
+          <span>正文</span>
+          <textarea id="diary-body-input" rows="7" maxlength="1600" placeholder="把今天想留下的话写在这里"></textarea>
+        </label>
+        <div class="diary-form-grid">
+          <label>
+            <span>作者</span>
+            <select id="diary-author-input">
+              <option value="me">我</option>
+              <option value="ta">TA</option>
+              <option value="memory">共同回忆</option>
+            </select>
+          </label>
+          <label>
+            <span>心情</span>
+            <select id="diary-mood-input">
+              <option value="">不选择</option>
+              <option value="开心">开心</option>
+              <option value="想念">想念</option>
+              <option value="委屈">委屈</option>
+              <option value="甜蜜">甜蜜</option>
+              <option value="普通">普通</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          <span>图片备注（预留）</span>
+          <input id="diary-image-input" maxlength="240" placeholder="以后可以放图片链接" />
+        </label>
+        <p id="diary-form-error" class="diary-form-error" hidden></p>
+        <div class="diary-dialog-actions">
+          <button class="secondary-button diary-cancel-button" type="button" data-close-diary-editor>取消</button>
+          <button class="special-password-button" type="submit">保存日记</button>
+        </div>
+      </form>
+    </div>
+    <div id="diary-detail-modal" class="diary-modal" hidden>
+      <div class="diary-modal-backdrop" data-close-diary-detail></div>
+      <article class="diary-dialog diary-detail-card">
+        <div class="diary-dialog-head">
+          <div>
+            <p id="diary-detail-meta" class="step-label">DIARY DETAIL</p>
+            <h2 id="diary-detail-title"></h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-diary-detail aria-label="关闭">×</button>
+        </div>
+        <p id="diary-detail-body" class="diary-detail-body"></p>
+        <div id="diary-detail-tags" class="diary-detail-tags"></div>
+        <div class="diary-dialog-actions diary-detail-actions">
+          <button id="diary-favorite-button" class="secondary-button" type="button">收藏</button>
+          <button id="diary-edit-button" class="secondary-button" type="button">编辑</button>
+          <button id="diary-delete-button" class="text-button danger" type="button">删除</button>
+        </div>
+      </article>
+    </div>
     <div id="plan-gate-modal" class="plan-gate-modal" hidden>
       <div class="plan-gate-card" role="dialog" aria-modal="true" aria-labelledby="plan-gate-title">
         <h2 id="plan-gate-title" class="plan-gate-text" aria-label="敬请期待">
