@@ -2787,6 +2787,104 @@ body.modal-open {
   z-index: 90;
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 640px) {
+  .app-shell,
+  .site-header {
+    width: min(100% - 24px, 430px);
+  }
+
+  .flow-panel,
+  .mode-zone,
+  .diary-step,
+  .diary-shell,
+  .diary-dialog,
+  .special-entry-button,
+  .mode-button {
+    max-width: 100%;
+  }
+
+  .special-entry-button {
+    grid-template-columns: 38px minmax(0, 1fr) 26px;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .special-entry-copy {
+    min-width: 0;
+  }
+
+  .special-entry-copy strong,
+  .special-entry-copy small {
+    overflow-wrap: anywhere;
+  }
+
+  .diary-shell {
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .diary-filter {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+  }
+
+  .diary-filter button {
+    min-width: auto;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+
+  .diary-dialog {
+    width: min(100%, 430px);
+  }
+}
+
+@media (max-width: 390px) {
+  .app-shell,
+  .site-header {
+    width: calc(100% - 18px);
+  }
+
+  .diary-shell {
+    padding-inline: 12px;
+  }
+
+  .diary-hero {
+    gap: 8px;
+  }
+
+  .diary-hero h2 {
+    font-size: 32px;
+  }
+
+  .diary-write-button {
+    min-height: 40px;
+    padding-inline: 12px;
+    font-size: 13px;
+  }
+
+  .diary-filter {
+    padding: 5px;
+    gap: 4px;
+  }
+
+  .diary-filter button {
+    min-height: 34px;
+    padding-inline: 10px;
+  }
+
+  .diary-item {
+    grid-template-columns: 44px minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 600px) {
   button {
     min-height: 44px;

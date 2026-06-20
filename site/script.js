@@ -1297,9 +1297,9 @@ function formatDiaryDate(value) {
 }
 
 function diaryAuthorLabel(author) {
-  if (author === "ta") return "TA 写的";
+  if (author === "ta") return "婉婉写的";
   if (author === "memory") return "共同回忆";
-  return "我写的";
+  return "家鑫写的";
 }
 
 function diarySummary(body) {
