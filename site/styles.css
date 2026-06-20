@@ -4071,3 +4071,117 @@ body {
 .site-dialog {
   z-index: 90;
 }
+
+/* Final diary mobile guard: prevent real-device horizontal clipping. */
+@media (max-width: 640px) {
+  .diary-step {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .diary-step .diary-shell,
+  .diary-step .diary-list,
+  .diary-step .diary-item,
+  .diary-step .diary-card,
+  .diary-step .diary-card-top,
+  .diary-step .diary-card-summary,
+  .diary-step .diary-card-meta {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .diary-step .diary-shell {
+    width: 100%;
+    padding: 16px 10px 18px;
+    overflow: visible;
+  }
+
+  .diary-step .diary-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .diary-step .diary-write-button {
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .diary-step .diary-filter {
+    position: relative;
+    top: auto;
+    width: 100%;
+    margin-inline: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    overflow: visible;
+    border-radius: 20px;
+  }
+
+  .diary-step .diary-filter button {
+    width: 100%;
+    min-width: 0;
+    flex: initial;
+    flex-basis: auto;
+    padding-inline: 6px;
+  }
+
+  .diary-step .diary-date-jump {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .diary-step .diary-date-jump label,
+  .diary-step .diary-date-jump input,
+  .diary-step .diary-date-jump button,
+  .diary-step .diary-date-jump .text-button {
+    width: 100%;
+  }
+
+  .diary-step .diary-date-jump .text-button {
+    justify-self: stretch;
+    text-align: center;
+  }
+
+  .diary-step .diary-item {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .diary-step .diary-card {
+    overflow: hidden;
+  }
+
+  .diary-step .diary-card-top small {
+    max-width: 48px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 390px) {
+  .diary-step .diary-shell {
+    padding-inline: 8px;
+  }
+
+  .diary-step .diary-filter {
+    gap: 5px;
+  }
+
+  .diary-step .diary-filter button {
+    min-height: 36px;
+    font-size: 12px;
+  }
+
+  .diary-step .diary-item {
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .diary-step .diary-card {
+    padding: 11px;
+  }
+}
