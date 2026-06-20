@@ -368,7 +368,6 @@ button::after {
   gap: 16rpx;
 }
 
-.ghost-back-button,
 .secondary-button,
 .text-button,
 .add-button {
@@ -378,6 +377,14 @@ button::after {
 }
 
 .ghost-back-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0;
+  margin-right: 0;
+  border: 1rpx solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f7f1ff;
   min-height: 62rpx;
   line-height: 62rpx;
   border-radius: 999rpx;
@@ -427,9 +434,12 @@ button::after {
 .special-entry-button {
   display: flex;
   align-items: center;
+  box-sizing: border-box;
   width: 100%;
   min-height: 108rpx;
   margin-top: 18rpx;
+  margin-left: 0;
+  margin-right: 0;
   padding: 14rpx 20rpx;
   border: 1rpx solid rgba(255, 255, 255, 0.18);
   border-radius: 28rpx;
@@ -632,6 +642,68 @@ button::after {
   min-height: 66rpx;
   line-height: 66rpx;
   font-size: 24rpx;
+}
+
+.remaining-bank {
+  margin-top: 18rpx;
+  padding: 18rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.12);
+  border-radius: 26rpx;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.remaining-bank-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #fff;
+  font-size: 25rpx;
+  font-weight: 900;
+}
+
+.remaining-bank-head text:last-child {
+  color: #ffb4d6;
+  font-size: 22rpx;
+}
+
+.remaining-bank-list {
+  height: 230rpx;
+  margin-top: 12rpx;
+}
+
+.remaining-card-item {
+  display: flex;
+  gap: 12rpx;
+  padding: 12rpx 0;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.08);
+}
+
+.remaining-card-index {
+  flex-shrink: 0;
+  width: 42rpx;
+  height: 42rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 143, 199, 0.14);
+  color: #ffb4d6;
+  font-size: 20rpx;
+  font-weight: 900;
+  line-height: 42rpx;
+  text-align: center;
+}
+
+.remaining-card-text {
+  flex: 1;
+  color: #dcd4e8;
+  font-size: 24rpx;
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.remaining-empty {
+  padding: 18rpx 0;
+  color: #b9aecb;
+  font-size: 24rpx;
+  line-height: 1.5;
 }
 
 .sparkle {
@@ -861,6 +933,7 @@ button::after {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+  width: 100%;
   padding: 24rpx;
   border-radius: 28rpx;
   background: linear-gradient(145deg, rgba(255, 143, 199, 0.14), rgba(167, 139, 250, 0.12));
@@ -868,10 +941,13 @@ button::after {
 
 .plan-document-view {
   margin-top: 18rpx;
-  padding: 26rpx;
-  border-radius: 28rpx;
-  background: #f8f2e8;
-  color: #27334c;
+  padding: 28rpx 22rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.14);
+  border-radius: 32rpx;
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 199, 0.12), transparent 34%),
+    rgba(255, 255, 255, 0.07);
+  color: #f7f1ff;
 }
 
 .plan-document-title {
@@ -886,6 +962,105 @@ button::after {
   white-space: pre-wrap;
   font-size: 27rpx;
   line-height: 1.7;
+}
+
+.plan-doc-p {
+  color: #e8def4;
+  font-size: 27rpx;
+  line-height: 1.75;
+  word-break: break-word;
+}
+
+.plan-doc-title {
+  color: #fff;
+  font-size: 44rpx;
+  font-weight: 900;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.plan-doc-subtitle {
+  margin-top: 8rpx;
+  color: #ffb4d6;
+  font-size: 25rpx;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 2rpx;
+}
+
+.plan-doc-h1 {
+  margin-top: 34rpx;
+  padding-top: 22rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.12);
+  color: #9ec8ff;
+  font-size: 33rpx;
+  font-weight: 900;
+}
+
+.plan-doc-h2 {
+  margin-top: 24rpx;
+  color: #ffd6ea;
+  font-size: 29rpx;
+  font-weight: 900;
+}
+
+.plan-doc-body {
+  margin-top: 14rpx;
+}
+
+.plan-doc-check {
+  margin-top: 10rpx;
+  padding: 14rpx 16rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f7f1ff;
+}
+
+.plan-doc-quote,
+.plan-doc-callout {
+  margin-top: 18rpx;
+  padding: 20rpx;
+  border: 1rpx solid rgba(255, 143, 199, 0.2);
+  border-radius: 24rpx;
+  background: rgba(255, 143, 199, 0.1);
+  color: #ffd6ea;
+  font-size: 27rpx;
+  font-weight: 800;
+  line-height: 1.65;
+}
+
+.plan-doc-table-scroll {
+  width: 100%;
+  margin-top: 18rpx;
+}
+
+.plan-doc-table {
+  overflow: hidden;
+  border: 1rpx solid rgba(255, 255, 255, 0.16);
+  border-radius: 22rpx;
+}
+
+.plan-doc-row {
+  display: flex;
+  min-height: 66rpx;
+}
+
+.plan-doc-cell {
+  flex-shrink: 0;
+  padding: 16rpx 14rpx;
+  border-right: 1rpx solid rgba(255, 255, 255, 0.12);
+  border-bottom: 1rpx solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.055);
+  color: #efe8f8;
+  font-size: 23rpx;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.plan-doc-cell.is-head {
+  background: rgba(255, 143, 199, 0.17);
+  color: #fff;
+  font-weight: 900;
 }
 
 .plan-input {
@@ -1059,8 +1234,12 @@ button {
 
 button:active,
 .mode-button:active,
-.special-entry-button:active,
 .plan-document-entry-button:active {
+  transform: scale(0.975);
+  opacity: 0.9;
+}
+
+.tap-press {
   transform: scale(0.975);
   opacity: 0.9;
 }
@@ -1153,9 +1332,10 @@ textarea {
 .ghost-back-button {
   flex-shrink: 0;
   align-self: flex-start;
-  max-width: 260rpx;
+  width: 190rpx;
+  max-width: 190rpx;
   min-height: 78rpx;
-  padding: 0 30rpx;
+  padding: 0;
   border-radius: 34rpx;
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.18);
@@ -1167,6 +1347,10 @@ textarea {
 
 .panel-topline {
   justify-content: flex-start;
+}
+
+.panel-topline .ghost-back-button {
+  margin-left: 0;
 }
 
 .panel-topline .flow-badge {

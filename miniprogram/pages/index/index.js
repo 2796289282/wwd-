@@ -3,6 +3,7 @@ const LOAD_URL = `${CLOUD_BASE}/api/load-state`;
 const SAVE_URL = `${CLOUD_BASE}/api/save-state`;
 const ENTRANCE_PASSWORD = "080831";
 const PLAN_EDIT_PASSWORD = "050116";
+const planDocument = require("../../data/plan-document");
 
 const defaultTruth = [
   "真心话：第一次见到对方时，你的第一印象是什么？",
@@ -116,6 +117,8 @@ Page({
     letter: defaultLetter,
     planBook: "",
     planNotes: [],
+    planDocument,
+    availableCards: [],
     availableCount: defaultTruth.length + defaultDare.length
   },
 
@@ -174,7 +177,7 @@ Page({
   },
 
   goPlan() {
-    this.switchView("plan", { planEditing: false, planDocumentOpen: true });
+    this.switchView("plan", { planEditing: false, planDocumentOpen: false });
   },
 
   openLetter() {
@@ -327,7 +330,7 @@ Page({
   updateAvailableCount() {
     const pool = this.allCardsForCurrentMode();
     const available = pool.filter((card) => !this.data.drawnCards.includes(`${modeOf(card)}::${card}`));
-    this.setData({ availableCount: available.length });
+    this.setData({ availableCount: available.length, availableCards: available });
   },
 
   drawCard() {
@@ -469,7 +472,7 @@ Page({
       this.showToast("密码不对哦");
       return;
     }
-    this.setData({ passwordModal: false, passwordValue: "", planEditing: true, planDocumentOpen: false });
+    this.setData({ passwordModal: false, passwordValue: "", planEditing: true });
     this.showToast("可以修改啦");
   },
 
@@ -477,12 +480,11 @@ Page({
     const notes = this.data.planNotes
       .map((item) => ({ ...item, text: (item.text || "").trim() }))
       .filter((item) => item.text);
-    this.setData({ planNotes: notes, planEditing: false, planDocumentOpen: true });
+    this.setData({ planNotes: notes, planEditing: false });
     this.saveCloudState();
   },
 
   togglePlanDocument() {
-    if (this.data.planEditing) return;
     this.setData({ planDocumentOpen: !this.data.planDocumentOpen });
   },
 
