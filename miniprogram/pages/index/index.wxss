@@ -216,6 +216,20 @@ button::after {
   line-height: 1.35;
 }
 
+.header-letter-button {
+  flex-shrink: 0;
+  min-height: 58rpx;
+  padding: 0 20rpx;
+  border: 1rpx solid rgba(255, 143, 199, 0.28);
+  border-radius: 999rpx;
+  background: rgba(255, 143, 199, 0.14);
+  color: #ffd6ea;
+  font-size: 23rpx;
+  font-weight: 900;
+  line-height: 58rpx;
+  box-shadow: 0 0 24rpx rgba(255, 143, 199, 0.16);
+}
+
 .intro {
   padding-top: 28rpx;
 }
@@ -337,7 +351,7 @@ button::after {
 .panel-topline {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 16rpx;
 }
 
@@ -358,6 +372,7 @@ button::after {
 }
 
 .flow-badge {
+  margin-left: auto;
   padding: 10rpx 18rpx;
   border-radius: 999rpx;
   background: rgba(158, 200, 255, 0.14);
@@ -400,26 +415,26 @@ button::after {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 136rpx;
-  margin-top: 22rpx;
-  padding: 22rpx 24rpx;
+  min-height: 108rpx;
+  margin-top: 18rpx;
+  padding: 14rpx 20rpx;
   border: 1rpx solid rgba(255, 255, 255, 0.18);
-  border-radius: 34rpx;
+  border-radius: 28rpx;
   background: rgba(255, 255, 255, 0.1);
   line-height: 1.3;
   text-align: left;
 }
 
 .special-entry-mark {
-  width: 82rpx;
-  height: 82rpx;
+  width: 66rpx;
+  height: 66rpx;
   margin-right: 18rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
   color: #ffb4d6;
-  line-height: 82rpx;
+  line-height: 66rpx;
   text-align: center;
-  font-size: 44rpx;
+  font-size: 34rpx;
 }
 
 .special-entry-copy {
@@ -1091,8 +1106,13 @@ textarea {
 }
 
 .header-note {
-  min-width: 260rpx;
+  min-width: 0;
+  flex: 1 1 180rpx;
   word-break: break-word;
+}
+
+.header-letter-button {
+  margin-left: auto;
 }
 
 .intro-title {
@@ -1123,9 +1143,10 @@ textarea {
 
 .ghost-back-button {
   flex-shrink: 0;
-  max-width: 300rpx;
-  min-height: 88rpx;
-  padding: 0 32rpx;
+  align-self: flex-start;
+  max-width: 260rpx;
+  min-height: 78rpx;
+  padding: 0 30rpx;
   border-radius: 34rpx;
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.18);
@@ -1133,6 +1154,20 @@ textarea {
   font-size: 28rpx;
   font-weight: 900;
   line-height: 1.2;
+}
+
+.panel-topline {
+  justify-content: flex-start;
+}
+
+.panel-topline .flow-badge {
+  margin-left: auto;
+}
+
+.special-entry-button {
+  width: 100%;
+  min-height: 104rpx;
+  padding: 12rpx 18rpx;
 }
 
 .flow-badge {

@@ -24,6 +24,7 @@
         <view class="brand-text">婉婉的抽签机</view>
       </view>
       <view class="header-note">{{syncStatus}} · 今晚的答案，不许说“随便”。</view>
+      <button wx:if="{{view === 'intro'}}" class="header-letter-button" bindtap="openLetter">小纸条</button>
     </view>
 
     <view wx:if="{{view === 'intro'}}" class="intro screen screen-animate">
