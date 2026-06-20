@@ -144,6 +144,15 @@ button::after {
   font-size: 28rpx;
 }
 
+.entrance-input,
+.site-dialog-input,
+.plan-note-input {
+  height: 88rpx;
+  min-height: 88rpx;
+  padding: 0 26rpx;
+  line-height: 88rpx;
+}
+
 .start-game-button,
 .pick-button,
 .special-password-button {
@@ -221,6 +230,55 @@ button::after {
 
 .intro-title text {
   color: #ff8fc7;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  color: #7dd3fc;
+}
+
+.hero-eyebrow text {
+  width: 62rpx;
+  height: 8rpx;
+  border-radius: 999rpx;
+  background: #ff8fc7;
+  transform: rotate(-3deg);
+}
+
+.hero-title {
+  display: flex;
+  flex-direction: column;
+  margin-top: 26rpx;
+  letter-spacing: -2rpx;
+}
+
+.hero-title-main,
+.hero-title-accent {
+  display: block;
+}
+
+.intro-title .hero-title-main {
+  color: #f7f1ff;
+  font-size: 86rpx;
+  line-height: 0.98;
+}
+
+.intro-title .hero-title-accent {
+  margin-top: 6rpx;
+  color: #7dd3fc;
+  font-size: 76rpx;
+  line-height: 1.02;
+}
+
+.hero-underline {
+  width: 100%;
+  height: 8rpx;
+  margin: 24rpx 0 18rpx;
+  border-radius: 999rpx;
+  background: linear-gradient(90deg, #ff8fc7, #ff6b4a);
+  transform: rotate(-1deg);
 }
 
 .intro-copy {
@@ -342,23 +400,26 @@ button::after {
   display: flex;
   align-items: center;
   width: 100%;
+  min-height: 136rpx;
   margin-top: 22rpx;
-  padding: 18rpx;
-  border-radius: 30rpx;
-  background: rgba(255, 255, 255, 0.08);
+  padding: 22rpx 24rpx;
+  border: 1rpx solid rgba(255, 255, 255, 0.18);
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.1);
   line-height: 1.3;
   text-align: left;
 }
 
 .special-entry-mark {
-  width: 66rpx;
-  height: 66rpx;
+  width: 82rpx;
+  height: 82rpx;
   margin-right: 18rpx;
-  border-radius: 24rpx;
-  background: rgba(255, 143, 199, 0.22);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
   color: #ffb4d6;
-  line-height: 66rpx;
+  line-height: 82rpx;
   text-align: center;
+  font-size: 44rpx;
 }
 
 .special-entry-copy {
@@ -385,8 +446,8 @@ button::after {
 }
 
 .special-entry-arrow {
-  color: #ffd166;
-  font-size: 34rpx;
+  color: #ff8fc7;
+  font-size: 44rpx;
 }
 
 .mode-buttons {
@@ -832,6 +893,18 @@ button::after {
   background: rgba(255, 143, 199, 0.12);
 }
 
+.plan-note-edit-input {
+  width: 100%;
+  min-height: 88rpx;
+  padding: 18rpx 20rpx;
+  border: 1rpx solid rgba(255, 143, 199, 0.24);
+  border-radius: 22rpx;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 27rpx;
+  line-height: 1.5;
+}
+
 .toast {
   position: fixed;
   left: 50%;
@@ -1027,6 +1100,14 @@ textarea {
   word-break: break-word;
 }
 
+.intro-title .hero-title-main {
+  font-size: 84rpx;
+}
+
+.intro-title .hero-title-accent {
+  font-size: 74rpx;
+}
+
 .flow-panel {
   width: 100%;
   padding: 22rpx;
@@ -1042,7 +1123,16 @@ textarea {
 
 .ghost-back-button {
   flex-shrink: 0;
-  max-width: 260rpx;
+  max-width: 300rpx;
+  min-height: 88rpx;
+  padding: 0 32rpx;
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 1rpx rgba(255, 255, 255, 0.08);
+  font-size: 28rpx;
+  font-weight: 900;
+  line-height: 1.2;
 }
 
 .flow-badge {
@@ -1176,6 +1266,18 @@ textarea {
   transform: rotate(-1deg);
 }
 
+.result-stage.is-drawing .orbit {
+  animation: orbitPulse 520ms ease-in-out infinite alternate;
+}
+
+.result-ticket.ticket-drawing {
+  animation: cardShuffle 680ms ease-in-out both;
+}
+
+.result-ticket.ticket-fresh {
+  animation: cardReveal 360ms cubic-bezier(.2, .85, .22, 1.15) both;
+}
+
 .ticket-recipient,
 .result-type-tag {
   max-width: 100%;
@@ -1200,6 +1302,14 @@ textarea {
 
 .pick-button {
   min-height: 94rpx;
+}
+
+.pick-button-loading {
+  opacity: 0.86;
+}
+
+.pick-button-loading .button-icon {
+  animation: buttonArrowSpin 680ms linear infinite;
 }
 
 .button-label {
@@ -1313,5 +1423,61 @@ textarea {
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes orbitPulse {
+  from {
+    opacity: 0.34;
+    transform: scale(0.96) rotate(-8deg);
+  }
+  to {
+    opacity: 0.78;
+    transform: scale(1.04) rotate(8deg);
+  }
+}
+
+@keyframes cardShuffle {
+  0% {
+    opacity: 0.78;
+    transform: translateX(-16rpx) rotate(-4deg) scale(0.98);
+  }
+  45% {
+    opacity: 1;
+    transform: translateX(18rpx) rotate(3deg) scale(1.02);
+  }
+  100% {
+    opacity: 0.92;
+    transform: translateX(0) rotate(-1deg) scale(1);
+  }
+}
+
+@keyframes cardReveal {
+  from {
+    opacity: 0.72;
+    transform: translateY(18rpx) rotate(-3deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-1deg) scale(1);
+  }
+}
+
+@keyframes buttonArrowSpin {
+  from {
+    transform: rotate(0);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 360px) {
+  .intro-title .hero-title-main {
+    font-size: 76rpx;
+  }
+
+  .intro-title .hero-title-accent {
+    font-size: 66rpx;
   }
 }

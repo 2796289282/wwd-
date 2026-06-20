@@ -27,8 +27,12 @@
     </view>
 
     <view wx:if="{{view === 'intro'}}" class="intro screen screen-animate">
-      <view class="eyebrow"><text></text> JUST FOR WANWAN</view>
-      <view class="intro-title">小裴同学，<text>敢不敢抽一张？</text></view>
+      <view class="eyebrow hero-eyebrow"><text></text> JUST FOR WANWAN</view>
+      <view class="intro-title hero-title">
+        <text class="hero-title-main">小裴同学，</text>
+        <text class="hero-title-accent">敢不敢抽一张？</text>
+      </view>
+      <view class="hero-underline"></view>
       <view class="intro-copy">真心话要认真回答，大冒险要说到做到。赖皮的婉婉要被记一笔哦。</view>
       <view class="doodle-arrow">
         <view class="arrow-line">↘</view>
@@ -179,20 +183,20 @@
             <button class="secondary-button" bindtap="toggleBank">{{showBank ? '隐藏题库' : '查看题库'}}</button>
           </view>
 
-          <view class="result-stage">
+          <view class="result-stage {{isDrawing ? 'is-drawing' : ''}}">
             <view class="orbit orbit-one"></view>
             <view class="orbit orbit-two"></view>
-            <view class="result-ticket">
+            <view class="result-ticket {{isDrawing ? 'ticket-drawing' : currentCard ? 'ticket-fresh' : ''}}">
               <view class="ticket-recipient">TO {{player === '一起' ? '我们' : player}}</view>
-              <view class="result-type-tag">{{currentCard ? currentModeLabel : '等待抽卡'}}</view>
-              <view class="result-kicker">{{currentCard ? '抽到了这一张' : '乖乖准备好了吗？'}}</view>
-              <view class="result-text">{{currentCard || '点击下方按钮'}}</view>
-              <view class="result-caption">{{currentCard ? '可以认真，也可以害羞一点。' : randomHint}}</view>
+              <view class="result-type-tag">{{isDrawing ? '抽卡中' : currentCard ? currentModeLabel : '等待抽卡'}}</view>
+              <view class="result-kicker">{{isDrawing ? '正在靠近今晚的答案' : currentCard ? '抽到了这一张' : '乖乖准备好了吗？'}}</view>
+              <view class="result-text">{{isDrawing ? '抽卡中...' : currentCard || '点击下方按钮'}}</view>
+              <view class="result-caption">{{isDrawing ? drawLoadingText : currentCard ? randomHint : randomHint}}</view>
             </view>
           </view>
 
-          <button class="pick-button" bindtap="drawCard">
-            <text class="button-label">替婉婉抽一张</text>
+          <button class="pick-button {{isDrawing ? 'pick-button-loading' : ''}}" bindtap="drawCard" disabled="{{isDrawing}}">
+            <text class="button-label">{{isDrawing ? '正在认真抽卡' : '替婉婉抽一张'}}</text>
             <text class="button-icon">↗</text>
           </button>
           <view class="draw-actions">
@@ -280,7 +284,7 @@
           <textarea wx:if="{{planEditing}}" class="letter-input plan-input is-editing" value="{{planBook}}" maxlength="12000" bindinput="onPlanInput" placeholder="把计划书写在这里"></textarea>
           <view class="plan-notes-block">
             <view class="plan-notes-head">
-              <text class="plan-notes-label">婉婉挨揍凭证</text>
+              <text class="plan-notes-label">婉婉犯错凭证</text>
               <text class="plan-notes-sub">婉婉可以添加，但修改只有李家鑫可以哦</text>
             </view>
             <view class="plan-note-form">
@@ -289,7 +293,8 @@
             </view>
             <view wx:if="{{planNotes.length === 0}}" class="history-empty">还没有记录。</view>
             <view wx:for="{{planNotes}}" wx:key="id" class="plan-note-item">
-              <text class="plan-note-text">{{item.text}}</text>
+              <textarea wx:if="{{planEditing}}" class="plan-note-edit-input" data-id="{{item.id}}" value="{{item.text}}" auto-height bindinput="onNoteEditInput"></textarea>
+              <text wx:else class="plan-note-text">{{item.text}}</text>
               <text class="plan-note-time">{{item.timeText}}</text>
               <button wx:if="{{planEditing}}" class="plan-note-pin-button" data-id="{{item.id}}" bindtap="pinNote">置顶</button>
             </view>

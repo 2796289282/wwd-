@@ -94,6 +94,8 @@ Page({
     mode: "both",
     player: "婉婉",
     randomHint: "不许耍赖，抽到就算数。",
+    drawLoadingText: "",
+    isDrawing: false,
     currentCard: "",
     currentModeLabel: "",
     deckTitle: "真心话题库",
@@ -119,6 +121,11 @@ Page({
 
   onLoad() {
     this.loadCloudState();
+  },
+
+  onUnload() {
+    clearTimeout(this.drawTimer);
+    clearTimeout(this.toastTimer);
   },
 
   switchView(view, extra = {}) {
@@ -239,6 +246,13 @@ Page({
     this.setData({ newNoteText: event.detail.value });
   },
 
+  onNoteEditInput(event) {
+    const id = event.currentTarget.dataset.id;
+    const value = event.detail.value;
+    const notes = this.data.planNotes.map((item) => item.id === id ? { ...item, text: value } : item);
+    this.setData({ planNotes: notes });
+  },
+
   onPasswordInput(event) {
     this.setData({ passwordValue: event.detail.value });
   },
@@ -317,6 +331,7 @@ Page({
   },
 
   drawCard() {
+    if (this.data.isDrawing) return;
     const pool = this.allCardsForCurrentMode();
     let available = pool.filter((card) => !this.data.drawnCards.includes(`${modeOf(card)}::${card}`));
     if (!available.length) {
@@ -336,14 +351,35 @@ Page({
     };
 
     this.setData({
-      currentCard: card,
-      currentModeLabel: labelOf(mode),
-      drawnCards: [...this.data.drawnCards, key],
-      history: [historyItem, ...this.data.history].slice(0, 20),
-      randomHint: "婉婉不许耍赖，李家鑫也不许。"
+      isDrawing: true,
+      currentCard: "",
+      currentModeLabel: "抽卡中",
+      drawLoadingText: "正在替婉婉认真挑一张...",
+      randomHint: "先深呼吸一下，今晚会温柔地偏向你。"
     });
-    this.updateAvailableCount();
-    this.saveCloudState(false);
+
+    clearTimeout(this.drawTimer);
+    this.drawTimer = setTimeout(() => {
+      const valueHints = [
+        "这张是今晚给婉婉的小小偏爱，要认真收好。",
+        "抽到啦，不急着回答，先被认真看见一会儿。",
+        "这一张算数，但婉婉可以慢慢来。",
+        "李家鑫负责抽卡，婉婉负责被好好对待。",
+        "今晚不赶时间，答案和心情都可以慢慢说。"
+      ];
+      this.setData({
+        isDrawing: false,
+        drawLoadingText: "",
+        currentCard: card,
+        currentModeLabel: labelOf(mode),
+        drawnCards: [...this.data.drawnCards, key],
+        history: [historyItem, ...this.data.history].slice(0, 20),
+        randomHint: valueHints[Math.floor(Math.random() * valueHints.length)]
+      });
+      this.updateAvailableCount();
+      this.saveCloudState(false);
+      this.showToast("抽到啦，婉婉要认真收好");
+    }, 680);
   },
 
   resetRound() {
@@ -438,7 +474,10 @@ Page({
   },
 
   savePlan() {
-    this.setData({ planEditing: false, planDocumentOpen: true });
+    const notes = this.data.planNotes
+      .map((item) => ({ ...item, text: (item.text || "").trim() }))
+      .filter((item) => item.text);
+    this.setData({ planNotes: notes, planEditing: false, planDocumentOpen: true });
     this.saveCloudState();
   },
 
