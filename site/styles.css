@@ -240,6 +240,37 @@ button {
     center / 100% 100% no-repeat;
 }
 
+.intro-letter-button {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  top: clamp(188px, 17vw, 244px);
+  min-height: 34px;
+  padding: 0 18px;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 143, 199, 0.36), transparent 42%),
+    rgba(255, 143, 199, 0.13);
+  border: 1px solid rgba(255, 143, 199, 0.36);
+  border-radius: 999px;
+  box-shadow:
+    0 0 22px rgba(255, 143, 199, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.intro-letter-button:hover {
+  border-color: rgba(255, 143, 199, 0.56);
+  box-shadow:
+    0 0 28px rgba(255, 143, 199, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
 .intro-copy {
   max-width: 450px;
   margin: 28px 0 0;
@@ -400,6 +431,7 @@ button {
 
 .special-entry-button {
   width: 100%;
+  min-height: 92px;
   padding: 18px 18px 18px 16px;
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 24px;
@@ -632,6 +664,11 @@ button {
 
 .special-buttons {
   grid-template-columns: 1fr;
+}
+
+.special-entry-list {
+  display: grid;
+  gap: 16px;
 }
 
 .classic-buttons {
@@ -1866,6 +1903,14 @@ footer,
     font-size: clamp(43px, 14vw, 64px);
   }
 
+  .intro-letter-button {
+    top: clamp(166px, 43vw, 202px);
+    right: 8px;
+    min-height: 32px;
+    padding-inline: 15px;
+    font-size: 12px;
+  }
+
   .intro-copy {
     margin-top: 18px;
     font-size: 14px;
@@ -1948,6 +1993,7 @@ footer,
   }
 
   .special-entry-button {
+    min-height: 82px;
     padding: 14px 14px 14px 12px;
     border-radius: 16px;
   }
@@ -2293,6 +2339,10 @@ footer,
 
 .diary-entry-button {
   width: 100%;
+  margin-top: 16px;
+}
+
+.special-entry-list + .diary-entry-button {
   margin-top: 16px;
 }
 

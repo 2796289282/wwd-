@@ -475,6 +475,7 @@ const elements = {
   brand: document.querySelector(".brand"),
   brandMark: document.querySelector("#brand-mark"),
   brandText: document.querySelector("#brand-text"),
+  introLetterButton: document.querySelector("#intro-letter-button"),
   introSection: document.querySelector(".intro"),
   startButton: document.querySelector("#start-game-button"),
   gameFlow: document.querySelector("#game-flow"),
@@ -2051,6 +2052,10 @@ elements.brandText.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopPropagation();
   handleHiddenEntryTap("text");
+});
+
+elements.introLetterButton.addEventListener("click", () => {
+  unlockLetterStep();
 });
 
 elements.backToIntroButton.addEventListener("click", () => {
