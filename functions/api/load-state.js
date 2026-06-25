@@ -10,6 +10,7 @@ const DEFAULT_DATA = {
   diaryFilter: "month",
   diaryDate: "",
   diaryEntries: [],
+  notifications: [],
   history: [],
   updatedAt: "",
 };

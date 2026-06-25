@@ -20,7 +20,7 @@
       <form id="entrance-form" class="entrance-card" autocomplete="off">
         <p class="step-label">PRIVATE ENTRANCE</p>
         <h1 id="entrance-title">鑫婉小世界</h1>
-        <p>请输入专属密码，进入游戏吧</p>
+        <p>输入专属密码，会自动识别是谁回家啦。</p>
         <label class="sr-only" for="entrance-password">入口暗号</label>
         <input
           id="entrance-password"
@@ -51,6 +51,7 @@
         <h1 id="page-title">鑫婉小屋，<br /><em>专属游戏基地。</em></h1>
         <button id="intro-letter-button" class="intro-letter-button" type="button">
           小纸条
+          <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
         </button>
         <p class="intro-copy">
           游戏任务要好好完成哦。赖皮的婉婉是小狗。
@@ -64,7 +65,10 @@
           <div class="home-status-grid">
             <article class="mood-card">
               <div class="home-card-head">
-                <span>双方今日心情</span>
+                <span>
+                  双方今日心情
+                  <span class="notification-badge inline-badge" data-notification-badge="mood" hidden>0</span>
+                </span>
                 <small id="mood-date-label">今天</small>
               </div>
               <div class="mood-row" aria-label="李家鑫今日心情">
@@ -93,11 +97,16 @@
               </div>
               <p id="daily-task-text">今天也要认真偏爱对方。</p>
               <small id="daily-task-hint">每天自动刷新一条情侣互动任务</small>
+              <button id="send-reconcile-button" class="reconcile-button" type="button">
+                发送和好请求
+                <span class="notification-badge" data-notification-badge="reconcile" hidden>0</span>
+              </button>
             </article>
             <button id="recent-letter-card" class="recent-letter-card" type="button">
               <span>最近一条小纸条</span>
               <strong id="recent-letter-preview">还没有新的小纸条，去写一句吧。</strong>
               <small>点这里打开小纸条</small>
+              <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
             </button>
           </div>
         </section>
@@ -114,6 +123,7 @@
           <span class="flow-preview">希望我们每天都开开心心</span>
           <button id="start-game-button" class="start-game-button" type="button">
             点我进去
+            <span class="notification-badge" data-notification-badge="draw" hidden>0</span>
           </button>
         </div>
       </section>
@@ -231,6 +241,7 @@
                   <strong>神秘小计划</strong>
                   <small>只有我们知道的约定</small>
                 </span>
+                <span class="notification-badge" data-notification-badge="plan" hidden>0</span>
                 <span class="special-entry-arrow" aria-hidden="true">→</span>
               </button>
               <button id="open-flight-button" class="special-entry-button flight-entry-mode" type="button">
@@ -248,6 +259,7 @@
                 <strong>专属小日记</strong>
                 <small>把属于李家鑫和婉婉的每一天，都悄悄收藏起来。</small>
               </span>
+              <span class="notification-badge" data-notification-badge="diary" hidden>0</span>
               <span class="special-entry-arrow" aria-hidden="true">→</span>
             </button>
           </div>
@@ -708,6 +720,20 @@
           <button id="site-dialog-confirm" class="special-password-button" type="submit">确定</button>
         </div>
       </form>
+    </div>
+    <div id="notification-modal" class="notification-modal" hidden>
+      <div class="notification-modal-backdrop" data-close-notifications></div>
+      <section class="notification-card" role="dialog" aria-modal="true" aria-labelledby="notification-title">
+        <div class="notification-head">
+          <div>
+            <p class="step-label">NEW MESSAGES</p>
+            <h2 id="notification-title">有人给你留了新提醒</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-notifications aria-label="关闭">×</button>
+        </div>
+        <p id="notification-summary" class="notification-summary">打开看看吧。</p>
+        <div id="notification-list" class="notification-list"></div>
+      </section>
     </div>
     <script src="plan-document.js"></script>
     <script src="script.js"></script>

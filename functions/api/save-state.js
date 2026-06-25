@@ -24,6 +24,7 @@ function normalizeData(data) {
     diaryFilter: typeof data.diaryFilter === "string" ? data.diaryFilter : "month",
     diaryDate: typeof data.diaryDate === "string" ? data.diaryDate : "",
     diaryEntries: Array.isArray(data.diaryEntries) ? data.diaryEntries : [],
+    notifications: Array.isArray(data.notifications) ? data.notifications : [],
     history: Array.isArray(data.history) ? data.history : [],
     updatedAt: new Date().toISOString(),
     app: data.app && typeof data.app === "object" ? data.app : {},

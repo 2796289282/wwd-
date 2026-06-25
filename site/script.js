@@ -1,7 +1,15 @@
 const STORAGE_KEY = "wanwan-picker-v6";
+const CURRENT_USER_KEY = "wanwan-current-user";
 const HISTORY_LIMIT = 10;
 const PLAN_BOOK_LIMIT = 12000;
-const ENTRANCE_PASSWORD = "080831";
+const IDENTITY_PASSWORDS = {
+  "080831": "wanwan",
+  "050116": "jiaxin",
+};
+const USER_LABELS = {
+  wanwan: "婉婉",
+  jiaxin: "家鑫",
+};
 const PLAN_EDIT_PASSWORD = "050116";
 const PLAN_GATE_SEQUENCE = ["敬", "请", "请", "期", "期", "待", "待"];
 const HIDDEN_ENTRY_TIMEOUT = 1800;
@@ -11,6 +19,7 @@ const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
 const LETTER_HISTORY_LIMIT = 20;
+const NOTIFICATION_POLL_INTERVAL = 8000;
 const DAILY_TASKS = [
   "给李家鑫说一句“我想你了”，不许只发两个字糊弄过去。",
   "今天给婉婉留一句具体夸夸，要说清楚哪里可爱。",
@@ -582,8 +591,10 @@ const elements = {
   dailyTaskText: document.querySelector("#daily-task-text"),
   dailyTaskDate: document.querySelector("#daily-task-date"),
   dailyTaskHint: document.querySelector("#daily-task-hint"),
+  sendReconcileButton: document.querySelector("#send-reconcile-button"),
   recentLetterCard: document.querySelector("#recent-letter-card"),
   recentLetterPreview: document.querySelector("#recent-letter-preview"),
+  notificationBadges: [...document.querySelectorAll("[data-notification-badge]")],
   introSection: document.querySelector(".intro"),
   startButton: document.querySelector("#start-game-button"),
   gameFlow: document.querySelector("#game-flow"),
@@ -642,6 +653,10 @@ const elements = {
   siteDialogInput: document.querySelector("#site-dialog-input"),
   siteDialogCancel: document.querySelector("#site-dialog-cancel"),
   siteDialogConfirm: document.querySelector("#site-dialog-confirm"),
+  notificationModal: document.querySelector("#notification-modal"),
+  notificationTitle: document.querySelector("#notification-title"),
+  notificationSummary: document.querySelector("#notification-summary"),
+  notificationList: document.querySelector("#notification-list"),
   form: document.querySelector("#option-form"),
   input: document.querySelector("#option-input"),
   templateButtons: [...document.querySelectorAll(".template-button")],
@@ -705,6 +720,7 @@ const elements = {
 };
 
 let state = loadState();
+let currentUser = localStorage.getItem(CURRENT_USER_KEY) || "";
 let isPicking = false;
 let toastTimer;
 let hiddenTapTimer;
@@ -725,6 +741,8 @@ let siteDialogResolver = null;
 let browserHistoryReady = false;
 let editingDiaryId = null;
 let activeDiaryId = null;
+let notificationPollTimer = null;
+let knownUnreadNotificationIds = new Set();
 
 const stepTargets = {
   intro: () => elements.introSection,
@@ -769,6 +787,7 @@ function createDefaultState() {
     diaryFilter: "month",
     diaryDate: "",
     diaryEntries: [],
+    notifications: [],
     customDecks: {
       truth: [...decks.truth.options],
       dare: [...decks.dare.options],
@@ -804,6 +823,7 @@ function loadState() {
       diaryFilter: typeof stored.diaryFilter === "string" ? stored.diaryFilter : fallback.diaryFilter,
       diaryDate: typeof stored.diaryDate === "string" ? stored.diaryDate : "",
       diaryEntries: normalizeDiaryEntries(stored.diaryEntries),
+      notifications: normalizeNotifications(stored.notifications),
       currentCard: null,
     };
   } catch {
@@ -824,6 +844,7 @@ function saveState() {
     diaryFilter: state.diaryFilter,
     diaryDate: state.diaryDate,
     diaryEntries: state.diaryEntries,
+    notifications: state.notifications,
     history: state.history,
     usedCardIds: state.usedCardIds,
   };
@@ -931,6 +952,110 @@ function letterExcerpt(text, max = 46) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
   if (!value) return "";
   return value.length > max ? `${value.slice(0, max)}...` : value;
+}
+
+function otherUser(user = currentUser) {
+  if (user === "wanwan") return "jiaxin";
+  if (user === "jiaxin") return "wanwan";
+  return "";
+}
+
+function normalizeNotifications(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const fromUser = item.fromUser === "wanwan" || item.fromUser === "jiaxin" ? item.fromUser : "";
+      const toUser = item.toUser === "wanwan" || item.toUser === "jiaxin" ? item.toUser : "";
+      const type = typeof item.type === "string" && item.type ? item.type : "general";
+      if (!fromUser || !toUser) return null;
+      const createdAt =
+        typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+          ? item.createdAt
+          : new Date().toISOString();
+      return {
+        id:
+          typeof item.id === "string" && item.id
+            ? item.id
+            : `notice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        fromUser,
+        toUser,
+        type,
+        title: typeof item.title === "string" ? item.title : "新的提醒",
+        content: typeof item.content === "string" ? item.content : "",
+        relatedId: typeof item.relatedId === "string" ? item.relatedId : "",
+        isRead: Boolean(item.isRead),
+        createdAt,
+      };
+    })
+    .filter(Boolean)
+    .filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    })
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 80);
+}
+
+function mergeNotifications(primary = [], secondary = []) {
+  const map = new Map();
+  [...normalizeNotifications(secondary), ...normalizeNotifications(primary)].forEach((notice) => {
+    map.set(notice.id, { ...(map.get(notice.id) || {}), ...notice });
+  });
+  return [...map.values()]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 80);
+}
+
+function unreadNotifications() {
+  if (!currentUser) return [];
+  return normalizeNotifications(state.notifications).filter(
+    (notice) => notice.toUser === currentUser && !notice.isRead,
+  );
+}
+
+function notificationGroup(type) {
+  if (type.startsWith("letter")) return "letter";
+  if (type.startsWith("diary")) return "diary";
+  if (type.startsWith("plan")) return "plan";
+  if (type.startsWith("draw")) return "draw";
+  if (type.startsWith("mood")) return "mood";
+  if (type.startsWith("reconcile")) return "reconcile";
+  return "general";
+}
+
+function addNotification({ type, title, content, relatedId = "" }) {
+  const toUser = otherUser();
+  if (!currentUser || !toUser || toUser === currentUser) return null;
+  const notice = {
+    id: `notice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    fromUser: currentUser,
+    toUser,
+    type,
+    title,
+    content,
+    relatedId,
+    isRead: false,
+    createdAt: new Date().toISOString(),
+  };
+  state.notifications = normalizeNotifications([notice, ...state.notifications]);
+  return notice;
+}
+
+function markNotificationRead(id) {
+  let changed = false;
+  state.notifications = normalizeNotifications(state.notifications).map((notice) => {
+    if (notice.id !== id || notice.isRead) return notice;
+    changed = true;
+    return { ...notice, isRead: true };
+  });
+  if (changed) {
+    saveState();
+    renderNotifications();
+    void saveCloudState({ silent: true });
+  }
 }
 
 function normalizeDeckMap(value) {
@@ -1079,6 +1204,7 @@ function cloudDataFromState() {
     diaryFilter: state.diaryFilter || "month",
     diaryDate: state.diaryDate || "",
     diaryEntries: normalizeDiaryEntries(state.diaryEntries),
+    notifications: normalizeNotifications(state.notifications),
     history: state.history,
     updatedAt: now,
   };
@@ -1109,6 +1235,7 @@ function applyCloudData(data) {
           ? data.diaryFilter
           : state.diaryFilter || "month",
     diaryDate: typeof data.diaryDate === "string" ? data.diaryDate : state.diaryDate || "",
+    notifications: mergeNotifications(data.notifications, state.notifications),
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
@@ -1131,6 +1258,19 @@ function applyCloudData(data) {
   }
 }
 
+function applyCloudDataPreservingFlow(data) {
+  const volatileState = {
+    mode: state.mode,
+    player: state.player,
+    drawType: state.drawType,
+    currentStep: state.currentStep,
+    isDeckOpen: state.isDeckOpen,
+    currentCard: state.currentCard,
+  };
+  applyCloudData(data);
+  state = { ...state, ...volatileState };
+}
+
 function isCloudStateEmpty(data) {
   if (!data || typeof data !== "object") return true;
   const hasRemainingCards =
@@ -1143,6 +1283,7 @@ function isCloudStateEmpty(data) {
     !data.planBook &&
     !(Array.isArray(data.planNotes) && data.planNotes.length) &&
     !(Array.isArray(data.diaryEntries) && data.diaryEntries.length) &&
+    !(Array.isArray(data.notifications) && data.notifications.length) &&
     !(Array.isArray(data.history) && data.history.length) &&
     !(Array.isArray(data.drawnCards) && data.drawnCards.length)
   );
@@ -1174,6 +1315,7 @@ function mergeLocalStateIntoCloud(localState) {
   if (!state.diaryEntries.length && localState.diaryEntries) {
     state.diaryEntries = mergeDiaryEntries(state.diaryEntries, localState.diaryEntries);
   }
+  state.notifications = mergeNotifications(state.notifications, localState.notifications);
 
   const historyKeys = new Set(
     state.history.map((entry) => `${entry.value}|${entry.player}|${entry.time}`),
@@ -1287,6 +1429,11 @@ async function migrateLocalStorageToCloud(cloudData) {
     state.diaryEntries = mergedDiaryEntries;
     changed = true;
   }
+  const mergedNotifications = mergeNotifications(state.notifications, localState.notifications);
+  if (mergedNotifications.length !== state.notifications.length) {
+    state.notifications = mergedNotifications;
+    changed = true;
+  }
   if (
     state.planBook &&
     (!cloudData || typeof cloudData.planBook !== "string" || !cloudData.planBook)
@@ -1311,6 +1458,12 @@ async function migrateLocalStorageToCloud(cloudData) {
   ) {
     changed = true;
   }
+  if (
+    state.notifications.length &&
+    (!cloudData || !Array.isArray(cloudData.notifications) || !cloudData.notifications.length)
+  ) {
+    changed = true;
+  }
   if (changed) {
     saveState();
     await saveCloudState({ silent: true });
@@ -1327,6 +1480,7 @@ function renderFromState() {
   renderDeckPanel();
   renderPlan();
   renderDiary();
+  renderNotifications();
 }
 
 function renderEntranceGate() {
@@ -1356,6 +1510,121 @@ function renderHomeDashboard() {
   const latestLetter = normalizeLetterHistory(state.letterHistory)[0];
   elements.recentLetterPreview.textContent =
     letterExcerpt(latestLetter?.text || state.secretLetter) || "还没有新的小纸条，去写一句吧。";
+}
+
+function renderNotifications() {
+  state.notifications = normalizeNotifications(state.notifications);
+  const unread = unreadNotifications();
+  const counts = unread.reduce((acc, notice) => {
+    const group = notificationGroup(notice.type);
+    acc[group] = (acc[group] || 0) + 1;
+    return acc;
+  }, {});
+
+  elements.notificationBadges.forEach((badge) => {
+    const group = badge.dataset.notificationBadge;
+    const count = counts[group] || 0;
+    badge.textContent = count > 9 ? "9+" : String(count);
+    badge.hidden = count === 0;
+  });
+
+  elements.notificationTitle.textContent = unread.length
+    ? `${USER_LABELS[otherUser()] || "对方"}给你留了 ${unread.length} 条新提醒`
+    : "暂时没有新的提醒";
+  elements.notificationSummary.textContent = unread.length
+    ? "点开任意一条，就会带你去对应的小角落。"
+    : "小屋很安静，今天也被好好照顾着。";
+  elements.notificationList.replaceChildren(
+    ...unread.map((notice) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "notification-item";
+      button.dataset.notificationId = notice.id;
+
+      const title = document.createElement("strong");
+      title.textContent = notice.title;
+
+      const content = document.createElement("span");
+      content.textContent = notice.content || "打开看看吧。";
+
+      const meta = document.createElement("small");
+      meta.textContent = `${USER_LABELS[notice.fromUser]} · ${new Intl.DateTimeFormat("zh-CN", {
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(notice.createdAt))}`;
+
+      button.append(title, content, meta);
+      return button;
+    }),
+  );
+}
+
+function showNotificationModal() {
+  renderNotifications();
+  if (!unreadNotifications().length) return;
+  elements.notificationModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeNotificationModal() {
+  elements.notificationModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function navigateForNotification(notice) {
+  const group = notificationGroup(notice.type);
+  closeNotificationModal();
+  markNotificationRead(notice.id);
+  if (group === "letter") {
+    unlockLetterStep();
+  } else if (group === "diary") {
+    diaryReturnStep = state.currentStep === "diary" ? "special" : state.currentStep;
+    openStep("diary");
+    if (notice.relatedId) {
+      window.setTimeout(() => openDiaryDetail(notice.relatedId), 120);
+    }
+  } else if (group === "plan") {
+    unlockPlanStep();
+  } else if (group === "draw") {
+    openStep("play");
+  } else {
+    openStep("intro");
+  }
+}
+
+function maybeShowUnreadNotificationPopup({ force = false } = {}) {
+  const unread = unreadNotifications();
+  if (!unread.length) return;
+  const unreadIds = new Set(unread.map((notice) => notice.id));
+  const hasNew = unread.some((notice) => !knownUnreadNotificationIds.has(notice.id));
+  knownUnreadNotificationIds = unreadIds;
+  if (force || hasNew) {
+    showToast(`${USER_LABELS[otherUser()] || "对方"}给你留了 ${unread.length} 条新提醒`);
+    showNotificationModal();
+  }
+}
+
+async function pollNotifications() {
+  if (!siteUnlocked || !currentUser) return;
+  try {
+    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
+    const payload = await response.json();
+    applyCloudDataPreservingFlow(payload.data || {});
+    saveState();
+    renderNotifications();
+    maybeShowUnreadNotificationPopup();
+  } catch (error) {
+    console.error("pollNotifications failed.", error);
+  }
+}
+
+function startNotificationPolling() {
+  window.clearInterval(notificationPollTimer);
+  if (!currentUser) return;
+  notificationPollTimer = window.setInterval(pollNotifications, NOTIFICATION_POLL_INTERVAL);
 }
 
 function currentOptions() {
@@ -1689,7 +1958,7 @@ function openDiaryEditor(entry = null) {
   elements.diaryEditorTitle.textContent = entry ? "编辑这篇小日记" : "写一篇小日记";
   elements.diaryTitleInput.value = entry?.title || "";
   elements.diaryBodyInput.value = entry?.body || "";
-  elements.diaryAuthorInput.value = entry?.author || "me";
+  elements.diaryAuthorInput.value = entry?.author || (currentUser === "wanwan" ? "ta" : "me");
   elements.diaryMoodInput.value = entry?.mood || "";
   elements.diaryImageInput.value = entry?.image || "";
   elements.diaryFormError.hidden = true;
@@ -1743,6 +2012,8 @@ function saveDiaryFromForm(event) {
   }
 
   const now = new Date().toISOString();
+  const isEditing = Boolean(editingDiaryId);
+  let relatedId = editingDiaryId;
   const payload = {
     title,
     body,
@@ -1758,13 +2029,20 @@ function saveDiaryFromForm(event) {
       state.diaryEntries[index] = { ...state.diaryEntries[index], ...payload };
     }
   } else {
+    relatedId = `diary-${Date.now()}-${secureRandomIndex(100000)}`;
     state.diaryEntries.unshift({
-      id: `diary-${Date.now()}-${secureRandomIndex(100000)}`,
+      id: relatedId,
       createdAt: now,
       favorite: false,
       ...payload,
     });
   }
+  addNotification({
+    type: isEditing ? "diary-updated" : "diary-created",
+    title: isEditing ? "日记被悄悄更新啦" : "有人写了一篇新日记",
+    content: title,
+    relatedId,
+  });
 
   saveState();
   renderDiary();
@@ -2038,6 +2316,12 @@ async function pickRandomOption() {
     mode: state.mode,
     time: new Date().toISOString(),
   });
+  addNotification({
+    type: "draw-card",
+    title: "刚刚抽了一张卡",
+    content: `${state.player}抽到：${letterExcerpt(result, 42)}`,
+    relatedId: resultKey,
+  });
   state.history = state.history.slice(0, HISTORY_LIMIT);
   saveState();
 
@@ -2196,14 +2480,21 @@ function saveLetter() {
   const previousLatest = normalizeLetterHistory(state.letterHistory)[0]?.text || "";
   state.secretLetter = nextLetter;
   if (nextLetter && nextLetter !== previousLatest) {
+    const letterId = `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     state.letterHistory = normalizeLetterHistory([
       {
-        id: `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: letterId,
         text: nextLetter,
         time: new Date().toISOString(),
       },
       ...state.letterHistory,
     ]);
+    addNotification({
+      type: "letter-saved",
+      title: "你收到一张新的小纸条",
+      content: letterExcerpt(nextLetter, 52),
+      relatedId: letterId,
+    });
   }
   saveState();
   renderLetter();
@@ -2261,10 +2552,17 @@ function addPlanNote(text) {
     showToast("先写一条记录吧");
     return;
   }
+  const noteId = `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   state.planNotes.unshift({
-    id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    id: noteId,
     text: value,
     time: new Date().toISOString(),
+  });
+  addNotification({
+    type: "plan-note-added",
+    title: "计划书多了一条新记录",
+    content: letterExcerpt(value, 52),
+    relatedId: noteId,
   });
   elements.planNoteInput.value = "";
   saveState();
@@ -2275,6 +2573,7 @@ function addPlanNote(text) {
 
 function savePlan() {
   state.planBook = elements.planInput.value.trim();
+  const wasEditing = planEditable;
   if (planEditable) {
     state.planNotes = [...elements.planNotesList.querySelectorAll("[data-note-edit-input]")]
       .map((input) => {
@@ -2291,29 +2590,57 @@ function savePlan() {
   }
   planEditable = false;
   planDocumentOpen = true;
+  if (wasEditing) {
+    addNotification({
+      type: "plan-completed",
+      title: "神秘小计划更新好了",
+      content: "计划书被认真保存了一次，快去看看。",
+      relatedId: "plan",
+    });
+  }
   saveState();
   renderPlan();
   showToast("已保存");
   void saveCloudState();
 }
 
-function unlockEntrance() {
+function sendReconcileRequest() {
+  addNotification({
+    type: "reconcile-request",
+    title: "有人想和好啦",
+    content: `${USER_LABELS[currentUser] || "对方"}递来一张和好小纸条，想被认真抱抱。`,
+    relatedId: "reconcile",
+  });
+  saveState();
+  renderNotifications();
+  showToast("和好请求已送到对方的小屋");
+  void saveCloudState();
+}
+
+function unlockEntrance(user) {
+  currentUser = user || currentUser;
+  if (currentUser) localStorage.setItem(CURRENT_USER_KEY, currentUser);
   siteUnlocked = true;
   resetVolatileFlow();
   renderFromState();
+  knownUnreadNotificationIds = new Set(unreadNotifications().map((notice) => notice.id));
+  window.setTimeout(() => maybeShowUnreadNotificationPopup({ force: true }), 180);
+  startNotificationPolling();
+  showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 elements.entranceForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (elements.entrancePassword.value.trim() !== ENTRANCE_PASSWORD) {
+  const user = IDENTITY_PASSWORDS[elements.entrancePassword.value.trim()];
+  if (!user) {
     elements.entranceError.hidden = false;
     elements.entrancePassword.focus();
     elements.entrancePassword.select();
     return;
   }
   elements.entrancePassword.value = "";
-  unlockEntrance();
+  unlockEntrance(user);
 });
 
 elements.form.addEventListener("submit", (event) => {
@@ -2359,17 +2686,36 @@ elements.recentLetterCard.addEventListener("click", () => {
   unlockLetterStep();
 });
 
+elements.sendReconcileButton.addEventListener("click", sendReconcileRequest);
+
 elements.moodButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const owner = button.dataset.moodOwner;
     if (!owner) return;
     state.todayMoods = normalizeTodayMoods(state.todayMoods);
     state.todayMoods[owner] = button.dataset.mood || "";
+    addNotification({
+      type: "mood-updated",
+      title: "今日心情更新啦",
+      content: `${USER_LABELS[currentUser] || "对方"}今天的心情是：${button.dataset.mood || "悄悄的"}`,
+      relatedId: owner,
+    });
     saveState();
     renderHomeDashboard();
     showToast("今日心情已同步");
     void saveCloudState({ silent: true });
   });
+});
+
+elements.notificationList.addEventListener("click", (event) => {
+  const item = event.target.closest("[data-notification-id]");
+  if (!item) return;
+  const notice = state.notifications.find((entry) => entry.id === item.dataset.notificationId);
+  if (notice) navigateForNotification(notice);
+});
+
+document.querySelectorAll("[data-close-notifications]").forEach((button) => {
+  button.addEventListener("click", closeNotificationModal);
 });
 
 elements.backToIntroButton.addEventListener("click", () => {

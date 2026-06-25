@@ -421,6 +421,56 @@ button {
   line-height: 1.65;
 }
 
+.reconcile-button {
+  position: relative;
+  width: 100%;
+  margin-top: 14px;
+  min-height: 42px;
+  color: #fff;
+  font-weight: 900;
+  background: linear-gradient(135deg, rgba(255, 143, 199, 0.9), rgba(167, 139, 250, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  box-shadow: 0 0 22px rgba(255, 143, 199, 0.2);
+  cursor: pointer;
+}
+
+.notification-badge {
+  position: absolute;
+  z-index: 4;
+  top: -8px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  color: #fff;
+  background: #ff4f79;
+  border: 2px solid rgba(255, 255, 255, 0.82);
+  border-radius: 999px;
+  box-shadow: 0 8px 18px rgba(255, 79, 121, 0.34);
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.notification-badge.inline-badge {
+  position: static;
+  min-width: 20px;
+  height: 20px;
+  margin-left: 6px;
+  display: inline-grid;
+  vertical-align: middle;
+  border-width: 1px;
+}
+
+.special-entry-button,
+.recent-letter-card,
+.intro-letter-button {
+  position: relative;
+}
+
 .landing-card {
   width: min(440px, 100%);
   margin-top: 28px;
@@ -447,6 +497,7 @@ button {
 }
 
 .start-game-button {
+  position: relative;
   width: 100%;
   padding: 13px 18px;
   color: var(--white);
@@ -2861,6 +2912,93 @@ footer,
   padding: 22px;
   display: grid;
   place-items: center;
+}
+
+.notification-modal {
+  position: fixed;
+  z-index: 82;
+  inset: 0;
+  padding: 22px;
+  display: grid;
+  place-items: center;
+}
+
+.notification-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 4, 12, 0.68);
+  backdrop-filter: blur(12px);
+  animation: fade-in 0.2s ease both;
+}
+
+.notification-card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  max-height: min(640px, calc(100dvh - 44px));
+  padding: 22px;
+  overflow: auto;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top left, rgba(255, 143, 199, 0.24), transparent 34%),
+    rgba(18, 18, 37, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 26px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.46);
+  animation: panel-rise 0.24s ease both;
+}
+
+.notification-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.notification-head h2 {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: -0.04em;
+}
+
+.notification-summary {
+  margin: 12px 0 16px;
+  color: var(--text-sub);
+  line-height: 1.7;
+}
+
+.notification-list {
+  display: grid;
+  gap: 10px;
+}
+
+.notification-item {
+  width: 100%;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+  color: var(--text-main);
+  text-align: left;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  cursor: pointer;
+}
+
+.notification-item strong {
+  font-size: 15px;
+}
+
+.notification-item span {
+  color: var(--text-sub);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.notification-item small {
+  color: var(--accent-blue);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .diary-modal-backdrop {
