@@ -55,6 +55,52 @@
         <p class="intro-copy">
           游戏任务要好好完成哦。赖皮的婉婉是小狗。
         </p>
+        <section class="home-dashboard" aria-label="今日小屋状态">
+          <div class="home-days-card">
+            <p class="home-card-label">TODAY'S HOME</p>
+            <strong id="together-days">第 0 天</strong>
+            <span>鑫婉小屋已经亮灯这么久啦</span>
+          </div>
+          <div class="home-status-grid">
+            <article class="mood-card">
+              <div class="home-card-head">
+                <span>双方今日心情</span>
+                <small id="mood-date-label">今天</small>
+              </div>
+              <div class="mood-row" aria-label="李家鑫今日心情">
+                <strong>李家鑫</strong>
+                <div class="mood-options">
+                  <button type="button" data-mood-owner="jiaxin" data-mood="想你">想你</button>
+                  <button type="button" data-mood-owner="jiaxin" data-mood="开心">开心</button>
+                  <button type="button" data-mood-owner="jiaxin" data-mood="要抱抱">要抱抱</button>
+                </div>
+                <span id="jiaxin-mood-value">还没选择</span>
+              </div>
+              <div class="mood-row" aria-label="婉婉今日心情">
+                <strong>婉婉</strong>
+                <div class="mood-options">
+                  <button type="button" data-mood-owner="wanwan" data-mood="想你">想你</button>
+                  <button type="button" data-mood-owner="wanwan" data-mood="乖乖">乖乖</button>
+                  <button type="button" data-mood-owner="wanwan" data-mood="求哄">求哄</button>
+                </div>
+                <span id="wanwan-mood-value">还没选择</span>
+              </div>
+            </article>
+            <article class="daily-task-card">
+              <div class="home-card-head">
+                <span>每日一句 / 每日任务</span>
+                <small id="daily-task-date">今日限定</small>
+              </div>
+              <p id="daily-task-text">今天也要认真偏爱对方。</p>
+              <small id="daily-task-hint">每天自动刷新一条情侣互动任务</small>
+            </article>
+            <button id="recent-letter-card" class="recent-letter-card" type="button">
+              <span>最近一条小纸条</span>
+              <strong id="recent-letter-preview">还没有新的小纸条，去写一句吧。</strong>
+              <small>点这里打开小纸条</small>
+            </button>
+          </div>
+        </section>
         <div class="doodle-arrow" aria-hidden="true">
           <svg viewBox="0 0 120 70" role="img">
             <path d="M5 10c35 2 57 16 74 41" />
@@ -423,6 +469,19 @@
                 </div>
               </div>
             </article>
+            <section class="letter-history-card" aria-labelledby="letter-history-title">
+              <div class="home-card-head">
+                <div>
+                  <span>LETTER HISTORY</span>
+                  <h3 id="letter-history-title">小纸条历史</h3>
+                </div>
+                <small>每次保存都会留下一个版本</small>
+              </div>
+              <ol id="letter-history-list" class="letter-history-list"></ol>
+              <p id="letter-history-empty" class="history-empty">
+                还没有历史小纸条，写下第一句就会出现在这里。
+              </p>
+            </section>
           </div>
         </section>
 

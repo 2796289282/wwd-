@@ -279,6 +279,148 @@ button {
   line-height: 1.8;
 }
 
+.home-dashboard {
+  width: min(620px, 100%);
+  margin-top: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+.home-days-card,
+.mood-card,
+.daily-task-card,
+.recent-letter-card,
+.letter-history-card {
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top right, rgba(255, 143, 199, 0.18), transparent 34%),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 22px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(16px);
+}
+
+.home-days-card {
+  padding: 18px;
+}
+
+.home-card-label,
+.home-card-head span {
+  margin: 0;
+  color: var(--accent-pink);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.home-days-card strong {
+  display: block;
+  margin-top: 6px;
+  font-size: clamp(30px, 8vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.home-days-card span,
+.home-card-head small,
+.daily-task-card small,
+.recent-letter-card small {
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.home-status-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  gap: 14px;
+}
+
+.mood-card,
+.daily-task-card,
+.recent-letter-card,
+.letter-history-card {
+  padding: 16px;
+}
+
+.recent-letter-card {
+  grid-column: 1 / -1;
+  width: 100%;
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.recent-letter-card strong {
+  color: var(--text-main);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.home-card-head {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mood-row {
+  display: grid;
+  gap: 8px;
+}
+
+.mood-row + .mood-row {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.mood-row strong {
+  font-size: 14px;
+}
+
+.mood-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mood-options button {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.mood-options button.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent-pink), var(--accent-purple));
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: 0 0 18px rgba(255, 143, 199, 0.24);
+}
+
+.mood-row > span {
+  color: var(--accent-blue);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.daily-task-card p {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.65;
+}
+
 .landing-card {
   width: min(440px, 100%);
   margin-top: 28px;
@@ -634,6 +776,53 @@ button {
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 700;
+}
+
+.letter-history-card {
+  display: grid;
+  gap: 10px;
+}
+
+.letter-history-card .home-card-head {
+  margin-bottom: 2px;
+}
+
+.letter-history-card h3 {
+  margin: 5px 0 0;
+  font-size: 22px;
+  letter-spacing: -0.04em;
+}
+
+.letter-history-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+
+.letter-history-item {
+  padding: 14px;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+}
+
+.letter-history-meta {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--accent-pink);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.letter-history-item p {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 .classic-zone {
@@ -1913,6 +2102,39 @@ footer,
 
   .intro-copy {
     margin-top: 18px;
+    font-size: 14px;
+  }
+
+  .home-dashboard {
+    width: 100%;
+    margin-top: 18px;
+    gap: 12px;
+  }
+
+  .home-status-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .home-days-card,
+  .mood-card,
+  .daily-task-card,
+  .recent-letter-card {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .home-days-card strong {
+    font-size: 32px;
+  }
+
+  .mood-options button {
+    min-height: 36px;
+    padding-inline: 13px;
+  }
+
+  .daily-task-card p,
+  .recent-letter-card strong {
     font-size: 14px;
   }
 

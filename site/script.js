@@ -9,6 +9,22 @@ const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/api/load-state";
 const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
+const RELATIONSHIP_START_DATE = "2025-08-31";
+const LETTER_HISTORY_LIMIT = 20;
+const DAILY_TASKS = [
+  "给李家鑫说一句“我想你了”，不许只发两个字糊弄过去。",
+  "今天给婉婉留一句具体夸夸，要说清楚哪里可爱。",
+  "互相发一张今天的小照片，让对方知道你此刻在哪里。",
+  "睡前认真说一句晚安，再补一句明天也要喜欢我。",
+  "今天选一个十分钟小约会：语音、视频、一起听歌都可以。",
+  "给对方取一个今日限定昵称，晚上之前都要这样叫。",
+  "把今天最想抱抱对方的瞬间写下来，存进小纸条。",
+  "发一句“今天辛苦啦”，然后认真问问对方累不累。",
+  "一起约定明天要完成的一件小事，越小越容易坚持。",
+  "给对方发一条只能今晚看的撒娇消息。",
+  "说一个今天让你想到对方的小细节。",
+  "给彼此一个今日奖励：一句夸夸、一个拥抱承诺或一个小愿望。",
+];
 const DEFAULT_SECRET_LETTER = `给今晚的我们：
 如果你点到了这里，说明你发现了这张藏起来的小纸条。
 
@@ -558,6 +574,16 @@ const elements = {
   brandMark: document.querySelector("#brand-mark"),
   brandText: document.querySelector("#brand-text"),
   introLetterButton: document.querySelector("#intro-letter-button"),
+  togetherDays: document.querySelector("#together-days"),
+  moodDateLabel: document.querySelector("#mood-date-label"),
+  jiaxinMoodValue: document.querySelector("#jiaxin-mood-value"),
+  wanwanMoodValue: document.querySelector("#wanwan-mood-value"),
+  moodButtons: [...document.querySelectorAll("[data-mood-owner]")],
+  dailyTaskText: document.querySelector("#daily-task-text"),
+  dailyTaskDate: document.querySelector("#daily-task-date"),
+  dailyTaskHint: document.querySelector("#daily-task-hint"),
+  recentLetterCard: document.querySelector("#recent-letter-card"),
+  recentLetterPreview: document.querySelector("#recent-letter-preview"),
   introSection: document.querySelector(".intro"),
   startButton: document.querySelector("#start-game-button"),
   gameFlow: document.querySelector("#game-flow"),
@@ -590,6 +616,8 @@ const elements = {
   letterCount: document.querySelector("#letter-count"),
   saveLetterButton: document.querySelector("#save-letter-button"),
   toggleLetterVisibilityButton: document.querySelector("#toggle-letter-visibility-button"),
+  letterHistoryList: document.querySelector("#letter-history-list"),
+  letterHistoryEmpty: document.querySelector("#letter-history-empty"),
   planGateModal: document.querySelector("#plan-gate-modal"),
   closePlanGateButton: document.querySelector("#close-plan-gate-button"),
   planGateButtons: [...document.querySelectorAll("[data-plan-word]")],
@@ -730,6 +758,12 @@ function createDefaultState() {
     currentStep: "intro",
     isDeckOpen: false,
     secretLetter: DEFAULT_SECRET_LETTER,
+    letterHistory: [],
+    todayMoods: {
+      date: getTodayKey(),
+      jiaxin: "",
+      wanwan: "",
+    },
     planBook: "",
     planNotes: [],
     diaryFilter: "month",
@@ -763,6 +797,8 @@ function loadState() {
         typeof stored.secretLetter === "string" && stored.secretLetter.trim()
           ? stored.secretLetter
           : fallback.secretLetter,
+      letterHistory: normalizeLetterHistory(stored.letterHistory),
+      todayMoods: normalizeTodayMoods(stored.todayMoods),
       planBook: typeof stored.planBook === "string" ? stored.planBook : "",
       planNotes: normalizePlanNotes(stored.planNotes),
       diaryFilter: typeof stored.diaryFilter === "string" ? stored.diaryFilter : fallback.diaryFilter,
@@ -781,6 +817,8 @@ function saveState() {
   const persistentState = {
     customDecks: state.customDecks,
     secretLetter: state.secretLetter,
+    letterHistory: state.letterHistory,
+    todayMoods: state.todayMoods,
     planBook: state.planBook,
     planNotes: state.planNotes,
     diaryFilter: state.diaryFilter,
@@ -807,6 +845,92 @@ function resetVolatileFlow() {
   diaryReturnStep = "special";
   planGateIndex = 0;
   planEditable = false;
+}
+
+function getTodayKey(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatShortDate(dateKey = getTodayKey()) {
+  const [, month, day] = dateKey.split("-");
+  return `${Number(month)}月${Number(day)}日`;
+}
+
+function relationshipDays() {
+  const start = new Date(`${RELATIONSHIP_START_DATE}T00:00:00`);
+  const today = new Date(`${getTodayKey()}T00:00:00`);
+  const diff = today - start;
+  return Math.max(1, Math.floor(diff / 86400000) + 1);
+}
+
+function dailyTaskForToday() {
+  const key = getTodayKey();
+  const seed = key.replace(/-/g, "").split("").reduce((sum, char) => sum + Number(char), 0);
+  return DAILY_TASKS[seed % DAILY_TASKS.length];
+}
+
+function normalizeTodayMoods(value) {
+  const today = getTodayKey();
+  if (!value || typeof value !== "object" || value.date !== today) {
+    return { date: today, jiaxin: "", wanwan: "" };
+  }
+  return {
+    date: today,
+    jiaxin: typeof value.jiaxin === "string" ? value.jiaxin : "",
+    wanwan: typeof value.wanwan === "string" ? value.wanwan : "",
+  };
+}
+
+function normalizeLetterHistory(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        return {
+          id: `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          text: item.trim(),
+          time: new Date().toISOString(),
+        };
+      }
+      if (!item || typeof item !== "object") return null;
+      const text = typeof item.text === "string" ? item.text.trim() : "";
+      if (!text) return null;
+      const time =
+        typeof item.time === "string" && !Number.isNaN(Date.parse(item.time))
+          ? item.time
+          : new Date().toISOString();
+      return {
+        id:
+          typeof item.id === "string" && item.id
+            ? item.id
+            : `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        text,
+        time,
+      };
+    })
+    .filter(Boolean)
+    .filter((item) => {
+      const key = `${item.text}|${item.time}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .slice(0, LETTER_HISTORY_LIMIT);
+}
+
+function mergeLetterHistory(primary = [], secondary = []) {
+  return normalizeLetterHistory([...normalizeLetterHistory(primary), ...normalizeLetterHistory(secondary)]);
+}
+
+function letterExcerpt(text, max = 46) {
+  const value = String(text || "").replace(/\s+/g, " ").trim();
+  if (!value) return "";
+  return value.length > max ? `${value.slice(0, max)}...` : value;
 }
 
 function normalizeDeckMap(value) {
@@ -948,6 +1072,8 @@ function cloudDataFromState() {
     drawnCards: [...state.usedCardIds],
     remainingCards: state.customDecks,
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
+    letterHistory: normalizeLetterHistory(state.letterHistory),
+    todayMoods: normalizeTodayMoods(state.todayMoods),
     planBook: state.planBook || "",
     planNotes: normalizePlanNotes(state.planNotes),
     diaryFilter: state.diaryFilter || "month",
@@ -971,6 +1097,8 @@ function applyCloudData(data) {
       typeof data.letter === "string" && data.letter.trim()
         ? data.letter
         : state.secretLetter || fallback.secretLetter,
+    letterHistory: mergeLetterHistory(data.letterHistory, state.letterHistory),
+    todayMoods: normalizeTodayMoods(data.todayMoods || state.todayMoods),
     planBook: typeof data.planBook === "string" ? data.planBook : state.planBook || "",
     planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
     diaryEntries: mergeDiaryEntries(data.diaryEntries, state.diaryEntries),
@@ -1011,6 +1139,7 @@ function isCloudStateEmpty(data) {
   return (
     !hasRemainingCards &&
     !data.letter &&
+    !(Array.isArray(data.letterHistory) && data.letterHistory.length) &&
     !data.planBook &&
     !(Array.isArray(data.planNotes) && data.planNotes.length) &&
     !(Array.isArray(data.diaryEntries) && data.diaryEntries.length) &&
@@ -1031,6 +1160,10 @@ function mergeLocalStateIntoCloud(localState) {
   if (!state.secretLetter || state.secretLetter === DEFAULT_SECRET_LETTER) {
     state.secretLetter = localState.secretLetter || state.secretLetter;
   }
+  state.letterHistory = mergeLetterHistory(state.letterHistory, localState.letterHistory);
+  state.todayMoods = normalizeTodayMoods(state.todayMoods.jiaxin || state.todayMoods.wanwan
+    ? state.todayMoods
+    : localState.todayMoods);
 
   if (!state.planBook && typeof localState.planBook === "string") {
     state.planBook = localState.planBook;
@@ -1133,6 +1266,18 @@ async function migrateLocalStorageToCloud(cloudData) {
     state.planBook = localState.planBook;
     changed = true;
   }
+  const mergedLetterHistory = mergeLetterHistory(state.letterHistory, localState.letterHistory);
+  if (mergedLetterHistory.length !== state.letterHistory.length) {
+    state.letterHistory = mergedLetterHistory;
+    changed = true;
+  }
+  if (
+    (!state.todayMoods?.jiaxin && !state.todayMoods?.wanwan) &&
+    localState.todayMoods
+  ) {
+    state.todayMoods = normalizeTodayMoods(localState.todayMoods);
+    changed = true;
+  }
   if (!state.planNotes.length && localState.planNotes) {
     state.planNotes = normalizePlanNotes(localState.planNotes);
     changed = true;
@@ -1155,6 +1300,12 @@ async function migrateLocalStorageToCloud(cloudData) {
     changed = true;
   }
   if (
+    state.letterHistory.length &&
+    (!cloudData || !Array.isArray(cloudData.letterHistory) || !cloudData.letterHistory.length)
+  ) {
+    changed = true;
+  }
+  if (
     state.diaryEntries.length &&
     (!cloudData || !Array.isArray(cloudData.diaryEntries) || !cloudData.diaryEntries.length)
   ) {
@@ -1168,6 +1319,7 @@ async function migrateLocalStorageToCloud(cloudData) {
 
 function renderFromState() {
   renderEntranceGate();
+  renderHomeDashboard();
   renderControls();
   renderPlayer();
   renderHistory();
@@ -1183,6 +1335,27 @@ function renderEntranceGate() {
   if (!siteUnlocked) {
     elements.entranceError.hidden = true;
   }
+}
+
+function renderHomeDashboard() {
+  const moods = normalizeTodayMoods(state.todayMoods);
+  state.todayMoods = moods;
+  elements.togetherDays.textContent = `第 ${relationshipDays()} 天`;
+  elements.moodDateLabel.textContent = formatShortDate(moods.date);
+  elements.jiaxinMoodValue.textContent = moods.jiaxin || "还没选择";
+  elements.wanwanMoodValue.textContent = moods.wanwan || "还没选择";
+  elements.moodButtons.forEach((button) => {
+    const owner = button.dataset.moodOwner;
+    button.classList.toggle("active", moods[owner] === button.dataset.mood);
+  });
+
+  elements.dailyTaskText.textContent = dailyTaskForToday();
+  elements.dailyTaskDate.textContent = `${formatShortDate()} 今日限定`;
+  elements.dailyTaskHint.textContent = "做完以后，记得给对方一个认真回应。";
+
+  const latestLetter = normalizeLetterHistory(state.letterHistory)[0];
+  elements.recentLetterPreview.textContent =
+    letterExcerpt(latestLetter?.text || state.secretLetter) || "还没有新的小纸条，去写一句吧。";
 }
 
 function currentOptions() {
@@ -1306,6 +1479,35 @@ function renderLetter() {
   elements.letterCount.textContent = `${content.length} / 1200`;
   elements.letterInput.classList.toggle("letter-hidden", letterHidden);
   elements.toggleLetterVisibilityButton.textContent = letterHidden ? "显示内容" : "隐藏内容";
+  renderLetterHistory();
+}
+
+function renderLetterHistory() {
+  const letters = normalizeLetterHistory(state.letterHistory);
+  state.letterHistory = letters;
+  elements.letterHistoryList.replaceChildren(
+    ...letters.map((letter, index) => {
+      const item = document.createElement("li");
+      item.className = "letter-history-item";
+
+      const meta = document.createElement("span");
+      meta.className = "letter-history-meta";
+      meta.textContent = `小纸条 ${String(index + 1).padStart(2, "0")} · ${new Intl.DateTimeFormat("zh-CN", {
+        month: "numeric",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(letter.time))}`;
+
+      const text = document.createElement("p");
+      text.textContent = letterExcerpt(letter.text, 88);
+
+      item.append(meta, text);
+      return item;
+    }),
+  );
+  elements.letterHistoryList.hidden = letters.length === 0;
+  elements.letterHistoryEmpty.hidden = letters.length > 0;
 }
 
 function renderPlan() {
@@ -1990,9 +2192,22 @@ async function requestTextInSiteDialog(title, defaultValue = "") {
 }
 
 function saveLetter() {
-  state.secretLetter = elements.letterInput.value.trim() || DEFAULT_SECRET_LETTER;
+  const nextLetter = elements.letterInput.value.trim() || DEFAULT_SECRET_LETTER;
+  const previousLatest = normalizeLetterHistory(state.letterHistory)[0]?.text || "";
+  state.secretLetter = nextLetter;
+  if (nextLetter && nextLetter !== previousLatest) {
+    state.letterHistory = normalizeLetterHistory([
+      {
+        id: `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        text: nextLetter,
+        time: new Date().toISOString(),
+      },
+      ...state.letterHistory,
+    ]);
+  }
   saveState();
   renderLetter();
+  renderHomeDashboard();
   showToast("已收好。下次打开还在这里。");
   void saveCloudState();
 }
@@ -2138,6 +2353,23 @@ elements.brandText.addEventListener("click", (event) => {
 
 elements.introLetterButton.addEventListener("click", () => {
   unlockLetterStep();
+});
+
+elements.recentLetterCard.addEventListener("click", () => {
+  unlockLetterStep();
+});
+
+elements.moodButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const owner = button.dataset.moodOwner;
+    if (!owner) return;
+    state.todayMoods = normalizeTodayMoods(state.todayMoods);
+    state.todayMoods[owner] = button.dataset.mood || "";
+    saveState();
+    renderHomeDashboard();
+    showToast("今日心情已同步");
+    void saveCloudState({ silent: true });
+  });
 });
 
 elements.backToIntroButton.addEventListener("click", () => {

@@ -17,6 +17,8 @@ function normalizeData(data) {
       ? data.remainingCards
       : {},
     letter: typeof data.letter === "string" ? data.letter : "",
+    letterHistory: Array.isArray(data.letterHistory) ? data.letterHistory : [],
+    todayMoods: data.todayMoods && typeof data.todayMoods === "object" ? data.todayMoods : {},
     planBook: typeof data.planBook === "string" ? data.planBook : "",
     planNotes: Array.isArray(data.planNotes) ? data.planNotes : [],
     diaryFilter: typeof data.diaryFilter === "string" ? data.diaryFilter : "month",
@@ -33,26 +35,6 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestPost({ request, env }) {
-  const supabaseUrl = env.SUPABASE_URL;
-  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    if (!env.APP_STATE) {
-      return json({ error: "Missing cloud storage binding" }, { status: 500 });
-    }
-
-    let data;
-    try {
-      data = await request.json();
-    } catch {
-      return json({ error: "Invalid JSON body" }, { status: 400 });
-    }
-
-    const nextData = normalizeData(data);
-    await env.APP_STATE.put("main", JSON.stringify(nextData));
-    return json({ data: nextData, storage: "cloudflare-kv" });
-  }
-
   let data;
   try {
     data = await request.json();
@@ -61,6 +43,18 @@ export async function onRequestPost({ request, env }) {
   }
 
   const nextData = normalizeData(data);
+
+  if (env.APP_STATE) {
+    await env.APP_STATE.put("main", JSON.stringify(nextData));
+    return json({ data: nextData, storage: "cloudflare-kv" });
+  }
+
+  const supabaseUrl = env.SUPABASE_URL;
+  const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    return json({ error: "Missing cloud storage binding" }, { status: 500 });
+  }
 
   try {
     const response = await fetch(

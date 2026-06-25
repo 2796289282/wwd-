@@ -3,6 +3,8 @@ const DEFAULT_DATA = {
   drawnCards: [],
   remainingCards: {},
   letter: "",
+  letterHistory: [],
+  todayMoods: {},
   planBook: "",
   planNotes: [],
   diaryFilter: "month",
@@ -28,19 +30,20 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestGet({ env }) {
+  if (env.APP_STATE) {
+    try {
+      const stored = await env.APP_STATE.get("main");
+      const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
+      return json({ data, storage: "cloudflare-kv" });
+    } catch (error) {
+      return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 });
+    }
+  }
+
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    if (env.APP_STATE) {
-      try {
-        const stored = await env.APP_STATE.get("main");
-        const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
-        return json({ data, storage: "cloudflare-kv" });
-      } catch (error) {
-        return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 });
-      }
-    }
     return json({ data: DEFAULT_DATA, storage: "none" }, { status: 200 });
   }
 
