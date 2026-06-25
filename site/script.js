@@ -722,11 +722,20 @@ const elements = {
   diaryFormError: document.querySelector("#diary-form-error"),
   diaryDetailMeta: document.querySelector("#diary-detail-meta"),
   diaryDetailTitle: document.querySelector("#diary-detail-title"),
+  diaryDetailAvatar: document.querySelector("#diary-detail-avatar"),
+  diaryDetailAuthor: document.querySelector("#diary-detail-author"),
+  diaryDetailDate: document.querySelector("#diary-detail-date"),
   diaryDetailBody: document.querySelector("#diary-detail-body"),
+  diaryDetailImage: document.querySelector("#diary-detail-image"),
   diaryDetailTags: document.querySelector("#diary-detail-tags"),
   diaryFavoriteButton: document.querySelector("#diary-favorite-button"),
   diaryEditButton: document.querySelector("#diary-edit-button"),
   diaryDeleteButton: document.querySelector("#diary-delete-button"),
+  diaryCommentsCount: document.querySelector("#diary-comments-count"),
+  diaryCommentsList: document.querySelector("#diary-comments-list"),
+  diaryCommentsEmpty: document.querySelector("#diary-comments-empty"),
+  diaryCommentForm: document.querySelector("#diary-comment-form"),
+  diaryCommentInput: document.querySelector("#diary-comment-input"),
   profileAvatar: document.querySelector("#profile-avatar"),
   profileName: document.querySelector("#profile-name"),
   profileRole: document.querySelector("#profile-role"),
@@ -817,7 +826,7 @@ function createDefaultState() {
     },
     planBook: "",
     planNotes: [],
-    diaryFilter: "month",
+    diaryFilter: "all",
     diaryDate: "",
     diaryEntries: [],
     notifications: [],
@@ -1181,14 +1190,30 @@ function normalizePlanNotes(value) {
   return [];
 }
 
-function normalizeDiaryEntries(value) {
+function normalizeDiaryAuthor(value) {
+  if (value === "wanwan" || value === "ta" || value === "婉婉") return "ta";
+  return "me";
+}
+
+function diaryAuthorUser(author) {
+  return normalizeDiaryAuthor(author) === "ta" ? "wanwan" : "jiaxin";
+}
+
+function diaryCommentAuthor(value) {
+  if (value === "wanwan" || value === "婉婉" || value === "ta") return "wanwan";
+  if (value === "jiaxin" || value === "家鑫" || value === "me") return "jiaxin";
+  return currentUser === "wanwan" ? "wanwan" : "jiaxin";
+}
+
+function normalizeDiaryComments(value, diaryId = "") {
   if (!Array.isArray(value)) return [];
+  const seen = new Set();
   return value
     .map((item) => {
       if (!item || typeof item !== "object") return null;
-      const title = typeof item.title === "string" ? item.title.trim() : "";
-      const body = typeof item.body === "string" ? item.body.trim() : "";
-      if (!title || !body) return null;
+      const content = typeof item.content === "string" ? item.content.trim() : "";
+      if (!content) return null;
+      const author = diaryCommentAuthor(item.author);
       const createdAt =
         typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
           ? item.createdAt
@@ -1197,13 +1222,51 @@ function normalizeDiaryEntries(value) {
         id:
           typeof item.id === "string" && item.id
             ? item.id
-            : `diary-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            : `comment-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        diaryId: typeof item.diaryId === "string" && item.diaryId ? item.diaryId : diaryId,
+        author,
+        nickname: USER_LABELS[author] || (author === "wanwan" ? "婉婉" : "家鑫"),
+        content,
+        createdAt,
+      };
+    })
+    .filter(Boolean)
+    .filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    })
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+function normalizeDiaryEntries(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const body = typeof item.body === "string" ? item.body.trim() : "";
+      if (!body) return null;
+      const createdAt =
+        typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+          ? item.createdAt
+          : new Date().toISOString();
+      const id =
+        typeof item.id === "string" && item.id
+          ? item.id
+          : `diary-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const dateInfo = formatDiaryDate(createdAt);
+      const title = typeof item.title === "string" && item.title.trim()
+        ? item.title.trim()
+        : `${dateInfo.monthDay}的小日记`;
+      return {
+        ...item,
+        id,
         title,
         body,
-        author: item.author === "ta" ? "ta" : "me",
+        author: normalizeDiaryAuthor(item.author),
         mood: typeof item.mood === "string" ? item.mood : "",
         image: typeof item.image === "string" ? item.image : "",
         favorite: Boolean(item.favorite),
+        comments: normalizeDiaryComments(item.comments, id),
         createdAt,
         updatedAt:
           typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt))
@@ -1267,7 +1330,7 @@ function cloudDataFromState() {
     todayMoods: normalizeTodayMoods(state.todayMoods),
     planBook: state.planBook || "",
     planNotes: normalizePlanNotes(state.planNotes),
-    diaryFilter: state.diaryFilter || "month",
+    diaryFilter: state.diaryFilter || "all",
     diaryDate: state.diaryDate || "",
     diaryEntries: normalizeDiaryEntries(state.diaryEntries),
     notifications: normalizeNotifications(state.notifications),
@@ -1299,7 +1362,7 @@ function applyCloudData(data) {
         ? "date"
         : typeof data.diaryFilter === "string" && data.diaryFilter !== "memory"
           ? data.diaryFilter
-          : state.diaryFilter || "month",
+          : state.diaryFilter || "all",
     diaryDate: typeof data.diaryDate === "string" ? data.diaryDate : state.diaryDate || "",
     notifications: mergeNotifications(data.notifications, state.notifications),
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
@@ -1967,36 +2030,40 @@ function renderPlanNotes() {
 }
 
 function diaryMonthTitle(date = new Date()) {
-  return new Intl.DateTimeFormat("zh-CN", { month: "long" }).format(date);
+  return "小屋日记";
 }
 
 function formatDiaryDate(value) {
-  const date = new Date(value);
+  const parsed = value && !Number.isNaN(Date.parse(value)) ? new Date(value) : new Date();
   return {
-    week: new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(date),
-    day: `${date.getMonth() + 1}-${date.getDate()}`,
-    monthDay: `${date.getMonth() + 1}月${date.getDate()}日`,
+    week: new Intl.DateTimeFormat("zh-CN", { weekday: "short" }).format(parsed),
+    day: `${parsed.getMonth() + 1}-${parsed.getDate()}`,
+    monthDay: `${parsed.getMonth() + 1}月${parsed.getDate()}日`,
+    full: `${parsed.getFullYear()}年${parsed.getMonth() + 1}月${parsed.getDate()}日`,
     time: new Intl.DateTimeFormat("zh-CN", {
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
-    }).format(date),
+    }).format(parsed),
   };
 }
 
 function diaryAuthorLabel(author) {
-  if (author === "ta") return "婉婉写的";
-  return "家鑫写的";
+  return normalizeDiaryAuthor(author) === "ta" ? "婉婉" : "家鑫";
+}
+
+function diaryAuthorAvatar(author) {
+  return normalizeDiaryAuthor(author) === "ta" ? "婉" : "鑫";
 }
 
 function diarySummary(body) {
   const text = String(body || "").replace(/\s+/g, " ").trim();
-  return text.length > 58 ? `${text.slice(0, 58)}...` : text;
+  return text.length > 74 ? `${text.slice(0, 74)}...` : text;
 }
 
 function filteredDiaryEntries() {
   const now = new Date();
-  const filter = state.diaryFilter || "month";
+  const filter = state.diaryFilter === "month" ? "all" : (state.diaryFilter || "all");
   return normalizeDiaryEntries(state.diaryEntries)
     .filter((entry) => {
       const date = new Date(entry.createdAt);
@@ -2021,20 +2088,29 @@ function createDiaryItem(entry, index) {
   item.style.setProperty("--delay", `${Math.min(index * 45, 240)}ms`);
 
   const dateInfo = formatDiaryDate(entry.createdAt);
-  const dateBlock = document.createElement("span");
-  dateBlock.className = "diary-date-block";
-  dateBlock.innerHTML = `<small>${dateInfo.week}</small><strong>${dateInfo.day}</strong>`;
+  const avatar = document.createElement("span");
+  avatar.className = "diary-author-avatar";
+  avatar.textContent = diaryAuthorAvatar(entry.author);
 
   const card = document.createElement("span");
   card.className = "diary-card";
 
   const top = document.createElement("span");
   top.className = "diary-card-top";
-  const title = document.createElement("strong");
-  title.textContent = entry.title || dateInfo.monthDay;
+  const authorLine = document.createElement("span");
+  authorLine.className = "diary-card-author";
+  const author = document.createElement("strong");
+  author.textContent = diaryAuthorLabel(entry.author);
+  const mood = document.createElement("em");
+  mood.textContent = entry.mood || "小心情";
+  authorLine.append(author, mood);
   const time = document.createElement("small");
-  time.textContent = dateInfo.time;
-  top.append(title, time);
+  time.textContent = dateInfo.monthDay;
+  top.append(authorLine, time);
+
+  const title = document.createElement("b");
+  title.className = "diary-card-title";
+  title.textContent = entry.title || dateInfo.monthDay;
 
   const summary = document.createElement("span");
   summary.className = "diary-card-summary";
@@ -2042,7 +2118,8 @@ function createDiaryItem(entry, index) {
 
   const meta = document.createElement("span");
   meta.className = "diary-card-meta";
-  [diaryAuthorLabel(entry.author), entry.mood, entry.favorite ? "已收藏" : ""]
+  const comments = normalizeDiaryComments(entry.comments, entry.id);
+  [`${comments.length} 个小回应`, entry.favorite ? "已喜欢" : "", entry.image ? "有图片备注" : ""]
     .filter(Boolean)
     .forEach((text) => {
       const tag = document.createElement("em");
@@ -2050,23 +2127,23 @@ function createDiaryItem(entry, index) {
       meta.append(tag);
     });
 
-  card.append(top, summary, meta);
-  item.append(dateBlock, card);
+  card.append(top, title, summary, meta);
+  item.append(avatar, card);
   return item;
 }
 
 function renderDiary() {
   if (!elements.diaryList) return;
   state.diaryEntries = normalizeDiaryEntries(state.diaryEntries);
-  elements.diaryTitle.textContent =
-    state.diaryFilter === "date" && state.diaryDate
-      ? `${Number(state.diaryDate.slice(5, 7))}月${Number(state.diaryDate.slice(8, 10))}日`
-      : diaryMonthTitle();
+  const activeFilter = state.diaryFilter === "month" ? "all" : (state.diaryFilter || "all");
+  elements.diaryTitle.textContent = activeFilter === "date" && state.diaryDate
+    ? `${Number(state.diaryDate.slice(5, 7))}月${Number(state.diaryDate.slice(8, 10))}日`
+    : "小屋日记";
   elements.diaryDateInput.value = state.diaryDate || "";
-  elements.diaryDateForm.hidden = state.diaryFilter !== "date";
-  elements.diaryDateClearButton.hidden = state.diaryFilter !== "date" || !state.diaryDate;
+  elements.diaryDateForm.hidden = activeFilter !== "date";
+  elements.diaryDateClearButton.hidden = activeFilter !== "date" || !state.diaryDate;
   elements.diaryFilterButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.diaryFilter === (state.diaryFilter || "month"));
+    button.classList.toggle("active", button.dataset.diaryFilter === activeFilter);
   });
   const entries = filteredDiaryEntries();
   elements.diaryList.replaceChildren(...entries.map(createDiaryItem));
@@ -2095,16 +2172,55 @@ function closeDiaryEditor() {
   document.body.classList.remove("modal-open");
 }
 
+function renderDiaryComments(entry) {
+  const comments = normalizeDiaryComments(entry?.comments, entry?.id);
+  elements.diaryCommentsCount.textContent = `${comments.length} 条回应`;
+  elements.diaryCommentsEmpty.hidden = comments.length > 0;
+  elements.diaryCommentsList.replaceChildren(
+    ...comments.map((comment) => {
+      const item = document.createElement("article");
+      item.className = "diary-comment-item";
+
+      const avatar = document.createElement("span");
+      avatar.className = "diary-comment-avatar";
+      avatar.textContent = comment.author === "wanwan" ? "婉" : "鑫";
+
+      const body = document.createElement("div");
+      const head = document.createElement("p");
+      const name = document.createElement("strong");
+      name.textContent = comment.nickname || USER_LABELS[comment.author] || "家鑫";
+      const time = document.createElement("small");
+      const dateInfo = formatDiaryDate(comment.createdAt);
+      time.textContent = `${dateInfo.monthDay} ${dateInfo.time}`;
+      head.append(name, time);
+
+      const content = document.createElement("span");
+      content.textContent = comment.content;
+      const heart = document.createElement("i");
+      heart.textContent = "♡";
+      body.append(head, content, heart);
+      item.append(avatar, body);
+      return item;
+    }),
+  );
+}
+
 function openDiaryDetail(id) {
+  state.diaryEntries = normalizeDiaryEntries(state.diaryEntries);
   const entry = state.diaryEntries.find((item) => item.id === id);
   if (!entry) return;
   activeDiaryId = id;
   const dateInfo = formatDiaryDate(entry.createdAt);
-  elements.diaryDetailMeta.textContent = `${diaryAuthorLabel(entry.author)} · ${dateInfo.monthDay} ${dateInfo.time}`;
+  elements.diaryDetailMeta.textContent = "DIARY DETAIL";
   elements.diaryDetailTitle.textContent = entry.title || dateInfo.monthDay;
+  elements.diaryDetailAvatar.textContent = diaryAuthorAvatar(entry.author);
+  elements.diaryDetailAuthor.textContent = diaryAuthorLabel(entry.author);
+  elements.diaryDetailDate.textContent = `${dateInfo.full} · ${dateInfo.time}`;
   elements.diaryDetailBody.textContent = entry.body;
+  elements.diaryDetailImage.hidden = !entry.image;
+  elements.diaryDetailImage.textContent = entry.image ? `图片备注：${entry.image}` : "";
   elements.diaryDetailTags.replaceChildren(
-    ...[entry.mood, entry.image ? "有图片备注" : "", entry.favorite ? "已收藏" : ""]
+    ...[entry.mood, entry.favorite ? "已收藏" : ""]
       .filter(Boolean)
       .map((text) => {
         const tag = document.createElement("span");
@@ -2112,6 +2228,8 @@ function openDiaryDetail(id) {
         return tag;
       }),
   );
+  renderDiaryComments(entry);
+  elements.diaryCommentInput.value = "";
   elements.diaryFavoriteButton.textContent = entry.favorite ? "取消收藏" : "收藏";
   elements.diaryDetailModal.hidden = false;
   document.body.classList.add("modal-open");
@@ -2120,6 +2238,7 @@ function openDiaryDetail(id) {
 function closeDiaryDetail() {
   elements.diaryDetailModal.hidden = true;
   activeDiaryId = null;
+  if (elements.diaryCommentInput) elements.diaryCommentInput.value = "";
   document.body.classList.remove("modal-open");
 }
 
@@ -2156,6 +2275,7 @@ function saveDiaryFromForm(event) {
       id: relatedId,
       createdAt: now,
       favorite: false,
+      comments: [],
       ...payload,
     });
   }
@@ -2173,6 +2293,41 @@ function saveDiaryFromForm(event) {
   void saveCloudState();
 }
 
+function saveDiaryComment(event) {
+  event.preventDefault();
+  const content = elements.diaryCommentInput.value.trim();
+  if (!content) {
+    showToast("先写一句想说的话吧。");
+    return;
+  }
+  if (!activeDiaryId) return;
+  state.diaryEntries = normalizeDiaryEntries(state.diaryEntries);
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (!entry) return;
+  const author = currentUser === "wanwan" ? "wanwan" : "jiaxin";
+  const comment = {
+    id: `comment-${Date.now()}-${secureRandomIndex(100000)}`,
+    diaryId: entry.id,
+    author,
+    nickname: USER_LABELS[author] || (author === "wanwan" ? "婉婉" : "家鑫"),
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  entry.comments = normalizeDiaryComments([...(entry.comments || []), comment], entry.id);
+  entry.updatedAt = new Date().toISOString();
+  addNotification({
+    type: "diary-commented",
+    title: "日记收到一条小回应",
+    content: letterExcerpt(content, 52),
+    relatedId: entry.id,
+  });
+  saveState();
+  renderDiary();
+  renderDiaryComments(entry);
+  elements.diaryCommentInput.value = "";
+  showToast("小回应已送到这篇日记里");
+  void saveCloudState({ silent: true });
+}
 function editActiveDiary() {
   const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
   if (!entry) return;
@@ -3128,7 +3283,7 @@ elements.diaryDateForm.addEventListener("submit", (event) => {
 });
 
 elements.diaryDateClearButton.addEventListener("click", () => {
-  state.diaryFilter = "month";
+  state.diaryFilter = "all";
   state.diaryDate = "";
   saveState();
   renderDiary();
@@ -3142,6 +3297,7 @@ elements.diaryList.addEventListener("click", (event) => {
 });
 
 elements.diaryForm.addEventListener("submit", saveDiaryFromForm);
+elements.diaryCommentForm.addEventListener("submit", saveDiaryComment);
 
 document.querySelectorAll("[data-close-diary-editor]").forEach((button) => {
   button.addEventListener("click", closeDiaryEditor);

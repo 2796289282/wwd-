@@ -72,7 +72,7 @@
         <section class="home-dashboard" aria-label="今日小屋状态">
           <div class="home-days-card">
             <p class="home-card-label">TODAY'S HOME</p>
-            <strong id="together-days">第 -- 天</strong>
+            <strong id="together-days">第 635 天</strong>
             <span>鑫婉小屋已经亮灯这么久啦</span>
           </div>
           <div class="home-status-grid">
@@ -639,8 +639,7 @@
             </div>
 
             <div class="diary-filter" role="group" aria-label="筛选日记">
-              <button class="active" type="button" data-diary-filter="month">本月</button>
-              <button type="button" data-diary-filter="all">全部</button>
+              <button class="active" type="button" data-diary-filter="all">全部</button>
               <button type="button" data-diary-filter="me">家鑫</button>
               <button type="button" data-diary-filter="ta">婉婉</button>
               <button type="button" data-diary-filter="favorite">喜欢</button>
@@ -652,7 +651,7 @@
               <input id="diary-date-input" type="date" />
               <button class="secondary-button" type="submit">查看这天</button>
               <button id="diary-date-clear-button" class="text-button" type="button" hidden>
-                返回本月
+                返回全部
               </button>
             </form>
 
@@ -678,7 +677,7 @@
             <div>
               <strong id="profile-name">小屋居民</strong>
               <span id="profile-role">夜晚活跃的小屋居民</span>
-              <small id="profile-days">小屋第 0 天</small>
+              <small id="profile-days">小屋第 635 天</small>
             </div>
           </article>
           <section class="profile-list" aria-label="我的设置">
@@ -799,13 +798,33 @@
           </div>
           <button class="diary-icon-button" type="button" data-close-diary-detail aria-label="关闭">×</button>
         </div>
+        <div class="diary-detail-author">
+          <span id="diary-detail-avatar" class="diary-detail-avatar">鑫</span>
+          <div>
+            <strong id="diary-detail-author">家鑫</strong>
+            <small id="diary-detail-date"></small>
+          </div>
+        </div>
         <p id="diary-detail-body" class="diary-detail-body"></p>
+        <p id="diary-detail-image" class="diary-detail-image" hidden></p>
         <div id="diary-detail-tags" class="diary-detail-tags"></div>
         <div class="diary-dialog-actions diary-detail-actions">
           <button id="diary-favorite-button" class="secondary-button" type="button">收藏</button>
           <button id="diary-edit-button" class="secondary-button" type="button">编辑</button>
           <button id="diary-delete-button" class="text-button danger" type="button">删除</button>
         </div>
+        <section class="diary-comments" aria-labelledby="diary-comments-title">
+          <div class="diary-comments-head">
+            <h3 id="diary-comments-title">小回应</h3>
+            <span id="diary-comments-count">0 条回应</span>
+          </div>
+          <div id="diary-comments-list" class="diary-comments-list"></div>
+          <p id="diary-comments-empty" class="diary-comments-empty">还没有小回应，先留一句温柔的话吧。</p>
+          <form id="diary-comment-form" class="diary-comment-form" autocomplete="off">
+            <textarea id="diary-comment-input" rows="2" maxlength="300" placeholder="给这篇小日记写一句回应……"></textarea>
+            <button class="special-password-button" type="submit">发送小回应</button>
+          </form>
+        </section>
       </article>
     </div>
     <div id="plan-gate-modal" class="plan-gate-modal" hidden>
