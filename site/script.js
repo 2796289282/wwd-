@@ -604,7 +604,14 @@ const elements = {
   letterStep: document.querySelector("#letter-step"),
   planStep: document.querySelector("#plan-step"),
   diaryStep: document.querySelector("#diary-step"),
+  profileStep: document.querySelector("#profile-step"),
+  bottomNav: document.querySelector("#app-bottom-nav"),
+  bottomNavButtons: [...document.querySelectorAll("[data-app-tab]")],
   openSpecialStepButton: document.querySelector("#open-special-step-button"),
+  recommendedPlayButton: document.querySelector("#recommended-play-button"),
+  modeLetterButton: document.querySelector("#mode-letter-button"),
+  modeFlightButton: document.querySelector("#mode-flight-button"),
+  modePlanButton: document.querySelector("#mode-plan-button"),
   openPlanButton: document.querySelector("#open-plan-button"),
   openFlightButton: document.querySelector("#open-flight-button"),
   openDiaryButton: document.querySelector("#open-diary-button"),
@@ -709,6 +716,12 @@ const elements = {
   diaryFavoriteButton: document.querySelector("#diary-favorite-button"),
   diaryEditButton: document.querySelector("#diary-edit-button"),
   diaryDeleteButton: document.querySelector("#diary-delete-button"),
+  profileAvatar: document.querySelector("#profile-avatar"),
+  profileName: document.querySelector("#profile-name"),
+  profileRole: document.querySelector("#profile-role"),
+  profileDays: document.querySelector("#profile-days"),
+  profileMood: document.querySelector("#profile-mood"),
+  profileActivityList: document.querySelector("#profile-activity-list"),
   letterPrompt: document.querySelector("#letter-prompt"),
   openLetterPromptButton: document.querySelector("#open-letter-prompt-button"),
   deckTitle: document.querySelector("#deck-title"),
@@ -752,6 +765,7 @@ const stepTargets = {
   letter: () => elements.letterStep,
   plan: () => elements.planStep,
   diary: () => elements.diaryStep,
+  profile: () => elements.profileStep,
 };
 
 function cleanupLegacyPwa() {
@@ -1481,6 +1495,7 @@ function renderFromState() {
   renderPlan();
   renderDiary();
   renderNotifications();
+  renderProfile();
 }
 
 function renderEntranceGate() {
@@ -1557,6 +1572,46 @@ function renderNotifications() {
 
       button.append(title, content, meta);
       return button;
+    }),
+  );
+}
+
+function renderBottomNav() {
+  const active = state.currentStep === "profile" ? "profile"
+    : state.currentStep === "diary" ? "diary"
+      : ["mode", "special", "play", "letter", "plan"].includes(state.currentStep) ? "mode"
+        : "intro";
+  elements.bottomNavButtons.forEach((button) => {
+    button.classList.toggle("active", button.dataset.appTab === active);
+  });
+}
+
+function renderProfile() {
+  if (!elements.profileStep) return;
+  const isWanwan = currentUser === "wanwan";
+  const moods = normalizeTodayMoods(state.todayMoods);
+  elements.profileAvatar.textContent = isWanwan ? "婉" : "鑫";
+  elements.profileName.textContent = isWanwan ? "婉婉" : "李家鑫";
+  elements.profileRole.textContent = isWanwan ? "夜晚活跃的小屋居民" : "负责把小屋灯点亮的人";
+  elements.profileDays.textContent = `小屋第 ${relationshipDays()} 天`;
+  elements.profileMood.textContent = isWanwan
+    ? (moods.wanwan || "今天还没选择")
+    : (moods.jiaxin || "今天还没选择");
+
+  const activities = [
+    ...normalizeNotifications(state.notifications)
+      .filter((notice) => notice.fromUser === currentUser || notice.toUser === currentUser)
+      .slice(0, 3)
+      .map((notice) => `${notice.title}`),
+    state.history[0] ? "抽到了一张心动卡" : "",
+    normalizeLetterHistory(state.letterHistory)[0] ? "留下了一张小纸条" : "",
+  ].filter(Boolean).slice(0, 4);
+
+  elements.profileActivityList.replaceChildren(
+    ...(activities.length ? activities : ["今天还没有新活动，去点亮一点小事吧"]).map((text) => {
+      const item = document.createElement("li");
+      item.textContent = text;
+      return item;
     }),
   );
 }
@@ -2090,6 +2145,7 @@ function renderFlow() {
   const inLetter = state.currentStep === "letter";
   const inPlan = state.currentStep === "plan";
   const inDiary = state.currentStep === "diary";
+  const inProfile = state.currentStep === "profile";
 
   document.body.dataset.currentStep = state.currentStep;
   elements.introSection.hidden = !inIntro;
@@ -2100,11 +2156,14 @@ function renderFlow() {
   elements.letterStep.hidden = !inLetter;
   elements.planStep.hidden = !inPlan;
   elements.diaryStep.hidden = !inDiary;
+  elements.profileStep.hidden = !inProfile;
   elements.footer.hidden = !inIntro;
   renderSpecialAccess();
   renderLetter();
   renderPlan();
   renderDiary();
+  renderProfile();
+  renderBottomNav();
 }
 
 function renderDeckPanel() {
@@ -2662,6 +2721,17 @@ elements.startButton.addEventListener("click", () => {
   openStep("mode");
 });
 
+elements.bottomNavButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const tab = button.dataset.appTab;
+    if (!tab) return;
+    if (tab === "diary") {
+      diaryReturnStep = "intro";
+    }
+    openStep(tab);
+  });
+});
+
 elements.brand.addEventListener("click", (event) => {
   event.preventDefault();
 });
@@ -2687,6 +2757,19 @@ elements.recentLetterCard.addEventListener("click", () => {
 });
 
 elements.sendReconcileButton.addEventListener("click", sendReconcileRequest);
+
+elements.recommendedPlayButton.addEventListener("click", () => openStep("play"));
+
+elements.modeLetterButton.addEventListener("click", () => {
+  letterReturnStep = "mode";
+  openStep("letter");
+});
+
+elements.modeFlightButton.addEventListener("click", () => {
+  window.location.href = FLIGHT_REDIRECT_URL;
+});
+
+elements.modePlanButton.addEventListener("click", unlockPlanStep);
 
 elements.moodButtons.forEach((button) => {
   button.addEventListener("click", () => {

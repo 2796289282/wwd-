@@ -2,7 +2,7 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
       content="给小裴同学准备的真心话与大冒险随机抽取小游戏。"
@@ -31,6 +31,19 @@
         />
         <button class="start-game-button" type="submit">进入</button>
         <p id="entrance-error" class="entrance-error" hidden>小笨蛋输错密码了，重试。</p>
+        <div class="identity-hint">
+          <p><span></span> 双身份暗号 <span></span></p>
+          <div class="identity-cards" aria-label="双身份暗号说明">
+            <article>
+              <strong>婉婉回家</strong>
+              <small>输入婉婉的专属暗号进入</small>
+            </article>
+            <article>
+              <strong>家鑫回家</strong>
+              <small>输入家鑫的专属暗号进入</small>
+            </article>
+          </div>
+        </div>
       </form>
     </section>
 
@@ -134,27 +147,39 @@
             <button id="back-to-intro-button" class="ghost-back-button" type="button">
               返回上一级
             </button>
-            <span class="flow-badge">STEP 02</span>
+            <span class="flow-badge">互动</span>
           </div>
           <div class="setup-copy">
-            <p class="step-label">CHOOSE TONIGHT'S MOOD</p>
-            <h2 id="game-mode-title">今晚想玩什么呢？</h2>
-            <p class="setup-note">婉婉不想选的话，就让家鑫帮你决定吧。</p>
+            <p class="step-label">INTERACTION CENTER</p>
+            <h2 id="game-mode-title">互动中心。</h2>
+            <p class="setup-note">把今晚的心动，变成一点点互动。</p>
           </div>
 
           <div class="mode-zones">
+            <section class="mode-zone recommended-zone" aria-labelledby="recommended-zone-title">
+              <div class="zone-heading">
+                <p class="step-label">推荐活动</p>
+                <h3 id="recommended-zone-title">星光默契挑战</h3>
+                <span>猜一猜，我们有多懂彼此？</span>
+              </div>
+              <button id="recommended-play-button" class="special-password-button" type="button">
+                去参与
+              </button>
+            </section>
+
             <section class="mode-zone special-zone" aria-labelledby="special-zone-title">
               <div class="zone-heading">
-                <p class="step-label">PRIVATE AREA</p>
-                <h3 id="special-zone-title">神秘小窝</h3>
-                <span>藏着只属于我们的惊喜和小秘密</span>
+                <p class="step-label">MAILBOX</p>
+                <h3 id="special-zone-title">小纸条信箱</h3>
+                <span>写下心里话，慢慢送达。</span>
               </div>
-              <button id="open-special-step-button" class="special-entry-button" type="button">
-                <span class="special-entry-mark">♡</span>
+              <button id="mode-letter-button" class="special-entry-button" type="button">
+                <span class="special-entry-mark">信</span>
                 <span class="special-entry-copy">
-                  <strong>神秘小窝</strong>
-                  <small>欢迎进入李家鑫和婉婉的神秘小窝</small>
+                  <strong>打开小纸条</strong>
+                  <small>查看收到和发出的心里话</small>
                 </span>
+                <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
                 <span class="special-entry-arrow" aria-hidden="true">↗</span>
               </button>
             </section>
@@ -182,6 +207,25 @@
                   <small>进入自定义，放一点小心思</small>
                 </button>
               </div>
+            </section>
+
+            <section class="mode-zone app-feature-grid" aria-label="更多互动入口">
+              <button id="mode-flight-button" class="feature-card" type="button">
+                <span>棋</span>
+                <strong>双人飞行棋</strong>
+                <small>掷出乐趣，走近彼此</small>
+              </button>
+              <button id="mode-plan-button" class="feature-card" type="button">
+                <span>约</span>
+                <strong>任务与约定</strong>
+                <small>一起打卡，让约定落地</small>
+                <span class="notification-badge" data-notification-badge="plan" hidden>0</span>
+              </button>
+              <button id="open-special-step-button" class="feature-card feature-card-wide" type="button">
+                <span>屋</span>
+                <strong>专属回忆</strong>
+                <small>神秘小窝和更多小秘密</small>
+              </button>
             </section>
           </div>
         </section>
@@ -613,8 +657,68 @@
             <p id="diary-count" class="diary-count">0 个记录</p>
           </div>
         </section>
+
+        <section id="profile-step" class="flow-panel profile-step" aria-labelledby="profile-title" hidden>
+          <div class="profile-hero">
+            <div>
+              <p class="step-label">MY ROOM</p>
+              <h2 id="profile-title">我的</h2>
+              <p class="setup-note">这是属于你的温柔小屋。</p>
+            </div>
+          </div>
+          <article class="profile-card">
+            <div class="profile-avatar" id="profile-avatar">♡</div>
+            <div>
+              <strong id="profile-name">小屋居民</strong>
+              <span id="profile-role">夜晚活跃的小屋居民</span>
+              <small id="profile-days">小屋第 0 天</small>
+            </div>
+          </article>
+          <section class="profile-list" aria-label="我的设置">
+            <button type="button">
+              <span>身份与暗号</span>
+              <small>当前身份自动识别</small>
+            </button>
+            <button type="button">
+              <span>我的心情</span>
+              <small id="profile-mood">今天还没选择</small>
+            </button>
+            <button type="button">
+              <span>登录提醒</span>
+              <small>已开启</small>
+            </button>
+            <button type="button">
+              <span>小屋数据同步</span>
+              <small>Cloudflare KV 已同步</small>
+            </button>
+          </section>
+          <section class="profile-activity" aria-labelledby="profile-activity-title">
+            <h3 id="profile-activity-title">最近活动</h3>
+            <ol id="profile-activity-list"></ol>
+          </section>
+        </section>
       </div>
     </main>
+
+    <nav id="app-bottom-nav" class="app-bottom-nav" aria-label="底部导航">
+      <button class="active" type="button" data-app-tab="intro">
+        <span>⌂</span>
+        首页
+      </button>
+      <button type="button" data-app-tab="mode">
+        <span>♡</span>
+        互动
+      </button>
+      <button type="button" data-app-tab="diary">
+        <span>▤</span>
+        日记
+        <span class="notification-badge nav-badge" data-notification-badge="diary" hidden>0</span>
+      </button>
+      <button type="button" data-app-tab="profile">
+        <span>☺</span>
+        我的
+      </button>
+    </nav>
 
     <footer>
       <p>本游戏最终解释权归李家鑫所有，撒娇有效，但不一定有用。</p>
