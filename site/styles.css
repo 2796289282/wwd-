@@ -5420,3 +5420,306 @@ footer {
     width: min(calc(100vw - 24px), 408px);
   }
 }
+
+/* Home-only visual pass: match the dark romantic cottage reference without touching other pages. */
+body[data-current-step="intro"] {
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 74% 11%, rgba(109, 139, 255, 0.22), transparent 28%),
+    radial-gradient(circle at 82% 26%, rgba(255, 143, 199, 0.16), transparent 24%),
+    radial-gradient(circle at 18% 4%, rgba(167, 139, 250, 0.16), transparent 30%),
+    #090a0f;
+}
+
+body[data-current-step="intro"]::before {
+  opacity: 0.78;
+}
+
+body[data-current-step="intro"] .app-shell {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding:
+    calc(18px + env(safe-area-inset-top))
+    16px
+    calc(104px + env(safe-area-inset-bottom));
+}
+
+body[data-current-step="intro"] .intro {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+body[data-current-step="intro"] .eyebrow {
+  margin-bottom: 12px;
+  color: #d9b8ff;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+
+body[data-current-step="intro"] .intro h1 {
+  max-width: 398px;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(46px, 13.2vw, 58px);
+  line-height: 1.02;
+  letter-spacing: -0.07em;
+  text-shadow: 0 0 28px rgba(167, 139, 250, 0.28);
+}
+
+body[data-current-step="intro"] .intro h1 em {
+  display: inline;
+  color: #78c8ff;
+  font: inherit;
+}
+
+body[data-current-step="intro"] .intro h1 em::after {
+  display: none;
+}
+
+body[data-current-step="intro"] .intro-copy {
+  max-width: 320px;
+  margin: 14px 0 0;
+  color: rgba(243, 240, 255, 0.64);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+body[data-current-step="intro"] .intro::after {
+  content: "";
+  position: absolute;
+  top: 18px;
+  right: -14px;
+  width: 170px;
+  height: 150px;
+  background:
+    radial-gradient(circle at 70% 68%, rgba(255, 185, 226, 0.45), transparent 16%),
+    radial-gradient(circle at 62% 42%, rgba(255, 218, 150, 0.5), transparent 5%),
+    radial-gradient(circle at 64% 40%, rgba(109, 139, 255, 0.22), transparent 36%),
+    linear-gradient(145deg, transparent 0 48%, rgba(60, 47, 110, 0.46) 49% 62%, transparent 63%);
+  opacity: 0.85;
+  filter: drop-shadow(0 0 24px rgba(167, 139, 250, 0.22));
+  pointer-events: none;
+}
+
+body[data-current-step="intro"] .intro-letter-button {
+  position: static;
+  width: max-content;
+  min-height: 32px;
+  margin: 12px 0 0 auto;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  border-radius: 999px;
+  background: rgba(255, 143, 199, 0.12);
+  border: 1px solid rgba(255, 143, 199, 0.28);
+  box-shadow: 0 0 18px rgba(255, 143, 199, 0.22);
+  transform: none;
+}
+
+body[data-current-step="intro"] .home-dashboard {
+  width: 100%;
+  margin-top: 20px;
+  display: grid;
+  gap: 14px;
+}
+
+body[data-current-step="intro"] .home-status-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+body[data-current-step="intro"] .home-days-card,
+body[data-current-step="intro"] .mood-card,
+body[data-current-step="intro"] .daily-task-card,
+body[data-current-step="intro"] .recent-letter-card {
+  position: relative;
+  overflow: hidden;
+  padding: 18px;
+  color: #f3f0ff;
+  background:
+    radial-gradient(circle at 86% 18%, rgba(167, 139, 250, 0.2), transparent 34%),
+    rgba(255, 255, 255, 0.065);
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 24px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+body[data-current-step="intro"] .home-days-card {
+  min-height: 124px;
+  display: grid;
+  align-content: center;
+}
+
+body[data-current-step="intro"] .home-days-card::after {
+  content: "";
+  position: absolute;
+  right: 18px;
+  top: 20px;
+  width: 118px;
+  height: 92px;
+  background:
+    radial-gradient(circle at 52% 46%, rgba(255, 220, 242, 0.55), transparent 18%),
+    radial-gradient(circle at 54% 54%, rgba(167, 139, 250, 0.34), transparent 52%);
+  border-radius: 999px;
+  opacity: 0.78;
+  pointer-events: none;
+}
+
+body[data-current-step="intro"] .home-card-label,
+body[data-current-step="intro"] .home-card-head span {
+  color: #d9b8ff;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+}
+
+body[data-current-step="intro"] .home-days-card strong {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  font-size: clamp(44px, 13vw, 60px);
+  letter-spacing: -0.055em;
+  background: linear-gradient(135deg, #fff 0%, #ff8fc7 46%, #a78bfa 76%, #7dd3fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+body[data-current-step="intro"] .home-days-card span {
+  position: relative;
+  z-index: 1;
+  margin-top: 6px;
+  color: rgba(243, 240, 255, 0.66);
+  font-size: 14px;
+}
+
+body[data-current-step="intro"] .home-card-head {
+  margin-bottom: 14px;
+  align-items: center;
+}
+
+body[data-current-step="intro"] .home-card-head small,
+body[data-current-step="intro"] .daily-task-card small,
+body[data-current-step="intro"] .recent-letter-card small {
+  color: rgba(243, 240, 255, 0.62);
+}
+
+body[data-current-step="intro"] .status-list {
+  gap: 10px;
+}
+
+body[data-current-step="intro"] .status-person {
+  grid-template-columns: 50px minmax(0, 1fr);
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 18px;
+}
+
+body[data-current-step="intro"] .status-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+}
+
+body[data-current-step="intro"] .status-person strong {
+  font-size: 16px;
+}
+
+body[data-current-step="intro"] .status-person span {
+  font-size: 14px;
+}
+
+body[data-current-step="intro"] .soft-pill-button {
+  width: auto;
+  min-height: 34px;
+  margin: 12px auto 0;
+  padding: 0 18px;
+  color: #ddbaff;
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.28);
+  font-size: 13px;
+}
+
+body[data-current-step="intro"] .daily-task-card p {
+  margin-bottom: 8px;
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+body[data-current-step="intro"] .task-state-row {
+  grid-template-columns: 1fr 1fr;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body[data-current-step="intro"] .task-state-row span {
+  min-height: 34px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body[data-current-step="intro"] .reconcile-button {
+  min-height: 48px;
+  margin-top: 14px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #f08bce, #6d8bff);
+  box-shadow: 0 0 26px rgba(167, 139, 250, 0.26);
+}
+
+body[data-current-step="intro"] .recent-letter-card {
+  min-height: 118px;
+  align-content: center;
+  padding-right: 128px;
+}
+
+body[data-current-step="intro"] .recent-letter-card::after {
+  content: "✈";
+  position: absolute;
+  right: 34px;
+  top: 30px;
+  color: #d9b8ff;
+  font-size: 54px;
+  line-height: 1;
+  text-shadow: 0 0 22px rgba(167, 139, 250, 0.55);
+  transform: rotate(-14deg);
+}
+
+body[data-current-step="intro"] .recent-letter-card strong {
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+body[data-current-step="intro"] .landing-card,
+body[data-current-step="intro"] .doodle-arrow {
+  display: none !important;
+}
+
+.app-bottom-nav {
+  width: min(calc(100vw - 32px), 408px);
+  height: 60px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  background: rgba(12, 14, 28, 0.78);
+  border: 1px solid rgba(167, 139, 250, 0.22);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.app-bottom-nav button.active {
+  color: #f3e8ff;
+  background: rgba(167, 139, 250, 0.1);
+  box-shadow: inset 0 -2px 0 rgba(167, 139, 250, 0.78), 0 0 18px rgba(167, 139, 250, 0.22);
+}
+
+@media (max-width: 390px) {
+  body[data-current-step="intro"] .app-shell {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  body[data-current-step="intro"] .intro h1 {
+    font-size: clamp(46px, 14vw, 58px);
+  }
+}
