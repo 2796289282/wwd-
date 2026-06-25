@@ -67,58 +67,65 @@
           <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
         </button>
         <p class="intro-copy">
-          游戏任务要好好完成哦。赖皮的婉婉是小狗。
+          夜晚也温柔发光的小屋。
         </p>
         <section class="home-dashboard" aria-label="今日小屋状态">
           <div class="home-days-card">
             <p class="home-card-label">TODAY'S HOME</p>
-            <strong id="together-days">第 0 天</strong>
+            <strong id="together-days">第 -- 天</strong>
             <span>鑫婉小屋已经亮灯这么久啦</span>
           </div>
           <div class="home-status-grid">
             <article class="mood-card">
               <div class="home-card-head">
                 <span>
-                  双方今日心情
+                  今日状态
                   <span class="notification-badge inline-badge" data-notification-badge="mood" hidden>0</span>
                 </span>
                 <small id="mood-date-label">今天</small>
               </div>
-              <div class="mood-row" aria-label="李家鑫今日心情">
-                <strong>李家鑫</strong>
-                <div class="mood-options">
-                  <button type="button" data-mood-owner="jiaxin" data-mood="想你">想你</button>
-                  <button type="button" data-mood-owner="jiaxin" data-mood="开心">开心</button>
-                  <button type="button" data-mood-owner="jiaxin" data-mood="要抱抱">要抱抱</button>
+              <div class="status-list">
+                <div class="status-person" aria-label="李家鑫今日状态">
+                  <span class="status-avatar">鑫</span>
+                  <div>
+                    <strong>李家鑫</strong>
+                    <span id="jiaxin-mood-value">今晚还没留下状态</span>
+                    <small id="jiaxin-want-value">想要：抱抱</small>
+                  </div>
                 </div>
-                <span id="jiaxin-mood-value">还没选择</span>
-              </div>
-              <div class="mood-row" aria-label="婉婉今日心情">
-                <strong>婉婉</strong>
-                <div class="mood-options">
-                  <button type="button" data-mood-owner="wanwan" data-mood="想你">想你</button>
-                  <button type="button" data-mood-owner="wanwan" data-mood="乖乖">乖乖</button>
-                  <button type="button" data-mood-owner="wanwan" data-mood="求哄">求哄</button>
+                <div class="status-person" aria-label="婉婉今日状态">
+                  <span class="status-avatar wanwan">婉</span>
+                  <div>
+                    <strong>婉婉</strong>
+                    <span id="wanwan-mood-value">今晚还没留下状态</span>
+                    <small id="wanwan-want-value">想要：被哄</small>
+                  </div>
                 </div>
-                <span id="wanwan-mood-value">还没选择</span>
               </div>
+              <button id="edit-my-status-button" class="soft-pill-button" type="button">
+                修改我的状态
+              </button>
             </article>
             <article class="daily-task-card">
               <div class="home-card-head">
-                <span>每日一句 / 每日任务</span>
+                <span>今日小任务</span>
                 <small id="daily-task-date">今日限定</small>
               </div>
               <p id="daily-task-text">今天也要认真偏爱对方。</p>
-              <small id="daily-task-hint">每天自动刷新一条情侣互动任务</small>
-              <button id="send-reconcile-button" class="reconcile-button" type="button">
-                发送和好请求
+              <small id="daily-task-hint">做完以后，记得给对方一个认真回应。</small>
+              <div class="task-state-row" aria-label="今日小任务完成状态">
+                <span id="jiaxin-task-state">李家鑫：未完成</span>
+                <span id="wanwan-task-state">婉婉：未完成</span>
+              </div>
+              <button id="complete-daily-task-button" class="reconcile-button" type="button">
+                给 TA 一个奖励
                 <span class="notification-badge" data-notification-badge="reconcile" hidden>0</span>
               </button>
             </article>
             <button id="recent-letter-card" class="recent-letter-card" type="button">
               <span>最近一条小纸条</span>
               <strong id="recent-letter-preview">还没有新的小纸条，去写一句吧。</strong>
-              <small>点这里打开小纸条</small>
+              <small id="recent-letter-meta">点这里打开小纸条</small>
               <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
             </button>
           </div>
@@ -837,6 +844,45 @@
         </div>
         <p id="notification-summary" class="notification-summary">打开看看吧。</p>
         <div id="notification-list" class="notification-list"></div>
+      </section>
+    </div>
+    <div id="status-modal" class="notification-modal" hidden>
+      <div class="notification-modal-backdrop" data-close-status-modal></div>
+      <section class="notification-card status-modal-card" role="dialog" aria-modal="true" aria-labelledby="status-modal-title">
+        <div class="notification-head">
+          <div>
+            <p class="step-label">TODAY STATUS</p>
+            <h2 id="status-modal-title">修改我的状态</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-status-modal aria-label="关闭">×</button>
+        </div>
+        <div class="status-edit-block">
+          <p>心情选择</p>
+          <div class="status-choice-grid" id="status-mood-options">
+            <button type="button" data-status-mood="🥺 想你">🥺 想你</button>
+            <button type="button" data-status-mood="😊 开心">😊 开心</button>
+            <button type="button" data-status-mood="🤗 要抱抱">🤗 要抱抱</button>
+            <button type="button" data-status-mood="🐶 乖乖">🐶 乖乖</button>
+            <button type="button" data-status-mood="😴 累累">😴 累累</button>
+            <button type="button" data-status-mood="😤 有点气">😤 有点气</button>
+            <button type="button" data-status-mood="💕 想贴贴">💕 想贴贴</button>
+            <button type="button" data-status-mood="🌙 想被哄">🌙 想被哄</button>
+          </div>
+        </div>
+        <div class="status-edit-block">
+          <p>想要互动</p>
+          <div class="status-choice-grid compact" id="status-want-options">
+            <button type="button" data-status-want="抱抱">抱抱</button>
+            <button type="button" data-status-want="亲亲">亲亲</button>
+            <button type="button" data-status-want="被哄">被哄</button>
+            <button type="button" data-status-want="聊聊天">聊聊天</button>
+            <button type="button" data-status-want="一起玩">一起玩</button>
+            <button type="button" data-status-want="说晚安">说晚安</button>
+          </div>
+        </div>
+        <button id="save-status-button" class="special-password-button" type="button">
+          保存状态
+        </button>
       </section>
     </div>
     <script src="plan-document.js"></script>

@@ -17,9 +17,10 @@ const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/api/load-state";
 const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
-const RELATIONSHIP_START_DATE = "2025-08-31";
+const RELATIONSHIP_START_DATE = "2024-09-30";
 const LETTER_HISTORY_LIMIT = 20;
 const NOTIFICATION_POLL_INTERVAL = 8000;
+const DAILY_REWARD_TASK = "给彼此一个今日奖励：一句夸夸、一个拥抱承诺或一个小愿望。";
 const DAILY_TASKS = [
   "给李家鑫说一句“我想你了”，不许只发两个字糊弄过去。",
   "今天给婉婉留一句具体夸夸，要说清楚哪里可爱。",
@@ -586,14 +587,20 @@ const elements = {
   togetherDays: document.querySelector("#together-days"),
   moodDateLabel: document.querySelector("#mood-date-label"),
   jiaxinMoodValue: document.querySelector("#jiaxin-mood-value"),
+  jiaxinWantValue: document.querySelector("#jiaxin-want-value"),
   wanwanMoodValue: document.querySelector("#wanwan-mood-value"),
+  wanwanWantValue: document.querySelector("#wanwan-want-value"),
   moodButtons: [...document.querySelectorAll("[data-mood-owner]")],
+  editMyStatusButton: document.querySelector("#edit-my-status-button"),
   dailyTaskText: document.querySelector("#daily-task-text"),
   dailyTaskDate: document.querySelector("#daily-task-date"),
   dailyTaskHint: document.querySelector("#daily-task-hint"),
-  sendReconcileButton: document.querySelector("#send-reconcile-button"),
+  jiaxinTaskState: document.querySelector("#jiaxin-task-state"),
+  wanwanTaskState: document.querySelector("#wanwan-task-state"),
+  completeDailyTaskButton: document.querySelector("#complete-daily-task-button"),
   recentLetterCard: document.querySelector("#recent-letter-card"),
   recentLetterPreview: document.querySelector("#recent-letter-preview"),
+  recentLetterMeta: document.querySelector("#recent-letter-meta"),
   notificationBadges: [...document.querySelectorAll("[data-notification-badge]")],
   introSection: document.querySelector(".intro"),
   startButton: document.querySelector("#start-game-button"),
@@ -664,6 +671,10 @@ const elements = {
   notificationTitle: document.querySelector("#notification-title"),
   notificationSummary: document.querySelector("#notification-summary"),
   notificationList: document.querySelector("#notification-list"),
+  statusModal: document.querySelector("#status-modal"),
+  statusMoodButtons: [...document.querySelectorAll("[data-status-mood]")],
+  statusWantButtons: [...document.querySelectorAll("[data-status-want]")],
+  saveStatusButton: document.querySelector("#save-status-button"),
   form: document.querySelector("#option-form"),
   input: document.querySelector("#option-input"),
   templateButtons: [...document.querySelectorAll(".template-button")],
@@ -756,6 +767,8 @@ let editingDiaryId = null;
 let activeDiaryId = null;
 let notificationPollTimer = null;
 let knownUnreadNotificationIds = new Set();
+let pendingStatusMood = "";
+let pendingStatusWant = "";
 
 const stepTargets = {
   intro: () => elements.introSection,
@@ -795,6 +808,12 @@ function createDefaultState() {
       date: getTodayKey(),
       jiaxin: "",
       wanwan: "",
+      jiaxinWant: "抱抱",
+      wanwanWant: "被哄",
+      taskDone: {
+        jiaxin: false,
+        wanwan: false,
+      },
     },
     planBook: "",
     planNotes: [],
@@ -894,6 +913,15 @@ function formatShortDate(dateKey = getTodayKey()) {
   return `${Number(month)}月${Number(day)}日`;
 }
 
+function formatClockTime(value) {
+  const date = value && !Number.isNaN(Date.parse(value)) ? new Date(value) : new Date();
+  return new Intl.DateTimeFormat("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 function relationshipDays() {
   const start = new Date(`${RELATIONSHIP_START_DATE}T00:00:00`);
   const today = new Date(`${getTodayKey()}T00:00:00`);
@@ -909,13 +937,36 @@ function dailyTaskForToday() {
 
 function normalizeTodayMoods(value) {
   const today = getTodayKey();
+  const fallback = {
+    date: today,
+    jiaxin: "",
+    wanwan: "",
+    jiaxinWant: "抱抱",
+    wanwanWant: "被哄",
+    taskDone: {
+      jiaxin: false,
+      wanwan: false,
+    },
+  };
   if (!value || typeof value !== "object" || value.date !== today) {
-    return { date: today, jiaxin: "", wanwan: "" };
+    return fallback;
   }
+  const taskDone =
+    value.taskDone && typeof value.taskDone === "object" ? value.taskDone : {};
   return {
     date: today,
     jiaxin: typeof value.jiaxin === "string" ? value.jiaxin : "",
     wanwan: typeof value.wanwan === "string" ? value.wanwan : "",
+    jiaxinWant: typeof value.jiaxinWant === "string" && value.jiaxinWant
+      ? value.jiaxinWant
+      : fallback.jiaxinWant,
+    wanwanWant: typeof value.wanwanWant === "string" && value.wanwanWant
+      ? value.wanwanWant
+      : fallback.wanwanWant,
+    taskDone: {
+      jiaxin: Boolean(taskDone.jiaxin),
+      wanwan: Boolean(taskDone.wanwan),
+    },
   };
 }
 
@@ -945,6 +996,7 @@ function normalizeLetterHistory(value) {
             : `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         text,
         time,
+        fromUser: item.fromUser === "wanwan" || item.fromUser === "jiaxin" ? item.fromUser : "",
       };
     })
     .filter(Boolean)
@@ -1511,20 +1563,35 @@ function renderHomeDashboard() {
   state.todayMoods = moods;
   elements.togetherDays.textContent = `第 ${relationshipDays()} 天`;
   elements.moodDateLabel.textContent = formatShortDate(moods.date);
-  elements.jiaxinMoodValue.textContent = moods.jiaxin || "还没选择";
-  elements.wanwanMoodValue.textContent = moods.wanwan || "还没选择";
+  elements.jiaxinMoodValue.textContent = moods.jiaxin || "今晚还没留下状态";
+  elements.wanwanMoodValue.textContent = moods.wanwan || "今晚还没留下状态";
+  elements.jiaxinWantValue.textContent = `想要：${moods.jiaxinWant || "抱抱"}`;
+  elements.wanwanWantValue.textContent = `想要：${moods.wanwanWant || "被哄"}`;
   elements.moodButtons.forEach((button) => {
     const owner = button.dataset.moodOwner;
     button.classList.toggle("active", moods[owner] === button.dataset.mood);
   });
 
-  elements.dailyTaskText.textContent = dailyTaskForToday();
+  const taskDone = moods.taskDone || {};
+  const jiaxinDone = Boolean(taskDone.jiaxin);
+  const wanwanDone = Boolean(taskDone.wanwan);
+  elements.dailyTaskText.textContent = DAILY_REWARD_TASK;
   elements.dailyTaskDate.textContent = `${formatShortDate()} 今日限定`;
-  elements.dailyTaskHint.textContent = "做完以后，记得给对方一个认真回应。";
+  elements.dailyTaskHint.textContent = jiaxinDone && wanwanDone
+    ? "今日小任务已一起完成啦"
+    : "做完以后，记得给对方一个认真回应。";
+  elements.jiaxinTaskState.textContent = `李家鑫：${jiaxinDone ? "已完成" : "未完成"}`;
+  elements.wanwanTaskState.textContent = `婉婉：${wanwanDone ? "已完成" : "未完成"}`;
+  const currentDone = currentUser ? Boolean(taskDone[currentUser]) : false;
+  elements.completeDailyTaskButton.textContent = currentDone ? "今天已完成" : "给 TA 一个奖励";
+  elements.completeDailyTaskButton.disabled = currentDone;
 
   const latestLetter = normalizeLetterHistory(state.letterHistory)[0];
   elements.recentLetterPreview.textContent =
-    letterExcerpt(latestLetter?.text || state.secretLetter) || "还没有新的小纸条，去写一句吧。";
+    letterExcerpt(latestLetter?.text) || "还没有新的小纸条，去写一句吧。";
+  elements.recentLetterMeta.textContent = latestLetter
+    ? `来自 ${USER_LABELS[latestLetter.fromUser] || "我们"} · ${formatClockTime(latestLetter.time)}`
+    : "点击这里打开小纸条信箱";
 }
 
 function renderNotifications() {
@@ -2545,6 +2612,7 @@ function saveLetter() {
         id: letterId,
         text: nextLetter,
         time: new Date().toISOString(),
+        fromUser: currentUser,
       },
       ...state.letterHistory,
     ]);
@@ -2663,6 +2731,84 @@ function savePlan() {
   void saveCloudState();
 }
 
+function activeUserKey() {
+  return currentUser === "wanwan" || currentUser === "jiaxin" ? currentUser : "";
+}
+
+function setStatusChoiceActive(buttons, value, dataKey) {
+  buttons.forEach((button) => {
+    button.classList.toggle("active", button.dataset[dataKey] === value);
+  });
+}
+
+function openStatusModal() {
+  const user = activeUserKey();
+  if (!user) {
+    showToast("先用专属暗号回到小屋哦");
+    return;
+  }
+  state.todayMoods = normalizeTodayMoods(state.todayMoods);
+  pendingStatusMood = state.todayMoods[user] || "🥺 想你";
+  pendingStatusWant = state.todayMoods[`${user}Want`] || (user === "wanwan" ? "被哄" : "抱抱");
+  setStatusChoiceActive(elements.statusMoodButtons, pendingStatusMood, "statusMood");
+  setStatusChoiceActive(elements.statusWantButtons, pendingStatusWant, "statusWant");
+  elements.statusModal.hidden = false;
+  document.body.classList.add("modal-open");
+}
+
+function closeStatusModal() {
+  elements.statusModal.hidden = true;
+  document.body.classList.remove("modal-open");
+}
+
+function saveMyStatus() {
+  const user = activeUserKey();
+  if (!user) {
+    showToast("先用专属暗号回到小屋哦");
+    return;
+  }
+  state.todayMoods = normalizeTodayMoods(state.todayMoods);
+  state.todayMoods[user] = pendingStatusMood || state.todayMoods[user] || "🥺 想你";
+  state.todayMoods[`${user}Want`] = pendingStatusWant || state.todayMoods[`${user}Want`] || "抱抱";
+  addNotification({
+    type: "mood-updated",
+    title: "今日状态更新啦",
+    content: `${USER_LABELS[currentUser] || "对方"}今晚留下了状态：${state.todayMoods[user]}，想要${state.todayMoods[`${user}Want`]}`,
+    relatedId: user,
+  });
+  saveState();
+  renderHomeDashboard();
+  renderNotifications();
+  closeStatusModal();
+  showToast("今日状态已同步");
+  void saveCloudState({ silent: true });
+}
+
+function completeDailyTask() {
+  const user = activeUserKey();
+  if (!user) {
+    showToast("先用专属暗号回到小屋哦");
+    return;
+  }
+  state.todayMoods = normalizeTodayMoods(state.todayMoods);
+  state.todayMoods.taskDone = {
+    jiaxin: Boolean(state.todayMoods.taskDone?.jiaxin),
+    wanwan: Boolean(state.todayMoods.taskDone?.wanwan),
+  };
+  if (state.todayMoods.taskDone[user]) return;
+  state.todayMoods.taskDone[user] = true;
+  addNotification({
+    type: "daily-task-completed",
+    title: "今日小任务完成啦",
+    content: `${USER_LABELS[currentUser] || "对方"}给 TA 准备了一个今日奖励。`,
+    relatedId: "daily-task",
+  });
+  saveState();
+  renderHomeDashboard();
+  renderNotifications();
+  showToast("今日小任务已同步");
+  void saveCloudState({ silent: true });
+}
 function sendReconcileRequest() {
   addNotification({
     type: "reconcile-request",
@@ -2749,14 +2895,18 @@ elements.brandText.addEventListener("click", (event) => {
 });
 
 elements.introLetterButton.addEventListener("click", () => {
-  unlockLetterStep();
+  letterReturnStep = "mode";
+  openStep("letter");
 });
 
 elements.recentLetterCard.addEventListener("click", () => {
-  unlockLetterStep();
+  letterReturnStep = "mode";
+  openStep("letter");
 });
 
-elements.sendReconcileButton.addEventListener("click", sendReconcileRequest);
+elements.editMyStatusButton.addEventListener("click", openStatusModal);
+
+elements.completeDailyTaskButton.addEventListener("click", completeDailyTask);
 
 elements.recommendedPlayButton.addEventListener("click", () => openStep("play"));
 
@@ -2788,6 +2938,26 @@ elements.moodButtons.forEach((button) => {
     showToast("今日心情已同步");
     void saveCloudState({ silent: true });
   });
+});
+
+elements.statusMoodButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    pendingStatusMood = button.dataset.statusMood || "";
+    setStatusChoiceActive(elements.statusMoodButtons, pendingStatusMood, "statusMood");
+  });
+});
+
+elements.statusWantButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    pendingStatusWant = button.dataset.statusWant || "";
+    setStatusChoiceActive(elements.statusWantButtons, pendingStatusWant, "statusWant");
+  });
+});
+
+elements.saveStatusButton.addEventListener("click", saveMyStatus);
+
+document.querySelectorAll("[data-close-status-modal]").forEach((button) => {
+  button.addEventListener("click", closeStatusModal);
 });
 
 elements.notificationList.addEventListener("click", (event) => {
