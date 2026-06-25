@@ -34,7 +34,8 @@ export async function onRequestGet({ env }) {
   if (env.APP_STATE) {
     try {
       const stored = await env.APP_STATE.get("main");
-      const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
+      const parsed = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : {};
+      const data = { ...DEFAULT_DATA, ...parsed };
       return json({ data, storage: "cloudflare-kv" });
     } catch (error) {
       return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 });
