@@ -4981,3 +4981,91 @@ footer {
     grid-column: 1 / -1;
   }
 }
+
+/* Compact bottom navigation pass: tuned for iPhone 16 Pro Max. */
+:root {
+  --bottom-nav-height: 60px;
+  --bottom-nav-width: min(calc(100vw - 32px), 408px);
+  --bottom-nav-bottom: calc(8px + env(safe-area-inset-bottom));
+  --bottom-nav-radius: 999px;
+  --bottom-nav-icon-size: 22px;
+  --bottom-nav-label-size: 11px;
+}
+
+.app-shell {
+  padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 24px);
+}
+
+.app-bottom-nav {
+  left: 50%;
+  right: auto;
+  bottom: var(--bottom-nav-bottom);
+  width: var(--bottom-nav-width);
+  height: var(--bottom-nav-height);
+  margin: 0;
+  padding: 6px 10px;
+  gap: 0;
+  align-items: center;
+  transform: translateX(-50%);
+  background: rgba(12, 14, 28, 0.72);
+  border-color: rgba(167, 139, 250, 0.18);
+  border-radius: var(--bottom-nav-radius);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.38);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+.app-bottom-nav button {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  font-size: var(--bottom-nav-label-size);
+  line-height: 1;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-bottom-nav button > span:first-child {
+  width: var(--bottom-nav-icon-size);
+  height: var(--bottom-nav-icon-size);
+  display: grid;
+  place-items: center;
+  font-size: var(--bottom-nav-icon-size);
+  line-height: 1;
+}
+
+.app-bottom-nav button.active {
+  color: var(--accent-purple);
+  background: transparent;
+  box-shadow: inset 0 -2px 0 rgba(167, 139, 250, 0.76);
+  text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
+}
+
+.nav-badge {
+  top: 2px;
+  right: 24%;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    padding-bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 24px);
+  }
+
+  .app-bottom-nav {
+    left: 50%;
+    right: auto;
+    width: var(--bottom-nav-width);
+  }
+}
+
+@media (max-width: 390px) {
+  .app-bottom-nav {
+    width: min(calc(100vw - 24px), 408px);
+  }
+}
