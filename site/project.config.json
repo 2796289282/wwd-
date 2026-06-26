@@ -1,5 +1,4 @@
 {
-  "miniprogramRoot": "miniprogram/",
   "setting": {
     "es6": true,
     "postcss": true,
@@ -15,13 +14,12 @@
     "useCompilerPlugins": false,
     "minifyWXML": true
   },
-  "srcMiniprogramRoot": "miniprogram/",
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {
     "ignore": [],
     "include": []
   },
-  "appid": "wxb966796b2ffb748e",
+  "appid": "wxd19a28f7110acc28",
   "editorSetting": {}
 }
