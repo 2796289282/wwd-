@@ -4697,10 +4697,81 @@ body[data-current-step="intro"] .intro-letter-button {
 
 .notification-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding-top: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.notification-clear-button,
+.notification-close-button {
+  min-height: 42px;
+  border-radius: 999px;
+  font-weight: 900;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+
+.notification-clear-button {
+  flex: 1;
+  padding: 0 18px;
+  color: #fff8fc;
+  background:
+    linear-gradient(135deg, rgba(255, 119, 183, 0.9), rgba(154, 116, 255, 0.86)),
+    rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 214, 238, 0.36);
+  box-shadow:
+    0 14px 34px rgba(255, 119, 183, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.notification-close-button {
+  min-width: 86px;
+  padding: 0 18px;
+  color: rgba(255, 247, 251, 0.82);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.notification-clear-button:hover,
+.notification-close-button:hover {
+  transform: translateY(-1px);
+}
+
+.notification-clear-button:hover {
+  box-shadow:
+    0 18px 40px rgba(255, 119, 183, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.26);
+}
+
+.notification-close-button:hover {
+  color: #fff8fc;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+@media (max-width: 430px) {
+  .notification-actions {
+    gap: 10px;
+  }
+
+  .notification-clear-button,
+  .notification-close-button {
+    min-height: 40px;
+    padding-inline: 14px;
+    font-size: 13px;
+  }
+
+  .notification-close-button {
+    min-width: 74px;
+  }
 }
 
 .diary-comments {
