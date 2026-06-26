@@ -20,6 +20,7 @@ const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
 const LETTER_HISTORY_LIMIT = 20;
 const NOTIFICATION_POLL_INTERVAL = 8000;
+const CUSTOM_DIARY_MOOD_VALUE = "__custom";
 const DAILY_TASKS = [
   "给李家鑫说一句“我想你了”，不许只发两个字糊弄过去。",
   "今天给婉婉留一句具体夸夸，要说清楚哪里可爱。",
@@ -704,6 +705,7 @@ const elements = {
   diaryBodyInput: document.querySelector("#diary-body-input"),
   diaryAuthorInput: document.querySelector("#diary-author-input"),
   diaryMoodInput: document.querySelector("#diary-mood-input"),
+  diaryMoodCustomInput: document.querySelector("#diary-mood-custom-input"),
   diaryImageInput: document.querySelector("#diary-image-input"),
   diaryFormError: document.querySelector("#diary-form-error"),
   diaryDetailMeta: document.querySelector("#diary-detail-meta"),
@@ -750,6 +752,7 @@ let siteDialogResolver = null;
 let browserHistoryReady = false;
 let editingDiaryId = null;
 let activeDiaryId = null;
+let editingDiaryCommentId = null;
 let notificationPollTimer = null;
 let knownUnreadNotificationIds = new Set();
 
@@ -1248,7 +1251,16 @@ function normalizeDiaryEntries(value) {
         typeof item.id === "string" && item.id
           ? item.id
           : `diary-${createdAt}-${title}`;
-      const comments = normalizeDiaryComments(item.comments, id);
+      const rawComments = Array.isArray(item.comments)
+        ? item.comments
+        : Array.isArray(item.replies)
+          ? item.replies
+          : Array.isArray(item.responses)
+            ? item.responses
+            : Array.isArray(item.diaryComments)
+              ? item.diaryComments
+              : [];
+      const comments = normalizeDiaryComments(rawComments, id);
       return {
         id,
         title,
@@ -1269,13 +1281,26 @@ function normalizeDiaryEntries(value) {
 }
 
 function mergeDiaryEntries(primary = [], secondary = []) {
-  const seen = new Set();
-  return [...normalizeDiaryEntries(primary), ...normalizeDiaryEntries(secondary)]
-    .filter((entry) => {
-      if (seen.has(entry.id)) return false;
-      seen.add(entry.id);
-      return true;
-    })
+  const merged = new Map();
+  normalizeDiaryEntries(secondary).forEach((entry) => {
+    merged.set(entry.id, entry);
+  });
+  normalizeDiaryEntries(primary).forEach((entry) => {
+    const existing = merged.get(entry.id);
+    const comments = normalizeDiaryComments(
+      [
+        ...(existing?.comments || []),
+        ...(entry.comments || []),
+      ],
+      entry.id,
+    );
+    merged.set(entry.id, {
+      ...(existing || {}),
+      ...entry,
+      ...(comments.length ? { comments } : {}),
+    });
+  });
+  return [...merged.values()]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
@@ -2066,12 +2091,21 @@ function renderDiaryComments(entry) {
 
       const body = document.createElement("div");
       const head = document.createElement("p");
+      head.className = "diary-comment-headline";
       const author = document.createElement("strong");
       author.textContent = comment.nickname || USER_LABELS[comment.author] || "家鑫";
+      const actions = document.createElement("span");
+      actions.className = "diary-comment-actions";
       const time = document.createElement("small");
       const dateInfo = formatDiaryDate(comment.createdAt);
       time.textContent = `${dateInfo.monthDay} ${dateInfo.time}`;
-      head.append(author, time);
+      const editButton = document.createElement("button");
+      editButton.className = "diary-comment-edit-button";
+      editButton.type = "button";
+      editButton.dataset.diaryCommentId = comment.id;
+      editButton.textContent = editingDiaryCommentId === comment.id ? "取消编辑" : "编辑";
+      actions.append(time, editButton);
+      head.append(author, actions);
 
       const content = document.createElement("p");
       content.className = "diary-comment-content";
@@ -2083,6 +2117,38 @@ function renderDiaryComments(entry) {
       return item;
     }),
   );
+}
+
+function diaryCommentSubmitButton() {
+  return elements.diaryCommentForm?.querySelector("button[type='submit']");
+}
+
+function resetDiaryCommentEditor({ clearInput = true } = {}) {
+  editingDiaryCommentId = null;
+  if (clearInput && elements.diaryCommentInput) {
+    elements.diaryCommentInput.value = "";
+  }
+  const submitButton = diaryCommentSubmitButton();
+  if (submitButton) submitButton.textContent = "发送回应";
+}
+
+function startEditingDiaryComment(commentId) {
+  if (!activeDiaryId || !commentId) return;
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (editingDiaryCommentId === commentId) {
+    resetDiaryCommentEditor();
+    if (entry) renderDiaryComments(entry);
+    return;
+  }
+  const comments = normalizeDiaryComments(entry?.comments, entry?.id);
+  const comment = comments.find((item) => item.id === commentId);
+  if (!entry || !comment) return;
+  editingDiaryCommentId = comment.id;
+  elements.diaryCommentInput.value = comment.content;
+  const submitButton = diaryCommentSubmitButton();
+  if (submitButton) submitButton.textContent = "保存回应";
+  renderDiaryComments(entry);
+  window.setTimeout(() => elements.diaryCommentInput.focus(), 0);
 }
 
 function filteredDiaryEntries() {
@@ -2140,6 +2206,13 @@ function createDiaryItem(entry, index) {
       tag.textContent = text;
       meta.append(tag);
     });
+  const commentCount = normalizeDiaryComments(entry.comments, entry.id).length;
+  if (commentCount) {
+    const tag = document.createElement("em");
+    tag.className = "diary-reply-count";
+    tag.textContent = `${commentCount} 条小回应`;
+    meta.append(tag);
+  }
   if (diaryUnreadNotificationIds(entry.id).length) {
     const tag = document.createElement("em");
     tag.className = "diary-new-reply";
@@ -2172,13 +2245,56 @@ function renderDiary() {
   elements.diaryCount.textContent = `${entries.length} 个记录`;
 }
 
+function diaryMoodOptions() {
+  return [...(elements.diaryMoodInput?.options || [])]
+    .map((option) => option.value)
+    .filter((value) => value && value !== CUSTOM_DIARY_MOOD_VALUE);
+}
+
+function updateDiaryMoodCustomVisibility() {
+  if (!elements.diaryMoodInput || !elements.diaryMoodCustomInput) return;
+  const isCustom = elements.diaryMoodInput.value === CUSTOM_DIARY_MOOD_VALUE;
+  elements.diaryMoodCustomInput.hidden = !isCustom;
+  if (!isCustom) {
+    elements.diaryMoodCustomInput.value = "";
+    return;
+  }
+  window.setTimeout(() => elements.diaryMoodCustomInput.focus(), 0);
+}
+
+function setDiaryMoodValue(value = "") {
+  if (!elements.diaryMoodInput) return;
+  const mood = String(value || "").trim();
+  if (!mood || diaryMoodOptions().includes(mood)) {
+    elements.diaryMoodInput.value = mood;
+    if (elements.diaryMoodCustomInput) {
+      elements.diaryMoodCustomInput.hidden = true;
+      elements.diaryMoodCustomInput.value = "";
+    }
+    return;
+  }
+  elements.diaryMoodInput.value = CUSTOM_DIARY_MOOD_VALUE;
+  if (elements.diaryMoodCustomInput) {
+    elements.diaryMoodCustomInput.hidden = false;
+    elements.diaryMoodCustomInput.value = mood;
+  }
+}
+
+function selectedDiaryMood() {
+  if (!elements.diaryMoodInput) return "";
+  if (elements.diaryMoodInput.value !== CUSTOM_DIARY_MOOD_VALUE) {
+    return elements.diaryMoodInput.value;
+  }
+  return (elements.diaryMoodCustomInput?.value || "").trim();
+}
+
 function openDiaryEditor(entry = null) {
   editingDiaryId = entry?.id || null;
   elements.diaryEditorTitle.textContent = entry ? "编辑这篇小日记" : "写一篇小日记";
   elements.diaryTitleInput.value = entry?.title || "";
   elements.diaryBodyInput.value = entry?.body || "";
   elements.diaryAuthorInput.value = entry?.author || (currentUser === "wanwan" ? "ta" : "me");
-  elements.diaryMoodInput.value = entry?.mood || "";
+  setDiaryMoodValue(entry?.mood || "");
   elements.diaryImageInput.value = entry?.image || "";
   elements.diaryFormError.hidden = true;
   elements.diaryEditorModal.hidden = false;
@@ -2196,6 +2312,7 @@ function openDiaryDetail(id) {
   const entry = state.diaryEntries.find((item) => item.id === id);
   if (!entry) return;
   activeDiaryId = id;
+  resetDiaryCommentEditor();
   const dateInfo = formatDiaryDate(entry.createdAt);
   elements.diaryDetailMeta.textContent = `${diaryAuthorLabel(entry.author)} · ${dateInfo.monthDay} ${dateInfo.time}`;
   elements.diaryDetailTitle.textContent = entry.title || dateInfo.monthDay;
@@ -2221,7 +2338,7 @@ function openDiaryDetail(id) {
 function closeDiaryDetail() {
   elements.diaryDetailModal.hidden = true;
   activeDiaryId = null;
-  if (elements.diaryCommentInput) elements.diaryCommentInput.value = "";
+  resetDiaryCommentEditor();
   document.body.classList.remove("modal-open");
 }
 
@@ -2242,7 +2359,7 @@ function saveDiaryFromForm(event) {
     title,
     body,
     author: elements.diaryAuthorInput.value,
-    mood: elements.diaryMoodInput.value,
+    mood: selectedDiaryMood(),
     image: elements.diaryImageInput.value.trim(),
     updatedAt: now,
   };
@@ -2288,6 +2405,28 @@ function saveDiaryComment(event) {
   const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
   if (!entry) return;
   const author = currentUser === "wanwan" ? "wanwan" : "jiaxin";
+  if (editingDiaryCommentId) {
+    const comments = normalizeDiaryComments(entry.comments, entry.id);
+    const index = comments.findIndex((comment) => comment.id === editingDiaryCommentId);
+    if (index === -1) {
+      resetDiaryCommentEditor();
+      showToast("这条小回应暂时没找到");
+      return;
+    }
+    comments[index] = {
+      ...comments[index],
+      content,
+    };
+    entry.comments = normalizeDiaryComments(comments, entry.id);
+    entry.updatedAt = new Date().toISOString();
+    saveState();
+    renderDiary();
+    renderDiaryComments(entry);
+    resetDiaryCommentEditor();
+    showToast("小回应已更新");
+    void saveCloudState({ silent: true });
+    return;
+  }
   const comment = {
     id: `comment-${Date.now()}-${secureRandomIndex(100000)}`,
     diaryId: entry.id,
@@ -3175,6 +3314,12 @@ elements.diaryList.addEventListener("click", (event) => {
 
 elements.diaryForm.addEventListener("submit", saveDiaryFromForm);
 elements.diaryCommentForm?.addEventListener("submit", saveDiaryComment);
+elements.diaryMoodInput?.addEventListener("change", updateDiaryMoodCustomVisibility);
+elements.diaryCommentsList?.addEventListener("click", (event) => {
+  const button = event.target.closest(".diary-comment-edit-button");
+  if (!button) return;
+  startEditingDiaryComment(button.dataset.diaryCommentId);
+});
 
 document.querySelectorAll("[data-close-diary-editor]").forEach((button) => {
   button.addEventListener("click", closeDiaryEditor);
