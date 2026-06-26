@@ -7,7 +7,7 @@
       name="description"
       content="给小裴同学准备的真心话与大冒险随机抽取小游戏。"
     />
-    <title>鑫婉小世界</title>
+    <title>鑫婉小屋</title>
     <meta name="theme-color" content="#090912" />
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -19,7 +19,7 @@
     <section id="entrance-gate" class="entrance-gate" aria-labelledby="entrance-title">
       <form id="entrance-form" class="entrance-card" autocomplete="off">
         <p class="step-label">PRIVATE ENTRANCE</p>
-        <h1 id="entrance-title">鑫婉小世界</h1>
+        <h1 id="entrance-title">鑫婉小屋</h1>
         <p>输入专属密码，会自动识别是谁回家啦。</p>
         <label class="sr-only" for="entrance-password">入口暗号</label>
         <input
@@ -51,7 +51,7 @@
     <header class="site-header">
       <a class="brand" href="#" aria-label="返回顶部">
         <span class="brand-mark" id="brand-mark" aria-hidden="true">裴</span>
-        <span id="brand-text">鑫婉小世界</span>
+        <span id="brand-text">鑫婉小屋</span>
       </a>
       <div class="header-actions">
         <p class="header-note">今晚的答案，不许说“随便”。</p>
@@ -135,12 +135,12 @@
             <path d="M5 10c35 2 57 16 74 41" />
             <path d="m70 42 11 12 4-16" />
           </svg>
-          <span>从这里开始</span>
+          <span>开始</span>
         </div>
         <div class="landing-card">
-          <p>今晚规则</p>
-          <strong>先玩游戏，再玩婉婉。每一次游戏都要认真对待哦</strong>
-          <span class="flow-preview">希望我们每天都开开心心</span>
+          <p>入口</p>
+          <strong>进入互动</strong>
+          <span class="flow-preview">选择今晚的小玩法</span>
           <button id="start-game-button" class="start-game-button" type="button">
             点我进去
             <span class="notification-badge" data-notification-badge="draw" hidden>0</span>
@@ -165,12 +165,12 @@
           <div class="mode-zones">
             <section class="mode-zone recommended-zone" aria-labelledby="recommended-zone-title">
               <div class="zone-heading">
-                <p class="step-label">推荐活动</p>
-                <h3 id="recommended-zone-title">星光默契挑战</h3>
-                <span>猜一猜，我们有多懂彼此？</span>
+                <p class="step-label">互动入口</p>
+                <h3 id="recommended-zone-title">真心话大冒险</h3>
+                <span>敢问敢答，心更近一步。</span>
               </div>
               <button id="recommended-play-button" class="special-password-button" type="button">
-                去参与
+                开始玩
               </button>
             </section>
 
@@ -222,16 +222,21 @@
                 <strong>双人飞行棋</strong>
                 <small>掷出乐趣，走近彼此</small>
               </button>
-              <button id="mode-plan-button" class="feature-card" type="button">
+              <button class="feature-card" type="button" data-app-tab="intro">
                 <span>约</span>
                 <strong>任务与约定</strong>
-                <small>一起打卡，让约定落地</small>
+                <small>一起打卡，让约定落地生根</small>
+              </button>
+              <button id="mode-plan-button" class="feature-card" type="button">
+                <span>书</span>
+                <strong>神秘计划书</strong>
+                <small>只有我们知道的约定</small>
                 <span class="notification-badge" data-notification-badge="plan" hidden>0</span>
               </button>
               <button id="open-special-step-button" class="feature-card feature-card-wide" type="button">
-                <span>屋</span>
+                <span>忆</span>
                 <strong>专属回忆</strong>
-                <small>神秘小窝和更多小秘密</small>
+                <small>记录点滴美好，珍藏心动瞬间</small>
               </button>
             </section>
           </div>
@@ -630,7 +635,8 @@
             <div class="diary-hero">
               <div>
                 <p class="step-label">PRIVATE DIARY</p>
-                <h2 id="diary-title">六月</h2>
+                <h2 id="diary-title">小屋日记</h2>
+                <span class="diary-month-label">六月</span>
                 <p class="setup-note">把今天也悄悄收藏起来</p>
               </div>
               <button id="new-diary-button" class="diary-write-button" type="button">

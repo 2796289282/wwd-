@@ -5698,6 +5698,22 @@ body[data-current-step="intro"] .doodle-arrow {
   display: none !important;
 }
 
+body[data-current-step="intro"] .intro-letter-button,
+body[data-current-step="intro"] .notification-badge,
+#mode-step .classic-zone,
+#mode-step .notification-badge,
+.app-bottom-nav .notification-badge {
+  display: none !important;
+}
+
+.diary-month-label {
+  display: inline-block;
+  margin-top: 6px;
+  color: rgba(243, 240, 255, 0.62);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .app-bottom-nav {
   width: min(calc(100vw - 32px), 408px);
   height: 60px;
