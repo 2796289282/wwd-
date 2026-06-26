@@ -3820,11 +3820,12 @@ body {
 
 .plan-note-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 82px;
+  grid-template-columns: minmax(0, 1fr) 76px 82px;
   gap: 10px;
 }
 
 .plan-note-input,
+.plan-note-quantity-input,
 .site-dialog-input {
   width: 100%;
   min-height: 44px;
@@ -3838,10 +3839,30 @@ body {
 }
 
 .plan-note-input:focus,
+.plan-note-quantity-input:focus,
 .site-dialog-input:focus,
 .plan-input.is-editing {
   border-color: rgba(255, 143, 199, 0.62);
   box-shadow: 0 0 0 3px rgba(255, 143, 199, 0.14);
+}
+
+.plan-notes-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  color: rgba(255, 244, 249, 0.72);
+  background: rgba(255, 143, 199, 0.1);
+  border: 1px solid rgba(255, 143, 199, 0.2);
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.plan-notes-total strong {
+  color: #fff8fc;
+  font-size: 18px;
 }
 
 .plan-input[readonly] {
@@ -3869,6 +3890,18 @@ body {
 .plan-note-text {
   overflow-wrap: anywhere;
   line-height: 1.65;
+}
+
+.plan-note-quantity {
+  justify-self: start;
+  width: fit-content;
+  padding: 5px 9px;
+  color: #fff8fc;
+  background: rgba(255, 143, 199, 0.16);
+  border: 1px solid rgba(255, 143, 199, 0.24);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .plan-note-edit-input {
@@ -4604,6 +4637,10 @@ body {
   }
 }
 
+.plan-note-item .plan-note-quantity-input {
+  max-width: 120px;
+}
+
 /* Home rollback: keep the screenshot-style landing page, only add notifications above notes. */
 body[data-current-step="intro"] .home-dashboard,
 body[data-current-step="intro"] .doodle-arrow {
@@ -4927,6 +4964,14 @@ body[data-current-step="intro"] .intro-letter-button {
 }
 
 @media (max-width: 430px) {
+  .plan-note-form {
+    grid-template-columns: minmax(0, 1fr) 70px;
+  }
+
+  .plan-note-form button {
+    grid-column: 1 / -1;
+  }
+
   .intro-notification-button {
     top: 40px;
     min-height: 31px;

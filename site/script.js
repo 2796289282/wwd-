@@ -644,6 +644,8 @@ const elements = {
   planInput: document.querySelector("#plan-input"),
   planNoteForm: document.querySelector("#plan-note-form"),
   planNoteInput: document.querySelector("#plan-note-input"),
+  planNoteQuantityInput: document.querySelector("#plan-note-quantity-input"),
+  planNotesTotal: document.querySelector("#plan-notes-total"),
   planNotesList: document.querySelector("#plan-notes-list"),
   planNotesEmpty: document.querySelector("#plan-notes-empty"),
   planCount: document.querySelector("#plan-count"),
@@ -1162,6 +1164,7 @@ function normalizePlanNotes(value) {
           return {
             id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
             text: item.trim(),
+            quantity: 0,
             time: new Date().toISOString(),
           };
         }
@@ -1171,6 +1174,7 @@ function normalizePlanNotes(value) {
         return {
           id: typeof item.id === "string" && item.id ? item.id : `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
           text,
+          quantity: normalizePlanNoteQuantity(item.quantity),
           time: typeof item.time === "string" ? item.time : new Date().toISOString(),
         };
       })
@@ -1181,11 +1185,22 @@ function normalizePlanNotes(value) {
       {
         id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         text: value.trim(),
+        quantity: 0,
         time: new Date().toISOString(),
       },
     ];
   }
   return [];
+}
+
+function normalizePlanNoteQuantity(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return 0;
+  return Math.min(9999, Math.floor(number));
+}
+
+function planNotesTotal(notes = state.planNotes) {
+  return normalizePlanNotes(notes).reduce((sum, note) => sum + normalizePlanNoteQuantity(note.quantity), 0);
 }
 
 function diaryCommentAuthor(value) {
@@ -1996,6 +2011,9 @@ function renderPlan() {
 function renderPlanNotes() {
   const notes = normalizePlanNotes(state.planNotes);
   state.planNotes = notes;
+  if (elements.planNotesTotal) {
+    elements.planNotesTotal.textContent = String(planNotesTotal(notes));
+  }
   elements.planNotesList.replaceChildren(
     ...notes.map((note) => {
       const item = document.createElement("li");
@@ -2012,6 +2030,21 @@ function renderPlanNotes() {
         text.dataset.noteEditInput = note.id;
       } else {
         text.textContent = note.text;
+      }
+
+      const quantity = document.createElement(planEditable ? "input" : "span");
+      quantity.className = planEditable ? "plan-note-quantity-input" : "plan-note-quantity";
+      if (planEditable) {
+        quantity.type = "number";
+        quantity.min = "0";
+        quantity.max = "9999";
+        quantity.step = "1";
+        quantity.inputMode = "numeric";
+        quantity.value = String(normalizePlanNoteQuantity(note.quantity));
+        quantity.setAttribute("aria-label", "挨揍数量");
+        quantity.dataset.noteQuantityInput = note.id;
+      } else {
+        quantity.textContent = `数量 ${normalizePlanNoteQuantity(note.quantity)}`;
       }
 
       const time = document.createElement("time");
@@ -2031,9 +2064,9 @@ function renderPlanNotes() {
         pinButton.type = "button";
         pinButton.dataset.pinNote = note.id;
         pinButton.textContent = "置顶";
-        item.append(text, time, pinButton);
+        item.append(text, quantity, time, pinButton);
       } else {
-        item.append(text, time);
+        item.append(text, quantity, time);
       }
       return item;
     }),
@@ -2946,16 +2979,18 @@ async function unlockPlanEditing() {
   elements.planInput.focus();
 }
 
-function addPlanNote(text) {
+function addPlanNote(text, quantity = 1) {
   const value = text.trim();
   if (!value) {
     showToast("先写一条记录吧");
     return;
   }
+  const normalizedQuantity = normalizePlanNoteQuantity(quantity);
   const noteId = `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   state.planNotes.unshift({
     id: noteId,
     text: value,
+    quantity: normalizedQuantity,
     time: new Date().toISOString(),
   });
   addNotification({
@@ -2965,6 +3000,7 @@ function addPlanNote(text) {
     relatedId: noteId,
   });
   elements.planNoteInput.value = "";
+  if (elements.planNoteQuantityInput) elements.planNoteQuantityInput.value = "1";
   saveState();
   renderPlan();
   showToast("已添加");
@@ -2975,15 +3011,24 @@ function savePlan() {
   state.planBook = elements.planInput.value.trim();
   const wasEditing = planEditable;
   if (planEditable) {
+    const quantityInputs = new Map(
+      [...elements.planNotesList.querySelectorAll("[data-note-quantity-input]")]
+        .map((input) => [input.dataset.noteQuantityInput, input]),
+    );
     state.planNotes = [...elements.planNotesList.querySelectorAll("[data-note-edit-input]")]
       .map((input) => {
         const note = state.planNotes.find((item) => item.id === input.dataset.noteEditInput);
         const nextText = input.value.trim();
         if (!note || !nextText) return null;
+        const quantityInput = quantityInputs.get(note.id);
+        const nextQuantity = normalizePlanNoteQuantity(quantityInput?.value);
         return {
           ...note,
           text: nextText,
-          time: nextText === note.text ? note.time : new Date().toISOString(),
+          quantity: nextQuantity,
+          time: nextText === note.text && nextQuantity === normalizePlanNoteQuantity(note.quantity)
+            ? note.time
+            : new Date().toISOString(),
         };
       })
       .filter(Boolean);
@@ -3222,7 +3267,7 @@ elements.savePlanButton.addEventListener("click", savePlan);
 
 elements.planNoteForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  addPlanNote(elements.planNoteInput.value);
+  addPlanNote(elements.planNoteInput.value, elements.planNoteQuantityInput?.value || 1);
 });
 
 elements.planNotesList.addEventListener("click", (event) => {

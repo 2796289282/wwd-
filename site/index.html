@@ -553,8 +553,23 @@
                     placeholder="添加一条记录"
                     autocomplete="off"
                   />
+                  <input
+                    id="plan-note-quantity-input"
+                    class="plan-note-quantity-input"
+                    type="number"
+                    min="0"
+                    max="9999"
+                    step="1"
+                    value="1"
+                    inputmode="numeric"
+                    aria-label="挨揍数量"
+                  />
                   <button class="secondary-button" type="submit">添加</button>
                 </form>
+                <div class="plan-notes-total" aria-live="polite">
+                  <span>挨揍总数量</span>
+                  <strong id="plan-notes-total">0</strong>
+                </div>
                 <ul id="plan-notes-list" class="plan-notes-list"></ul>
                 <p id="plan-notes-empty" class="history-empty">还没有记录。</p>
               </div>
