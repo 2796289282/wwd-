@@ -583,6 +583,7 @@ const elements = {
   brandMark: document.querySelector("#brand-mark"),
   brandText: document.querySelector("#brand-text"),
   introLetterButton: document.querySelector("#intro-letter-button"),
+  notificationButton: document.querySelector("#notification-button"),
   togetherDays: document.querySelector("#together-days"),
   moodDateLabel: document.querySelector("#mood-date-label"),
   jiaxinMoodValue: document.querySelector("#jiaxin-mood-value"),
@@ -594,6 +595,7 @@ const elements = {
   sendReconcileButton: document.querySelector("#send-reconcile-button"),
   recentLetterCard: document.querySelector("#recent-letter-card"),
   recentLetterPreview: document.querySelector("#recent-letter-preview"),
+  recentLetterMeta: document.querySelector("#recent-letter-meta"),
   notificationBadges: [...document.querySelectorAll("[data-notification-badge]")],
   introSection: document.querySelector(".intro"),
   startButton: document.querySelector("#start-game-button"),
@@ -608,6 +610,7 @@ const elements = {
   openPlanButton: document.querySelector("#open-plan-button"),
   openFlightButton: document.querySelector("#open-flight-button"),
   openDiaryButton: document.querySelector("#open-diary-button"),
+  modeLetterButton: document.querySelector("#mode-letter-button"),
   specialBoundaryPanel: document.querySelector("#special-boundary-panel"),
   confirmBoundaryButton: document.querySelector("#confirm-boundary-button"),
   specialLockPanel: document.querySelector("#special-lock-panel"),
@@ -657,6 +660,7 @@ const elements = {
   notificationTitle: document.querySelector("#notification-title"),
   notificationSummary: document.querySelector("#notification-summary"),
   notificationList: document.querySelector("#notification-list"),
+  clearNotificationsButton: document.querySelector("#clear-notifications-button"),
   form: document.querySelector("#option-form"),
   input: document.querySelector("#option-input"),
   templateButtons: [...document.querySelectorAll(".template-button")],
@@ -709,6 +713,11 @@ const elements = {
   diaryFavoriteButton: document.querySelector("#diary-favorite-button"),
   diaryEditButton: document.querySelector("#diary-edit-button"),
   diaryDeleteButton: document.querySelector("#diary-delete-button"),
+  diaryCommentsCount: document.querySelector("#diary-comments-count"),
+  diaryCommentsList: document.querySelector("#diary-comments-list"),
+  diaryCommentsEmpty: document.querySelector("#diary-comments-empty"),
+  diaryCommentForm: document.querySelector("#diary-comment-form"),
+  diaryCommentInput: document.querySelector("#diary-comment-input"),
   letterPrompt: document.querySelector("#letter-prompt"),
   openLetterPromptButton: document.querySelector("#open-letter-prompt-button"),
   deckTitle: document.querySelector("#deck-title"),
@@ -960,6 +969,68 @@ function otherUser(user = currentUser) {
   return "";
 }
 
+function notificationStorageKey(prefix, user = currentUser) {
+  const safeUser = user === "wanwan" || user === "jiaxin" ? user : "guest";
+  return `${prefix}_${safeUser}`;
+}
+
+function readNotificationIdList(storage, key) {
+  try {
+    const value = JSON.parse(storage.getItem(key) || "[]");
+    return Array.isArray(value) ? value.filter((id) => typeof id === "string" && id) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeNotificationIdList(storage, key, ids) {
+  storage.setItem(key, JSON.stringify([...new Set((ids || []).filter(Boolean))]));
+}
+
+function getDismissedNotificationIds(user = currentUser) {
+  return readNotificationIdList(localStorage, notificationStorageKey("xw_dismissed_notifications", user));
+}
+
+function setDismissedNotificationIds(user, ids) {
+  writeNotificationIdList(localStorage, notificationStorageKey("xw_dismissed_notifications", user), ids);
+}
+
+function dismissNotifications(user, notificationIds = []) {
+  if (!user || !notificationIds.length) return;
+  const merged = new Set([...getDismissedNotificationIds(user), ...notificationIds]);
+  setDismissedNotificationIds(user, [...merged]);
+  renderNotifications();
+}
+
+function getToastedNotificationIds(user = currentUser) {
+  return readNotificationIdList(sessionStorage, notificationStorageKey("xw_toasted_notifications", user));
+}
+
+function setToastedNotificationIds(user, ids) {
+  writeNotificationIdList(sessionStorage, notificationStorageKey("xw_toasted_notifications", user), ids);
+}
+
+function markNotificationToasted(user, notificationIds = []) {
+  if (!user || !notificationIds.length) return;
+  const merged = new Set([...getToastedNotificationIds(user), ...notificationIds]);
+  setToastedNotificationIds(user, [...merged]);
+}
+
+function notificationStableId(item) {
+  if (typeof item.id === "string" && item.id) return item.id;
+  const type = typeof item.type === "string" && item.type ? item.type : "notice";
+  const fromUser = item.fromUser === "wanwan" || item.fromUser === "jiaxin" ? item.fromUser : "unknown";
+  const toUser = item.toUser === "wanwan" || item.toUser === "jiaxin" ? item.toUser : "unknown";
+  const relatedId = typeof item.relatedId === "string" && item.relatedId ? item.relatedId : "";
+  const createdAt =
+    typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+      ? item.createdAt
+      : typeof item.time === "string" && !Number.isNaN(Date.parse(item.time))
+        ? item.time
+        : "no-time";
+  return `${notificationGroup(type)}-${type}-${fromUser}-${toUser}-${relatedId || createdAt}`;
+}
+
 function normalizeNotifications(value) {
   if (!Array.isArray(value)) return [];
   const seen = new Set();
@@ -975,10 +1046,7 @@ function normalizeNotifications(value) {
           ? item.createdAt
           : new Date().toISOString();
       return {
-        id:
-          typeof item.id === "string" && item.id
-            ? item.id
-            : `notice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: notificationStableId({ ...item, fromUser, toUser, type, createdAt }),
         fromUser,
         toUser,
         type,
@@ -1011,8 +1079,9 @@ function mergeNotifications(primary = [], secondary = []) {
 
 function unreadNotifications() {
   if (!currentUser) return [];
+  const dismissed = new Set(getDismissedNotificationIds(currentUser));
   return normalizeNotifications(state.notifications).filter(
-    (notice) => notice.toUser === currentUser && !notice.isRead,
+    (notice) => notice.toUser === currentUser && !notice.isRead && !dismissed.has(notice.id),
   );
 }
 
@@ -1029,8 +1098,8 @@ function notificationGroup(type) {
 function addNotification({ type, title, content, relatedId = "" }) {
   const toUser = otherUser();
   if (!currentUser || !toUser || toUser === currentUser) return null;
+  const createdAt = new Date().toISOString();
   const notice = {
-    id: `notice-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     fromUser: currentUser,
     toUser,
     type,
@@ -1038,8 +1107,9 @@ function addNotification({ type, title, content, relatedId = "" }) {
     content,
     relatedId,
     isRead: false,
-    createdAt: new Date().toISOString(),
+    createdAt,
   };
+  notice.id = notificationStableId(notice);
   state.notifications = normalizeNotifications([notice, ...state.notifications]);
   return notice;
 }
@@ -1115,6 +1185,53 @@ function normalizePlanNotes(value) {
   return [];
 }
 
+function diaryCommentAuthor(value) {
+  if (value === "wanwan" || value === "婉婉" || value === "ta") return "wanwan";
+  if (value === "jiaxin" || value === "家鑫" || value === "me") return "jiaxin";
+  return "";
+}
+
+function normalizeDiaryComments(value, diaryId = "") {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const content = typeof item.content === "string"
+        ? item.content.trim()
+        : typeof item.text === "string"
+          ? item.text.trim()
+          : "";
+      if (!content) return null;
+      const createdAt =
+        typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+          ? item.createdAt
+          : typeof item.time === "string" && !Number.isNaN(Date.parse(item.time))
+            ? item.time
+            : new Date().toISOString();
+      const author = diaryCommentAuthor(item.author || item.fromUser);
+      return {
+        id:
+          typeof item.id === "string" && item.id
+            ? item.id
+            : `comment-${diaryId || "diary"}-${createdAt}`,
+        diaryId: typeof item.diaryId === "string" && item.diaryId ? item.diaryId : diaryId,
+        author,
+        nickname: typeof item.nickname === "string" ? item.nickname : USER_LABELS[author] || "",
+        content,
+        createdAt,
+      };
+    })
+    .filter(Boolean)
+    .filter((comment) => {
+      const key = comment.id || `${comment.diaryId}-${comment.author}-${comment.createdAt}-${comment.content}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
 function normalizeDiaryEntries(value) {
   if (!Array.isArray(value)) return [];
   return value
@@ -1127,11 +1244,13 @@ function normalizeDiaryEntries(value) {
         typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
           ? item.createdAt
           : new Date().toISOString();
+      const id =
+        typeof item.id === "string" && item.id
+          ? item.id
+          : `diary-${createdAt}-${title}`;
+      const comments = normalizeDiaryComments(item.comments, id);
       return {
-        id:
-          typeof item.id === "string" && item.id
-            ? item.id
-            : `diary-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id,
         title,
         body,
         author: item.author === "ta" ? "ta" : "me",
@@ -1143,6 +1262,7 @@ function normalizeDiaryEntries(value) {
           typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt))
             ? item.updatedAt
             : createdAt,
+        ...(comments.length ? { comments } : {}),
       };
     })
     .filter(Boolean);
@@ -1508,8 +1628,35 @@ function renderHomeDashboard() {
   elements.dailyTaskHint.textContent = "做完以后，记得给对方一个认真回应。";
 
   const latestLetter = normalizeLetterHistory(state.letterHistory)[0];
+  const hasUnreadLetter = unreadNotifications().some((notice) => notificationGroup(notice.type) === "letter");
   elements.recentLetterPreview.textContent =
-    letterExcerpt(latestLetter?.text || state.secretLetter) || "还没有新的小纸条，去写一句吧。";
+    hasUnreadLetter ? "有新的小纸条" : "还没有新的小纸条";
+  if (elements.recentLetterMeta) {
+    elements.recentLetterMeta.textContent = latestLetter
+      ? letterExcerpt(latestLetter.text, 34) || "给对方留一句悄悄话"
+      : "给对方留一句悄悄话";
+  }
+}
+
+function notificationDisplayTitle(notice) {
+  const source = USER_LABELS[notice.fromUser] || "对方";
+  const group = notificationGroup(notice.type);
+  if (group === "letter") return `${source}给你留了小纸条`;
+  if (notice.type.includes("comment") || notice.type.includes("reply")) return `${source}回应了你的日记`;
+  if (group === "diary") return `${source}写了新的日记`;
+  if (notice.type.includes("login")) return `${source}刚刚回到了小屋`;
+  return notice.title || "新的提醒";
+}
+
+function notificationDisplayContent(notice) {
+  if (notice.type.includes("login")) return "刚刚";
+  if (notificationGroup(notice.type) === "letter" && !notice.content) {
+    return "有一封悄悄话等你看";
+  }
+  if (notificationGroup(notice.type) === "diary" && !notice.content) {
+    return "有一篇新的小日记";
+  }
+  return notice.content || "打开看看吧。";
 }
 
 function renderNotifications() {
@@ -1518,22 +1665,34 @@ function renderNotifications() {
   const counts = unread.reduce((acc, notice) => {
     const group = notificationGroup(notice.type);
     acc[group] = (acc[group] || 0) + 1;
+    acc.all = (acc.all || 0) + 1;
     return acc;
   }, {});
 
   elements.notificationBadges.forEach((badge) => {
     const group = badge.dataset.notificationBadge;
     const count = counts[group] || 0;
-    badge.textContent = count > 9 ? "9+" : String(count);
+    badge.textContent = count > 99 ? "99+" : String(count);
     badge.hidden = count === 0;
   });
 
-  elements.notificationTitle.textContent = unread.length
-    ? `${USER_LABELS[otherUser()] || "对方"}给你留了 ${unread.length} 条新提醒`
-    : "暂时没有新的提醒";
+  elements.notificationTitle.textContent = "通知";
   elements.notificationSummary.textContent = unread.length
-    ? "点开任意一条，就会带你去对应的小角落。"
-    : "小屋很安静，今天也被好好照顾着。";
+    ? `你有 ${unread.length > 99 ? "99+" : unread.length} 条新通知`
+    : "有新的小纸条、日记或回应时，会悄悄出现在这里。";
+
+  if (!unread.length) {
+    const empty = document.createElement("div");
+    empty.className = "notification-empty";
+    const title = document.createElement("strong");
+    title.textContent = "现在没有新通知";
+    const copy = document.createElement("span");
+    copy.textContent = "有新的小纸条、日记或回应时，会悄悄出现在这里。";
+    empty.append(title, copy);
+    elements.notificationList.replaceChildren(empty);
+    return;
+  }
+
   elements.notificationList.replaceChildren(
     ...unread.map((notice) => {
       const button = document.createElement("button");
@@ -1541,21 +1700,35 @@ function renderNotifications() {
       button.className = "notification-item";
       button.dataset.notificationId = notice.id;
 
+      const icon = document.createElement("span");
+      icon.className = "notification-icon";
+      const group = notificationGroup(notice.type);
+      icon.textContent =
+        group === "letter" ? "💌" :
+        notice.type.includes("comment") || notice.type.includes("reply") ? "💬" :
+        group === "diary" ? "📖" :
+        notice.type.includes("login") ? "🏠" :
+        "🔔";
+
+      const body = document.createElement("span");
+      body.className = "notification-copy";
+
       const title = document.createElement("strong");
-      title.textContent = notice.title;
+      title.textContent = notificationDisplayTitle(notice);
 
       const content = document.createElement("span");
-      content.textContent = notice.content || "打开看看吧。";
+      content.textContent = letterExcerpt(notificationDisplayContent(notice), 40);
 
       const meta = document.createElement("small");
-      meta.textContent = `${USER_LABELS[notice.fromUser]} · ${new Intl.DateTimeFormat("zh-CN", {
+      meta.textContent = `${USER_LABELS[notice.fromUser] || "对方"} · ${new Intl.DateTimeFormat("zh-CN", {
         month: "numeric",
         day: "numeric",
         hour: "2-digit",
         minute: "2-digit",
       }).format(new Date(notice.createdAt))}`;
 
-      button.append(title, content, meta);
+      body.append(title, content, meta);
+      button.append(icon, body);
       return button;
     }),
   );
@@ -1563,7 +1736,6 @@ function renderNotifications() {
 
 function showNotificationModal() {
   renderNotifications();
-  if (!unreadNotifications().length) return;
   elements.notificationModal.hidden = false;
   document.body.classList.add("modal-open");
 }
@@ -1576,7 +1748,7 @@ function closeNotificationModal() {
 function navigateForNotification(notice) {
   const group = notificationGroup(notice.type);
   closeNotificationModal();
-  markNotificationRead(notice.id);
+  dismissNotifications(currentUser, [notice.id]);
   if (group === "letter") {
     unlockLetterStep();
   } else if (group === "diary") {
@@ -1594,15 +1766,15 @@ function navigateForNotification(notice) {
   }
 }
 
-function maybeShowUnreadNotificationPopup({ force = false } = {}) {
+function maybeShowUnreadNotificationPopup() {
   const unread = unreadNotifications();
   if (!unread.length) return;
-  const unreadIds = new Set(unread.map((notice) => notice.id));
-  const hasNew = unread.some((notice) => !knownUnreadNotificationIds.has(notice.id));
-  knownUnreadNotificationIds = unreadIds;
-  if (force || hasNew) {
-    showToast(`${USER_LABELS[otherUser()] || "对方"}给你留了 ${unread.length} 条新提醒`);
-    showNotificationModal();
+  const toasted = new Set(getToastedNotificationIds(currentUser));
+  const newIds = unread.map((notice) => notice.id).filter((id) => !toasted.has(id));
+  knownUnreadNotificationIds = new Set(unread.map((notice) => notice.id));
+  if (newIds.length) {
+    showToast(`你有 ${unread.length > 99 ? "99+" : unread.length} 条新通知`);
+    markNotificationToasted(currentUser, newIds);
   }
 }
 
@@ -1872,6 +2044,38 @@ function diarySummary(body) {
   return text.length > 58 ? `${text.slice(0, 58)}...` : text;
 }
 
+function diaryUnreadNotificationIds(entryId) {
+  return unreadNotifications()
+    .filter((notice) => notificationGroup(notice.type) === "diary" && (!notice.relatedId || notice.relatedId === entryId))
+    .map((notice) => notice.id);
+}
+
+function renderDiaryComments(entry) {
+  if (!elements.diaryCommentsList) return;
+  const comments = normalizeDiaryComments(entry?.comments, entry?.id);
+  elements.diaryCommentsCount.textContent = `${comments.length} 条回应`;
+  elements.diaryCommentsEmpty.hidden = comments.length > 0;
+  elements.diaryCommentsList.replaceChildren(
+    ...comments.map((comment) => {
+      const item = document.createElement("article");
+      item.className = "diary-comment-item";
+
+      const head = document.createElement("div");
+      const author = document.createElement("strong");
+      author.textContent = comment.nickname || USER_LABELS[comment.author] || "对方";
+      const time = document.createElement("small");
+      const dateInfo = formatDiaryDate(comment.createdAt);
+      time.textContent = `${dateInfo.monthDay} ${dateInfo.time}`;
+      head.append(author, time);
+
+      const content = document.createElement("p");
+      content.textContent = comment.content;
+      item.append(head, content);
+      return item;
+    }),
+  );
+}
+
 function filteredDiaryEntries() {
   const now = new Date();
   const filter = state.diaryFilter || "month";
@@ -1927,6 +2131,12 @@ function createDiaryItem(entry, index) {
       tag.textContent = text;
       meta.append(tag);
     });
+  if (diaryUnreadNotificationIds(entry.id).length) {
+    const tag = document.createElement("em");
+    tag.className = "diary-new-reply";
+    tag.textContent = "新回应";
+    meta.append(tag);
+  }
 
   card.append(top, summary, meta);
   item.append(dateBlock, card);
@@ -1990,6 +2200,10 @@ function openDiaryDetail(id) {
         return tag;
       }),
   );
+  renderDiaryComments(entry);
+  const dismissedDiaryIds = diaryUnreadNotificationIds(entry.id);
+  dismissNotifications(currentUser, dismissedDiaryIds);
+  if (dismissedDiaryIds.length) renderDiary();
   elements.diaryFavoriteButton.textContent = entry.favorite ? "取消收藏" : "收藏";
   elements.diaryDetailModal.hidden = false;
   document.body.classList.add("modal-open");
@@ -2679,10 +2893,18 @@ elements.brandText.addEventListener("click", (event) => {
 });
 
 elements.introLetterButton.addEventListener("click", () => {
+  dismissNotifications(
+    currentUser,
+    unreadNotifications().filter((notice) => notificationGroup(notice.type) === "letter").map((notice) => notice.id),
+  );
   unlockLetterStep();
 });
 
 elements.recentLetterCard.addEventListener("click", () => {
+  dismissNotifications(
+    currentUser,
+    unreadNotifications().filter((notice) => notificationGroup(notice.type) === "letter").map((notice) => notice.id),
+  );
   unlockLetterStep();
 });
 
@@ -2714,6 +2936,14 @@ elements.notificationList.addEventListener("click", (event) => {
   if (notice) navigateForNotification(notice);
 });
 
+elements.notificationButton.addEventListener("click", showNotificationModal);
+
+elements.clearNotificationsButton.addEventListener("click", () => {
+  const ids = unreadNotifications().map((notice) => notice.id);
+  dismissNotifications(currentUser, ids);
+  showToast(ids.length ? "通知已清除" : "现在没有新通知");
+});
+
 document.querySelectorAll("[data-close-notifications]").forEach((button) => {
   button.addEventListener("click", closeNotificationModal);
 });
@@ -2731,6 +2961,14 @@ elements.openSpecialStepButton.addEventListener("click", () => {
 elements.openPlanButton.addEventListener("click", unlockPlanStep);
 elements.openFlightButton.addEventListener("click", () => {
   window.location.href = FLIGHT_REDIRECT_URL;
+});
+elements.modeLetterButton.addEventListener("click", () => {
+  dismissNotifications(
+    currentUser,
+    unreadNotifications().filter((notice) => notificationGroup(notice.type) === "letter").map((notice) => notice.id),
+  );
+  letterReturnStep = "mode";
+  openStep("letter");
 });
 elements.openDiaryButton.addEventListener("click", () => {
   diaryReturnStep = state.currentStep === "diary" ? "special" : state.currentStep;
@@ -2889,6 +3127,10 @@ elements.diaryList.addEventListener("click", (event) => {
 });
 
 elements.diaryForm.addEventListener("submit", saveDiaryFromForm);
+elements.diaryCommentForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  showToast("小回应入口已保留，当前版本不修改数据库结构");
+});
 
 document.querySelectorAll("[data-close-diary-editor]").forEach((button) => {
   button.addEventListener("click", closeDiaryEditor);

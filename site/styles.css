@@ -4595,3 +4595,378 @@ body {
     padding: 11px;
   }
 }
+
+/* Quiet cleanup: home, notification center, and compact entry cards. */
+.quiet-home {
+  min-height: min(720px, calc(100svh - 112px));
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding-top: clamp(18px, 5vw, 40px);
+}
+
+.home-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.quiet-home #page-title {
+  margin: 4px 0 0;
+  font-size: clamp(44px, 11vw, 76px);
+  line-height: 0.98;
+  letter-spacing: 0;
+}
+
+.quiet-home .intro-copy {
+  max-width: none;
+  margin: 10px 0 0;
+  color: rgba(255, 235, 246, 0.76);
+  font-size: clamp(15px, 4vw, 19px);
+}
+
+.notification-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 92px;
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  color: #fff6fb;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.notification-total-badge {
+  position: static;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  transform: none;
+}
+
+.quiet-home-grid {
+  margin-top: 0;
+}
+
+.quiet-home-cards {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.quiet-home .recent-letter-card,
+.quiet-entry-card {
+  min-height: 0;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.07)),
+    rgba(18, 13, 28, 0.7);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.26);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+}
+
+.quiet-home .recent-letter-card {
+  position: relative;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px;
+  text-align: left;
+}
+
+.quiet-home .recent-letter-card > span:first-child,
+.quiet-entry-card p {
+  margin: 0;
+  color: rgba(255, 213, 231, 0.74);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.quiet-home .recent-letter-card strong,
+.quiet-entry-card strong {
+  display: block;
+  margin: 0;
+  color: #fff8fc;
+  font-size: clamp(22px, 6vw, 30px);
+  line-height: 1.16;
+  letter-spacing: 0;
+}
+
+.quiet-home .recent-letter-card small,
+.quiet-entry-card .flow-preview {
+  color: rgba(255, 243, 248, 0.68);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.quiet-home .recent-letter-card::after {
+  content: "打开小纸条";
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 9px 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff7fb;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.quiet-entry-card {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+
+.quiet-entry-card .start-game-button {
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 18px;
+  border-radius: 999px;
+}
+
+.compact-mode-copy {
+  margin-bottom: 14px;
+}
+
+.compact-entry-list {
+  display: grid;
+  gap: 10px;
+}
+
+.compact-entry-card {
+  min-height: 76px;
+  padding: 14px 16px;
+  border-radius: 20px;
+}
+
+.compact-entry-card .special-entry-mark {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  border-radius: 15px;
+  font-size: 20px;
+}
+
+.compact-entry-card .special-entry-copy {
+  gap: 3px;
+}
+
+.compact-entry-card .special-entry-copy strong {
+  font-size: 18px;
+}
+
+.compact-entry-card .special-entry-copy small {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.notification-modal {
+  align-items: flex-end;
+  padding: 16px;
+}
+
+.notification-modal-backdrop {
+  background: rgba(8, 6, 14, 0.46);
+}
+
+.notification-card {
+  width: min(100%, 520px);
+  max-height: min(78vh, 680px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-radius: 28px 28px 22px 22px;
+  background:
+    linear-gradient(145deg, rgba(42, 32, 58, 0.94), rgba(18, 13, 28, 0.96)),
+    rgba(18, 13, 28, 0.94);
+}
+
+.notification-list {
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.notification-item {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+}
+
+.notification-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.11);
+  font-size: 19px;
+}
+
+.notification-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.notification-copy strong,
+.notification-copy span,
+.notification-copy small {
+  min-width: 0;
+}
+
+.notification-empty {
+  display: grid;
+  gap: 8px;
+  padding: 26px 16px 30px;
+  text-align: center;
+  color: rgba(255, 244, 249, 0.72);
+}
+
+.notification-empty strong {
+  color: #fff8fc;
+  font-size: 20px;
+}
+
+.notification-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.diary-comments {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.diary-comments-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.diary-comments-head h3 {
+  margin: 0;
+  color: #fff8fc;
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+.diary-comments-head span,
+.diary-comments-empty,
+.diary-comments-note {
+  color: rgba(255, 244, 249, 0.64);
+  font-size: 13px;
+}
+
+.diary-comments-list {
+  display: grid;
+  gap: 10px;
+}
+
+.diary-comment-item {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.diary-comment-item div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.diary-comment-item strong {
+  color: #fff8fc;
+}
+
+.diary-comment-item small {
+  color: rgba(255, 244, 249, 0.56);
+}
+
+.diary-comment-item p {
+  margin: 0;
+  color: rgba(255, 250, 253, 0.86);
+  line-height: 1.6;
+}
+
+.diary-comment-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.diary-comment-form textarea:disabled,
+.diary-comment-form button:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.diary-new-reply {
+  color: #fff !important;
+  background: rgba(255, 72, 122, 0.3) !important;
+}
+
+@media (min-width: 760px) {
+  .quiet-home-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .notification-modal {
+    align-items: center;
+  }
+
+  .notification-card {
+    border-radius: 30px;
+  }
+}
+
+@media (max-width: 430px) {
+  .quiet-home {
+    gap: 14px;
+    min-height: calc(100svh - 96px);
+  }
+
+  .home-title-row {
+    gap: 10px;
+  }
+
+  .notification-button {
+    min-width: 82px;
+    min-height: 39px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+
+  .quiet-home .recent-letter-card,
+  .quiet-entry-card {
+    padding: 17px;
+    border-radius: 22px;
+  }
+
+  .compact-entry-card {
+    min-height: 70px;
+    padding: 12px 13px;
+  }
+}
