@@ -2060,17 +2060,26 @@ function renderDiaryComments(entry) {
       const item = document.createElement("article");
       item.className = "diary-comment-item";
 
-      const head = document.createElement("div");
+      const avatar = document.createElement("span");
+      avatar.className = "diary-comment-avatar";
+      avatar.textContent = comment.author === "wanwan" ? "婉" : "鑫";
+
+      const body = document.createElement("div");
+      const head = document.createElement("p");
       const author = document.createElement("strong");
-      author.textContent = comment.nickname || USER_LABELS[comment.author] || "对方";
+      author.textContent = comment.nickname || USER_LABELS[comment.author] || "家鑫";
       const time = document.createElement("small");
       const dateInfo = formatDiaryDate(comment.createdAt);
       time.textContent = `${dateInfo.monthDay} ${dateInfo.time}`;
       head.append(author, time);
 
       const content = document.createElement("p");
+      content.className = "diary-comment-content";
       content.textContent = comment.content;
-      item.append(head, content);
+      const heart = document.createElement("i");
+      heart.textContent = "♡";
+      body.append(head, content, heart);
+      item.append(avatar, body);
       return item;
     }),
   );
@@ -2212,6 +2221,7 @@ function openDiaryDetail(id) {
 function closeDiaryDetail() {
   elements.diaryDetailModal.hidden = true;
   activeDiaryId = null;
+  if (elements.diaryCommentInput) elements.diaryCommentInput.value = "";
   document.body.classList.remove("modal-open");
 }
 
@@ -2248,6 +2258,7 @@ function saveDiaryFromForm(event) {
       id: relatedId,
       createdAt: now,
       favorite: false,
+      comments: [],
       ...payload,
     });
   }
@@ -2263,6 +2274,42 @@ function saveDiaryFromForm(event) {
   closeDiaryEditor();
   showToast("日记已保存");
   void saveCloudState();
+}
+
+function saveDiaryComment(event) {
+  event.preventDefault();
+  const content = elements.diaryCommentInput.value.trim();
+  if (!content) {
+    showToast("先写一句想说的话吧。");
+    return;
+  }
+  if (!activeDiaryId) return;
+  state.diaryEntries = normalizeDiaryEntries(state.diaryEntries);
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (!entry) return;
+  const author = currentUser === "wanwan" ? "wanwan" : "jiaxin";
+  const comment = {
+    id: `comment-${Date.now()}-${secureRandomIndex(100000)}`,
+    diaryId: entry.id,
+    author,
+    nickname: USER_LABELS[author] || (author === "wanwan" ? "婉婉" : "家鑫"),
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  entry.comments = normalizeDiaryComments([...(entry.comments || []), comment], entry.id);
+  entry.updatedAt = new Date().toISOString();
+  addNotification({
+    type: "diary-commented",
+    title: "日记收到一条小回应",
+    content: letterExcerpt(content, 52),
+    relatedId: entry.id,
+  });
+  saveState();
+  renderDiary();
+  renderDiaryComments(entry);
+  elements.diaryCommentInput.value = "";
+  showToast("小回应已送到这篇日记里");
+  void saveCloudState({ silent: true });
 }
 
 function editActiveDiary() {
@@ -2936,9 +2983,9 @@ elements.notificationList.addEventListener("click", (event) => {
   if (notice) navigateForNotification(notice);
 });
 
-elements.notificationButton.addEventListener("click", showNotificationModal);
+elements.notificationButton?.addEventListener("click", showNotificationModal);
 
-elements.clearNotificationsButton.addEventListener("click", () => {
+elements.clearNotificationsButton?.addEventListener("click", () => {
   const ids = unreadNotifications().map((notice) => notice.id);
   dismissNotifications(currentUser, ids);
   showToast(ids.length ? "通知已清除" : "现在没有新通知");
@@ -2962,7 +3009,7 @@ elements.openPlanButton.addEventListener("click", unlockPlanStep);
 elements.openFlightButton.addEventListener("click", () => {
   window.location.href = FLIGHT_REDIRECT_URL;
 });
-elements.modeLetterButton.addEventListener("click", () => {
+elements.modeLetterButton?.addEventListener("click", () => {
   dismissNotifications(
     currentUser,
     unreadNotifications().filter((notice) => notificationGroup(notice.type) === "letter").map((notice) => notice.id),
@@ -3127,10 +3174,7 @@ elements.diaryList.addEventListener("click", (event) => {
 });
 
 elements.diaryForm.addEventListener("submit", saveDiaryFromForm);
-elements.diaryCommentForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  showToast("小回应入口已保留，当前版本不修改数据库结构");
-});
+elements.diaryCommentForm?.addEventListener("submit", saveDiaryComment);
 
 document.querySelectorAll("[data-close-diary-editor]").forEach((button) => {
   button.addEventListener("click", closeDiaryEditor);

@@ -46,34 +46,31 @@
     </header>
 
     <main class="app-shell">
-      <section class="intro quiet-home" aria-labelledby="page-title">
-        <div class="home-title-row">
-          <div>
-            <p class="eyebrow"><span></span> JUST FOR US</p>
-            <h1 id="page-title">鑫婉小屋</h1>
-            <p class="intro-copy">专属游戏基地</p>
-          </div>
-          <button id="notification-button" class="notification-button" type="button">
-            <span aria-hidden="true">🔔</span>
-            <span>通知</span>
-            <span class="notification-badge notification-total-badge" data-notification-badge="all" hidden>0</span>
-          </button>
-        </div>
-        <button id="intro-letter-button" class="intro-letter-button home-hidden-control" type="button" hidden>
+      <section class="intro" aria-labelledby="page-title">
+        <p class="eyebrow"><span></span> JUST FOR WANWAN</p>
+        <h1 id="page-title">鑫婉小屋，<br /><em>专属游戏基地。</em></h1>
+        <button id="notification-button" class="intro-notification-button" type="button">
+          通知
+          <span class="notification-badge notification-total-badge" data-notification-badge="all" hidden>0</span>
+        </button>
+        <button id="intro-letter-button" class="intro-letter-button" type="button">
           小纸条
           <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
         </button>
-        <section class="home-dashboard quiet-home-grid" aria-label="首页入口">
-          <div class="home-days-card home-hidden-control" hidden>
-            <p class="home-card-label">HOME</p>
+        <p class="intro-copy">
+          游戏任务要好好完成哦。赖皮的婉婉是小狗。
+        </p>
+        <section class="home-dashboard" aria-label="今日小屋状态">
+          <div class="home-days-card">
+            <p class="home-card-label">TODAY'S HOME</p>
             <strong id="together-days">第 0 天</strong>
             <span>鑫婉小屋已经亮灯这么久啦</span>
           </div>
-          <div class="home-status-grid quiet-home-cards">
-            <article class="mood-card home-hidden-control" hidden>
+          <div class="home-status-grid">
+            <article class="mood-card">
               <div class="home-card-head">
                 <span>
-                  今日状态
+                  双方今日心情
                   <span class="notification-badge inline-badge" data-notification-badge="mood" hidden>0</span>
                 </span>
                 <small id="mood-date-label">今天</small>
@@ -97,9 +94,9 @@
                 <span id="wanwan-mood-value">还没选择</span>
               </div>
             </article>
-            <article class="daily-task-card home-hidden-control" hidden>
+            <article class="daily-task-card">
               <div class="home-card-head">
-                <span>今日提醒</span>
+                <span>每日一句 / 每日任务</span>
                 <small id="daily-task-date">今日限定</small>
               </div>
               <p id="daily-task-text">今天也要认真偏爱对方。</p>
@@ -110,32 +107,25 @@
               </button>
             </article>
             <button id="recent-letter-card" class="recent-letter-card" type="button">
-              <span>小纸条</span>
-              <strong id="recent-letter-preview">还没有新的小纸条</strong>
-              <small id="recent-letter-meta">给对方留一句悄悄话</small>
+              <span>最近一条小纸条</span>
+              <strong id="recent-letter-preview">还没有新的小纸条，去写一句吧。</strong>
+              <small>点这里打开小纸条</small>
               <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
             </button>
-            <div class="landing-card quiet-entry-card">
-              <p>今晚入口</p>
-              <strong>游戏、日记和秘密都放在这里</strong>
-              <button id="start-game-button" class="start-game-button" type="button">
-                进去看看
-              </button>
-            </div>
           </div>
         </section>
-        <div class="doodle-arrow home-hidden-control" aria-hidden="true" hidden>
+        <div class="doodle-arrow" aria-hidden="true">
           <svg viewBox="0 0 120 70" role="img">
             <path d="M5 10c35 2 57 16 74 41" />
             <path d="m70 42 11 12 4-16" />
           </svg>
-          <span>开始</span>
+          <span>从这里开始</span>
         </div>
-        <div class="landing-card home-hidden-control" hidden>
-          <p>入口</p>
-          <strong>进入互动</strong>
-          <span class="flow-preview">选择今晚的小玩法</span>
-          <button class="start-game-button" type="button">
+        <div class="landing-card">
+          <p>今晚规则</p>
+          <strong>先玩游戏，再玩婉婉。每一次游戏都要认真对待哦</strong>
+          <span class="flow-preview">希望我们每天都开开心心</span>
+          <button id="start-game-button" class="start-game-button" type="button">
             点我进去
             <span class="notification-badge" data-notification-badge="draw" hidden>0</span>
           </button>
@@ -150,57 +140,14 @@
             </button>
             <span class="flow-badge">STEP 02</span>
           </div>
-          <div class="setup-copy compact-mode-copy">
-            <p class="step-label">INTERACTION</p>
-            <h2 id="game-mode-title">今晚入口</h2>
-            <p class="setup-note">想玩的、想写的、想藏起来的，都从这里进。</p>
+          <div class="setup-copy">
+            <p class="step-label">CHOOSE TONIGHT'S MOOD</p>
+            <h2 id="game-mode-title">今晚想玩什么呢？</h2>
+            <p class="setup-note">婉婉不想选的话，就让家鑫帮你决定吧。</p>
           </div>
 
-          <div class="mode-zones compact-entry-list">
-            <button class="special-entry-button mode-button compact-entry-card" type="button" data-mode="truth">
-              <span class="special-entry-mark">真</span>
-              <span class="special-entry-copy">
-                <strong>真心话大冒险</strong>
-                <small>抽一张卡，不许耍赖</small>
-              </span>
-              <span class="special-entry-arrow" aria-hidden="true">→</span>
-            </button>
-            <button id="open-plan-button" class="special-entry-button compact-entry-card plan-mode" type="button">
-              <span class="special-entry-mark">书</span>
-              <span class="special-entry-copy">
-                <strong>神秘计划书</strong>
-                <small>只有我们知道的小约定</small>
-              </span>
-              <span class="notification-badge" data-notification-badge="plan" hidden>0</span>
-              <span class="special-entry-arrow" aria-hidden="true">→</span>
-            </button>
-            <button id="open-flight-button" class="special-entry-button compact-entry-card flight-entry-mode" type="button">
-              <span class="special-entry-mark">棋</span>
-              <span class="special-entry-copy">
-                <strong>飞行棋</strong>
-                <small>今晚谁先认输</small>
-              </span>
-              <span class="special-entry-arrow" aria-hidden="true">→</span>
-            </button>
-            <button id="mode-letter-button" class="special-entry-button compact-entry-card" type="button">
-              <span class="special-entry-mark">信</span>
-              <span class="special-entry-copy">
-                <strong>小纸条</strong>
-                <small>给对方留一句悄悄话</small>
-              </span>
-              <span class="notification-badge" data-notification-badge="letter" hidden>0</span>
-              <span class="special-entry-arrow" aria-hidden="true">→</span>
-            </button>
-            <button id="open-diary-button" class="special-entry-button compact-entry-card diary-entry-button" type="button">
-              <span class="special-entry-mark">记</span>
-              <span class="special-entry-copy">
-                <strong>专属小日记</strong>
-                <small>把今天也悄悄收藏起来</small>
-              </span>
-              <span class="notification-badge" data-notification-badge="diary" hidden>0</span>
-              <span class="special-entry-arrow" aria-hidden="true">→</span>
-            </button>
-            <section class="mode-zone special-zone home-hidden-control" aria-labelledby="special-zone-title" hidden>
+          <div class="mode-zones">
+            <section class="mode-zone special-zone" aria-labelledby="special-zone-title">
               <div class="zone-heading">
                 <p class="step-label">PRIVATE AREA</p>
                 <h3 id="special-zone-title">神秘小窝</h3>
@@ -216,7 +163,7 @@
               </button>
             </section>
 
-            <section class="mode-zone classic-zone home-hidden-control" aria-labelledby="classic-zone-title" hidden>
+            <section class="mode-zone classic-zone" aria-labelledby="classic-zone-title">
               <div class="zone-heading">
                 <p class="step-label">CLASSIC PLAY</p>
                 <h3 id="classic-zone-title">心跳挑战</h3>
@@ -292,7 +239,7 @@
           </div>
           <div id="special-content" class="mode-zone special-zone" hidden>
             <div class="special-entry-list" role="group" aria-label="选择神秘专区玩法">
-              <button id="legacy-open-plan-button" class="special-entry-button plan-mode" type="button">
+              <button id="open-plan-button" class="special-entry-button plan-mode" type="button">
                 <span class="special-entry-mark">书</span>
                 <span class="special-entry-copy">
                   <strong>神秘小计划</strong>
@@ -301,7 +248,7 @@
                 <span class="notification-badge" data-notification-badge="plan" hidden>0</span>
                 <span class="special-entry-arrow" aria-hidden="true">→</span>
               </button>
-              <button id="legacy-open-flight-button" class="special-entry-button flight-entry-mode" type="button">
+              <button id="open-flight-button" class="special-entry-button flight-entry-mode" type="button">
                 <span class="special-entry-mark">棋</span>
                 <span class="special-entry-copy">
                   <strong>飞行棋</strong>
@@ -310,7 +257,7 @@
                 <span class="special-entry-arrow" aria-hidden="true">→</span>
               </button>
             </div>
-            <button id="legacy-open-diary-button" class="special-entry-button diary-entry-button" type="button">
+            <button id="open-diary-button" class="special-entry-button diary-entry-button" type="button">
               <span class="special-entry-mark">记</span>
               <span class="special-entry-copy">
                 <strong>专属小日记</strong>
@@ -760,10 +707,9 @@
           <div id="diary-comments-list" class="diary-comments-list"></div>
           <p id="diary-comments-empty" class="diary-comments-empty">还没有回应，写一句给对方吧。</p>
           <form id="diary-comment-form" class="diary-comment-form" autocomplete="off">
-            <textarea id="diary-comment-input" rows="2" maxlength="300" placeholder="写一句小回应…" disabled></textarea>
-            <button class="special-password-button" type="submit" disabled>发送回应</button>
+            <textarea id="diary-comment-input" rows="2" maxlength="300" placeholder="写一句小回应…"></textarea>
+            <button class="special-password-button" type="submit">发送回应</button>
           </form>
-          <p class="diary-comments-note">TODO: 接入现有日记回应数据逻辑，当前版本不修改数据库结构。</p>
         </section>
       </article>
     </div>
