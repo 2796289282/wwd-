@@ -3950,6 +3950,26 @@ body {
   cursor: pointer;
 }
 
+.plan-note-request-button {
+  grid-column: 2 / 3;
+  justify-self: end;
+  min-height: 34px;
+  padding: 7px 14px;
+  color: #fff8fc;
+  font: inherit;
+  font-weight: 900;
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.32), rgba(119, 220, 255, 0.18)),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 143, 199, 0.34);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.plan-note-request-button:active {
+  transform: translateY(1px);
+}
+
 .plan-note-pin-button:active {
   transform: translateY(1px);
 }
@@ -4720,6 +4740,26 @@ body[data-current-step="intro"] .intro-letter-button {
   align-content: start;
   gap: 10px;
   padding: 2px 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 143, 199, 0.38) rgba(255, 255, 255, 0.06);
+}
+
+.notification-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.notification-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+}
+
+.notification-list::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 143, 199, 0.58), rgba(119, 220, 255, 0.38));
+  border-radius: 999px;
+}
+
+.notification-list::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 143, 199, 0.78), rgba(119, 220, 255, 0.55));
 }
 
 .notification-item {
@@ -4728,6 +4768,8 @@ body[data-current-step="intro"] .intro-letter-button {
   align-items: flex-start;
   gap: 12px;
   text-align: left;
+  min-height: 96px;
+  overflow: hidden;
 }
 
 .notification-item.important {
@@ -4758,6 +4800,7 @@ body[data-current-step="intro"] .intro-letter-button {
   min-width: 0;
   display: grid;
   gap: 4px;
+  align-content: start;
 }
 
 .notification-copy strong,

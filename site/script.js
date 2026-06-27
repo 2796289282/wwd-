@@ -749,6 +749,7 @@ let planReturnStep = "special";
 let diaryReturnStep = "special";
 let planGateIndex = 0;
 let planEditable = false;
+let planRequestMode = false;
 let planDocumentOpen = false;
 let siteDialogResolver = null;
 let browserHistoryReady = false;
@@ -1995,6 +1996,7 @@ function renderLetterHistory() {
 }
 
 function renderPlan() {
+  if (currentUser !== "wanwan") planRequestMode = false;
   elements.planInput.value = state.planBook || "";
   elements.planCount.textContent = `${elements.planInput.value.length} / ${PLAN_BOOK_LIMIT}`;
   elements.planInput.readOnly = !planEditable;
@@ -2007,7 +2009,10 @@ function renderPlan() {
     elements.planDocumentView.innerHTML = window.PLAN_DOCUMENT_HTML;
   }
   elements.editPlanButton.hidden = planEditable;
-  elements.editPlanButton.textContent = currentUser === "wanwan" ? "申请取消或变更" : "修改";
+  elements.editPlanButton.textContent =
+    currentUser === "wanwan"
+      ? planRequestMode ? "退出申请" : "申请取消或变更"
+      : "修改";
   elements.savePlanButton.hidden = !planEditable;
   renderPlanNotes();
 }
@@ -2069,6 +2074,13 @@ function renderPlanNotes() {
         pinButton.dataset.pinNote = note.id;
         pinButton.textContent = "置顶";
         item.append(text, quantity, time, pinButton);
+      } else if (planRequestMode && currentUser === "wanwan") {
+        const requestButton = document.createElement("button");
+        requestButton.className = "plan-note-request-button";
+        requestButton.type = "button";
+        requestButton.dataset.requestNote = note.id;
+        requestButton.textContent = "选择申请";
+        item.append(text, quantity, time, requestButton);
       } else {
         item.append(text, quantity, time);
       }
@@ -2956,6 +2968,7 @@ function unlockPlanStep() {
   planReturnStep = state.currentStep === "plan" ? "special" : state.currentStep;
   closePlanGate();
   planEditable = false;
+  planRequestMode = false;
   planDocumentOpen = false;
   openStep("plan");
 }
@@ -2973,7 +2986,10 @@ function handlePlanGateClick(word, button) {
 
 async function unlockPlanEditing() {
   if (currentUser === "wanwan") {
-    await requestPlanNoteChange();
+    planRequestMode = !planRequestMode;
+    planEditable = false;
+    planDocumentOpen = false;
+    renderPlan();
     return;
   }
   const password = await requestPasswordInSiteDialog("修改计划书");
@@ -2987,26 +3003,13 @@ async function unlockPlanEditing() {
   elements.planInput.focus();
 }
 
-async function requestPlanNoteChange() {
+async function requestPlanNoteChange(noteId) {
   const notes = normalizePlanNotes(state.planNotes);
   if (!notes.length) {
     showToast("现在还没有可申请变更的凭证");
     return;
   }
-  const listText = notes
-    .map((note, index) => `${index + 1}. ${letterExcerpt(note.text, 24)}（数量 ${normalizePlanNoteQuantity(note.quantity)}）`)
-    .join("\n");
-  const selected = await openSiteDialog({
-    title: "申请取消或变更",
-    message: `选择要申请的凭证编号：\n${listText}`,
-    input: true,
-    inputType: "number",
-    placeholder: "输入编号",
-    confirmText: "下一步",
-    cancelText: "取消",
-  });
-  if (!selected?.confirmed) return;
-  const note = notes[Number(selected.value) - 1];
+  const note = notes.find((item) => item.id === noteId);
   if (!note) {
     showToast("没有找到这条凭证");
     return;
@@ -3033,6 +3036,8 @@ async function requestPlanNoteChange() {
     relatedId: requestId,
   });
   saveState();
+  planRequestMode = false;
+  renderPlan();
   renderNotifications();
   showToast("申请已发给李家鑫");
   void saveCloudState();
@@ -3295,6 +3300,7 @@ elements.backFromLetterButton.addEventListener("click", () => {
 
 elements.backFromPlanButton.addEventListener("click", () => {
   planEditable = false;
+  planRequestMode = false;
   planDocumentOpen = false;
   renderPlan();
   backToStep(planReturnStep);
@@ -3315,6 +3321,7 @@ elements.planInput.addEventListener("input", () => {
 elements.planDocumentEntryButton.addEventListener("click", () => {
   planDocumentOpen = !planDocumentOpen;
   planEditable = false;
+  planRequestMode = false;
   renderPlan();
   if (planDocumentOpen) {
     elements.planDocumentView.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -3330,6 +3337,11 @@ elements.planNoteForm.addEventListener("submit", (event) => {
 });
 
 elements.planNotesList.addEventListener("click", (event) => {
+  const requestButton = event.target.closest("[data-request-note]");
+  if (requestButton && planRequestMode) {
+    void requestPlanNoteChange(requestButton.dataset.requestNote);
+    return;
+  }
   const pinButton = event.target.closest("[data-pin-note]");
   if (!pinButton || !planEditable) return;
   const item = pinButton.closest(".plan-note-item");
