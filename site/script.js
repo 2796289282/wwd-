@@ -750,6 +750,8 @@ let isPicking = false;
 let toastTimer;
 let hiddenTapTimer;
 let hiddenTapSequence = [];
+let brandLoginTapTimer;
+let brandLoginTapCount = 0;
 let letterReturnStep = "intro";
 let cloudReady = false;
 let lastSavedCloudPayload = "";
@@ -2865,6 +2867,24 @@ function resetHiddenEntrySequence() {
   hiddenTapSequence = [];
 }
 
+function resetBrandLoginTaps() {
+  window.clearTimeout(brandLoginTapTimer);
+  brandLoginTapCount = 0;
+}
+
+function returnToEntranceGate() {
+  resetBrandLoginTaps();
+  window.clearInterval(notificationPollTimer);
+  currentUser = "";
+  localStorage.removeItem(CURRENT_USER_KEY);
+  siteUnlocked = false;
+  resetVolatileFlow();
+  renderFromState();
+  elements.entrancePassword.value = "";
+  window.setTimeout(() => elements.entrancePassword.focus(), 0);
+  showToast("已回到登录界面");
+}
+
 function unlockLetterStep() {
   letterReturnStep =
     state.currentStep === "intro" || state.currentStep === "letter"
@@ -3229,6 +3249,16 @@ function unlockPlanStep() {
   openStep("plan");
 }
 
+function handleBrandTextLoginTap() {
+  brandLoginTapCount += 1;
+  window.clearTimeout(brandLoginTapTimer);
+  if (brandLoginTapCount >= 3) {
+    returnToEntranceGate();
+    return;
+  }
+  brandLoginTapTimer = window.setTimeout(resetBrandLoginTaps, 900);
+}
+
 function handlePlanGateClick(word, button) {
   if (word !== PLAN_GATE_SEQUENCE[planGateIndex]) {
     planGateIndex = word === PLAN_GATE_SEQUENCE[0] ? 1 : 0;
@@ -3465,7 +3495,7 @@ function sendReconcileRequest() {
   void saveCloudState();
 }
 
-function unlockEntrance(user) {
+function unlockEntrance(user, { silent = false } = {}) {
   currentUser = user || currentUser;
   if (currentUser) localStorage.setItem(CURRENT_USER_KEY, currentUser);
   siteUnlocked = true;
@@ -3476,7 +3506,7 @@ function unlockEntrance(user) {
     void showLoginPopups();
   }, 180);
   startNotificationPolling();
-  showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
+  if (!silent) showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -3525,6 +3555,7 @@ elements.brandMark.addEventListener("click", (event) => {
 elements.brandText.addEventListener("click", (event) => {
   event.preventDefault();
   event.stopPropagation();
+  handleBrandTextLoginTap();
   handleHiddenEntryTap("text");
 });
 
@@ -3938,7 +3969,11 @@ async function initApp() {
   await migrateLocalStorageToCloud(cloudData);
   resetVolatileFlow();
   saveState();
-  renderFromState();
+  if (currentUser === "wanwan" || currentUser === "jiaxin") {
+    unlockEntrance(currentUser, { silent: true });
+  } else {
+    renderFromState();
+  }
   browserHistoryReady = true;
   syncBrowserHistory(state.currentStep, { replace: true });
 }

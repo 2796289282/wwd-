@@ -4942,12 +4942,27 @@ body[data-current-step="intro"] .intro-letter-button {
 .notification-swipe-row {
   --swipe-x: 0px;
   position: relative;
+  min-height: 96px;
+  display: block;
   overflow: hidden;
   border-radius: 18px;
+  isolation: isolate;
 }
 
 .notification-swipe-row .notification-item {
   z-index: 2;
+  width: 100%;
+  min-height: 96px;
+  padding: 14px;
+  color: var(--text-main);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.055)),
+    rgba(24, 23, 42, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 18px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 10px 24px rgba(0, 0, 0, 0.16);
   transform: translateX(var(--swipe-x));
   transition: transform 0.18s ease;
 }
@@ -4965,8 +4980,8 @@ body[data-current-step="intro"] .intro-letter-button {
   font-size: 13px;
   font-weight: 900;
   background:
-    linear-gradient(135deg, rgba(80, 27, 48, 0.98), rgba(54, 39, 82, 0.96)),
-    rgba(8, 8, 18, 0.96);
+    linear-gradient(135deg, rgba(45, 18, 34, 0.98), rgba(28, 24, 48, 0.98)),
+    rgba(6, 6, 14, 0.98);
   border: 0;
   box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08);
   cursor: pointer;
@@ -5010,6 +5025,24 @@ body[data-current-step="intro"] .intro-letter-button {
   display: grid;
   gap: 4px;
   align-content: start;
+}
+
+.notification-copy strong {
+  color: #fff8fc;
+  font-size: 14px;
+  line-height: 1.28;
+}
+
+.notification-copy span {
+  color: rgba(255, 244, 249, 0.74);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.notification-copy small {
+  color: var(--accent-blue);
+  font-size: 11px;
+  font-weight: 900;
 }
 
 .notification-copy strong,
@@ -5119,8 +5152,8 @@ body[data-current-step="intro"] .intro-letter-button {
 
 .plan-document-edit-button,
 .plan-document-save-button {
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   min-height: 0;
   padding: 0;
   display: grid;
@@ -5132,20 +5165,85 @@ body[data-current-step="intro"] .intro-letter-button {
   line-height: 1;
   border-radius: 999px;
   cursor: pointer;
-  border: 1px solid rgba(255, 214, 238, 0.28);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 244, 249, 0.34);
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 .plan-document-edit-button {
   background:
-    linear-gradient(135deg, rgba(255, 143, 199, 0.26), rgba(119, 220, 255, 0.16)),
-    rgba(255, 255, 255, 0.08);
+    radial-gradient(circle at 25% 18%, rgba(255, 255, 255, 0.3), transparent 36%),
+    linear-gradient(135deg, rgba(255, 143, 199, 0.34), rgba(119, 220, 255, 0.18)),
+    rgba(255, 255, 255, 0.1);
 }
 
 .plan-document-save-button {
   background:
-    linear-gradient(135deg, rgba(255, 119, 183, 0.9), rgba(154, 116, 255, 0.86)),
-    rgba(255, 255, 255, 0.12);
+    radial-gradient(circle at 25% 18%, rgba(255, 255, 255, 0.32), transparent 36%),
+    linear-gradient(135deg, rgba(255, 119, 183, 0.92), rgba(154, 116, 255, 0.88)),
+    rgba(255, 255, 255, 0.14);
+}
+
+.plan-document-edit-button:hover,
+.plan-document-save-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 244, 249, 0.48);
+  box-shadow:
+    0 18px 36px rgba(255, 143, 199, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.diary-dialog select {
+  appearance: none;
+  padding-right: 42px;
+  color: #fff8fc;
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.13), rgba(119, 220, 255, 0.08)),
+    rgba(255, 255, 255, 0.085);
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(255, 244, 249, 0.78) 50%),
+    linear-gradient(135deg, rgba(255, 244, 249, 0.78) 50%, transparent 50%),
+    linear-gradient(135deg, rgba(255, 143, 199, 0.13), rgba(119, 220, 255, 0.08));
+  background-position:
+    calc(100% - 22px) 50%,
+    calc(100% - 16px) 50%,
+    0 0;
+  background-size: 6px 6px, 6px 6px, 100% 100%;
+  background-repeat: no-repeat;
+}
+
+.diary-dialog select option {
+  color: #181425;
+  background: #fff7fb;
+}
+
+.diary-mood-custom-input:not([hidden]) {
+  display: block;
+  margin-top: 10px;
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.12), rgba(154, 116, 255, 0.08)),
+    rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 143, 199, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.site-dialog {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 143, 199, 0.16), transparent 34%),
+    rgba(5, 5, 12, 0.72);
+}
+
+.site-dialog-card {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 143, 199, 0.2), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
+    rgba(18, 18, 37, 0.96);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.48),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .plan-note-item.is-swipeable {
