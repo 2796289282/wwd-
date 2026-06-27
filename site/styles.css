@@ -3865,6 +3865,105 @@ body {
   font-size: 18px;
 }
 
+.plan-requests-block {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+}
+
+.plan-requests-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.plan-requests-head small {
+  color: var(--text-sub);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.plan-requests-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  list-style: none;
+}
+
+.plan-request-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background:
+    linear-gradient(135deg, rgba(255, 196, 87, 0.12), rgba(255, 143, 199, 0.08)),
+    rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 205, 110, 0.22);
+  border-radius: 14px;
+}
+
+.plan-request-item.answered {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(119, 220, 255, 0.18);
+}
+
+.plan-request-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan-request-head strong {
+  color: #fff8fc;
+  font-size: 13px;
+}
+
+.plan-request-head time,
+.plan-request-item p {
+  color: var(--text-sub);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.plan-request-item p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.plan-request-reply {
+  color: rgba(255, 244, 249, 0.86) !important;
+  padding: 8px 10px;
+  background: rgba(119, 220, 255, 0.1);
+  border: 1px solid rgba(119, 220, 255, 0.18);
+  border-radius: 12px;
+}
+
+.plan-request-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.plan-request-actions button {
+  min-height: 32px;
+  padding: 7px 12px;
+  color: #fff8fc;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(255, 143, 199, 0.16);
+  border: 1px solid rgba(255, 143, 199, 0.28);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
 .plan-input[readonly] {
   opacity: 0.78;
 }

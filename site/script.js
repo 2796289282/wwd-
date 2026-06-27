@@ -646,6 +646,8 @@ const elements = {
   planNoteInput: document.querySelector("#plan-note-input"),
   planNoteQuantityInput: document.querySelector("#plan-note-quantity-input"),
   planNotesTotal: document.querySelector("#plan-notes-total"),
+  planRequestsList: document.querySelector("#plan-requests-list"),
+  planRequestsEmpty: document.querySelector("#plan-requests-empty"),
   planNotesList: document.querySelector("#plan-notes-list"),
   planNotesEmpty: document.querySelector("#plan-notes-empty"),
   planCount: document.querySelector("#plan-count"),
@@ -1683,6 +1685,7 @@ function notificationDisplayTitle(notice) {
   const source = USER_LABELS[notice.fromUser] || "对方";
   const group = notificationGroup(notice.type);
   if (notice.type === "plan-change-request") return "重要：婉婉申请取消或变更凭证";
+  if (notice.type === "plan-change-response") return "李家鑫回复了你的凭证申请";
   if (group === "letter") return `${source}给你留了小纸条`;
   if (notice.type.includes("comment") || notice.type.includes("reply")) return `${source}回应了你的日记`;
   if (group === "diary") return `${source}写了新的日记`;
@@ -2014,7 +2017,79 @@ function renderPlan() {
       ? planRequestMode ? "退出申请" : "申请取消或变更"
       : "修改";
   elements.savePlanButton.hidden = !planEditable;
+  renderPlanRequests();
   renderPlanNotes();
+}
+
+function planRequestRecords() {
+  const notices = normalizeNotifications(state.notifications);
+  const responses = new Map(
+    notices
+      .filter((notice) => notice.type === "plan-change-response" && notice.relatedId)
+      .map((notice) => [notice.relatedId, notice]),
+  );
+  return notices
+    .filter((notice) => notice.type === "plan-change-request")
+    .map((request) => ({
+      request,
+      response: responses.get(request.relatedId) || null,
+    }))
+    .sort((a, b) => new Date(b.request.createdAt) - new Date(a.request.createdAt));
+}
+
+function renderPlanRequests() {
+  if (!elements.planRequestsList) return;
+  const records = planRequestRecords();
+  elements.planRequestsList.replaceChildren(
+    ...records.map(({ request, response }) => {
+      const item = document.createElement("li");
+      item.className = `plan-request-item${response ? " answered" : ""}`;
+
+      const head = document.createElement("div");
+      head.className = "plan-request-head";
+      const title = document.createElement("strong");
+      title.textContent = response ? "已回复" : "待李家鑫回复";
+      const time = document.createElement("time");
+      time.dateTime = request.createdAt;
+      time.textContent = new Intl.DateTimeFormat("zh-CN", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(new Date(request.createdAt));
+      head.append(title, time);
+
+      const content = document.createElement("p");
+      content.textContent = request.content;
+      item.append(head, content);
+
+      if (response) {
+        const reply = document.createElement("p");
+        reply.className = "plan-request-reply";
+        reply.textContent = response.content;
+        item.append(reply);
+      } else if (currentUser === "jiaxin") {
+        const actions = document.createElement("div");
+        actions.className = "plan-request-actions";
+        const approveButton = document.createElement("button");
+        approveButton.type = "button";
+        approveButton.dataset.planRequestResponse = request.id;
+        approveButton.dataset.planRequestDecision = "approved";
+        approveButton.textContent = "同意申请";
+        const rejectButton = document.createElement("button");
+        rejectButton.type = "button";
+        rejectButton.dataset.planRequestResponse = request.id;
+        rejectButton.dataset.planRequestDecision = "rejected";
+        rejectButton.textContent = "不同意";
+        actions.append(approveButton, rejectButton);
+        item.append(actions);
+      }
+
+      return item;
+    }),
+  );
+  elements.planRequestsEmpty.hidden = records.length > 0;
 }
 
 function renderPlanNotes() {
@@ -2992,11 +3067,6 @@ async function unlockPlanEditing() {
     renderPlan();
     return;
   }
-  const password = await requestPasswordInSiteDialog("修改计划书");
-  if (password !== PLAN_EDIT_PASSWORD) {
-    if (password !== null) showToast("密码不对");
-    return;
-  }
   planEditable = true;
   planDocumentOpen = false;
   renderPlan();
@@ -3040,6 +3110,40 @@ async function requestPlanNoteChange(noteId) {
   renderPlan();
   renderNotifications();
   showToast("申请已发给李家鑫");
+  void saveCloudState();
+}
+
+async function respondToPlanRequest(requestId, decision) {
+  const request = normalizeNotifications(state.notifications).find((notice) => notice.id === requestId);
+  if (!request || request.type !== "plan-change-request") {
+    showToast("没有找到这条申请");
+    return;
+  }
+  const reply = await openSiteDialog({
+    title: decision === "approved" ? "同意申请" : "不同意申请",
+    message: request.content,
+    input: true,
+    inputType: "text",
+    placeholder: "写一句回复给婉婉",
+    confirmText: "发送回复",
+    cancelText: "取消",
+  });
+  const replyText = reply?.confirmed ? reply.value.trim() : "";
+  if (!replyText) {
+    if (reply?.confirmed) showToast("需要写一下回复");
+    return;
+  }
+  addNotification({
+    type: "plan-change-response",
+    title: "李家鑫回复了你的凭证申请",
+    content: `${decision === "approved" ? "已同意" : "未同意"}：${replyText}`,
+    relatedId: request.relatedId,
+  });
+  markNotificationRead(request.id);
+  saveState();
+  renderPlan();
+  renderNotifications();
+  showToast("已回复婉婉");
   void saveCloudState();
 }
 
@@ -3348,6 +3452,15 @@ elements.planNotesList.addEventListener("click", (event) => {
   if (!item || item === elements.planNotesList.firstElementChild) return;
   elements.planNotesList.prepend(item);
   showToast("保存后置顶生效");
+});
+
+elements.planRequestsList?.addEventListener("click", (event) => {
+  const responseButton = event.target.closest("[data-plan-request-response]");
+  if (!responseButton || currentUser !== "jiaxin") return;
+  void respondToPlanRequest(
+    responseButton.dataset.planRequestResponse,
+    responseButton.dataset.planRequestDecision,
+  );
 });
 
 elements.siteDialogForm.addEventListener("submit", (event) => {
