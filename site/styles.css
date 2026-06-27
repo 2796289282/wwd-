@@ -5524,6 +5524,54 @@ body[data-current-step="intro"] .intro-letter-button {
   border-radius: 20px;
 }
 
+.plan-note-edit-card {
+  gap: 14px;
+}
+
+.plan-note-edit-field {
+  display: grid;
+  gap: 8px;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.plan-note-edit-field textarea,
+.plan-note-edit-field input {
+  width: 100%;
+  color: var(--text-main);
+  font: inherit;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.045)),
+    rgba(11, 11, 24, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  outline: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.plan-note-edit-field textarea {
+  min-height: 170px;
+  padding: 14px;
+  resize: vertical;
+  line-height: 1.75;
+  font-size: 16px;
+}
+
+.plan-note-edit-field input {
+  min-height: 46px;
+  padding: 11px 13px;
+  font-size: 16px;
+}
+
+.plan-note-edit-field textarea:focus,
+.plan-note-edit-field input:focus {
+  border-color: rgba(255, 143, 199, 0.58);
+  box-shadow:
+    0 0 0 3px rgba(255, 143, 199, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
 @media (max-width: 560px) {
   .diary-dialog {
     width: min(100%, calc(100vw - 18px));

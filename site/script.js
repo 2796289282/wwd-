@@ -649,6 +649,11 @@ const elements = {
   planInfoModal: document.querySelector("#plan-info-modal"),
   planInfoTitle: document.querySelector("#plan-info-title"),
   planInfoContent: document.querySelector("#plan-info-content"),
+  planNoteEditModal: document.querySelector("#plan-note-edit-modal"),
+  planNoteEditForm: document.querySelector("#plan-note-edit-form"),
+  planNoteEditText: document.querySelector("#plan-note-edit-text"),
+  planNoteEditQuantity: document.querySelector("#plan-note-edit-quantity"),
+  planNoteEditError: document.querySelector("#plan-note-edit-error"),
   planEditorPanel: document.querySelector("#plan-editor-panel"),
   planInput: document.querySelector("#plan-input"),
   planNoteForm: document.querySelector("#plan-note-form"),
@@ -772,6 +777,7 @@ let browserHistoryReady = false;
 let editingDiaryId = null;
 let activeDiaryId = null;
 let editingDiaryCommentId = null;
+let editingPlanNoteId = null;
 let notificationPollTimer = null;
 let knownUnreadNotificationIds = new Set();
 let suppressNextModalPop = false;
@@ -787,17 +793,21 @@ const stepTargets = {
 };
 
 function cleanupLegacyPwa() {
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.getRegistrations?.()
-      .then((registrations) => registrations.forEach((registration) => registration.unregister()))
-      .catch(() => {});
-  }
   if ("caches" in window) {
     caches.keys()
       .then((keys) => keys.filter((key) => key.startsWith("wanwan-picker-")))
       .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
       .catch(() => {});
   }
+}
+
+function registerPwa() {
+  if (!("serviceWorker" in navigator)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch((error) => {
+      console.error("service worker register failed.", error);
+    });
+  });
 }
 
 function createDefaultState() {
@@ -1847,6 +1857,10 @@ function closeVisibleModalFromHistory() {
     closePlanInfoModal({ fromHistory: true });
     return true;
   }
+  if (!elements.planNoteEditModal.hidden) {
+    closePlanNoteEditModal({ fromHistory: true });
+    return true;
+  }
   return false;
 }
 
@@ -1858,7 +1872,8 @@ function updateModalOpenState() {
       !elements.diaryEditorModal.hidden ||
       !elements.diaryDetailModal.hidden ||
       !elements.planGateModal.hidden ||
-      !elements.planInfoModal.hidden,
+      !elements.planInfoModal.hidden ||
+      !elements.planNoteEditModal.hidden,
   );
 }
 
@@ -3470,35 +3485,52 @@ async function editPlanNote(noteId) {
     showToast("没有找到这条凭证");
     return;
   }
-  const text = await openSiteDialog({
-    title: "修改凭证内容",
-    message: "只修改这一条婉婉挨揍凭证。",
-    input: true,
-    inputType: "text",
-    placeholder: "写下凭证内容",
-    defaultValue: note.text,
-    confirmText: "下一步",
-    cancelText: "取消",
-  });
-  const nextText = text?.confirmed ? text.value.trim() : "";
-  if (!nextText) {
-    if (text?.confirmed) showToast("凭证内容不能为空");
+  openPlanNoteEditModal(note);
+}
+
+function openPlanNoteEditModal(note) {
+  editingPlanNoteId = note.id;
+  elements.planNoteEditText.value = note.text;
+  elements.planNoteEditQuantity.value = String(normalizePlanNoteQuantity(note.quantity));
+  elements.planNoteEditError.hidden = true;
+  elements.planNoteEditModal.hidden = false;
+  updateModalOpenState();
+  pushModalHistory("plan-note-edit");
+  window.setTimeout(() => {
+    elements.planNoteEditText.focus();
+    elements.planNoteEditText.select();
+  }, 80);
+}
+
+function closePlanNoteEditModal({ fromHistory = false } = {}) {
+  elements.planNoteEditModal.hidden = true;
+  editingPlanNoteId = null;
+  elements.planNoteEditText.value = "";
+  elements.planNoteEditQuantity.value = "";
+  elements.planNoteEditError.hidden = true;
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("plan-note-edit");
+}
+
+function savePlanNoteEdit(event) {
+  event.preventDefault();
+  if (currentUser !== "jiaxin" || !editingPlanNoteId) return;
+  const notes = normalizePlanNotes(state.planNotes);
+  const note = notes.find((item) => item.id === editingPlanNoteId);
+  if (!note) {
+    elements.planNoteEditError.textContent = "没有找到这条凭证";
+    elements.planNoteEditError.hidden = false;
     return;
   }
-  const quantity = await openSiteDialog({
-    title: "修改挨揍数量",
-    message: nextText,
-    input: true,
-    inputType: "number",
-    placeholder: "输入数量",
-    defaultValue: String(normalizePlanNoteQuantity(note.quantity)),
-    confirmText: "保存修改",
-    cancelText: "取消",
-  });
-  if (!quantity?.confirmed) return;
-  const nextQuantity = normalizePlanNoteQuantity(quantity.value);
+  const nextText = elements.planNoteEditText.value.trim();
+  if (!nextText) {
+    elements.planNoteEditError.textContent = "凭证内容不能为空";
+    elements.planNoteEditError.hidden = false;
+    return;
+  }
+  const nextQuantity = normalizePlanNoteQuantity(elements.planNoteEditQuantity.value);
   state.planNotes = notes.map((item) =>
-    item.id === noteId
+    item.id === editingPlanNoteId
       ? {
           ...item,
           text: nextText,
@@ -3512,6 +3544,7 @@ async function editPlanNote(noteId) {
   );
   saveState();
   renderPlan();
+  closePlanNoteEditModal();
   showToast("这条凭证已修改");
   void saveCloudState();
 }
@@ -3839,6 +3872,12 @@ document.querySelectorAll("[data-close-plan-info]").forEach((button) => {
   button.addEventListener("click", () => closePlanInfoModal());
 });
 
+document.querySelectorAll("[data-close-plan-note-edit]").forEach((button) => {
+  button.addEventListener("click", () => closePlanNoteEditModal());
+});
+
+elements.planNoteEditForm?.addEventListener("submit", savePlanNoteEdit);
+
 elements.planGateButtons.forEach((button) => {
   button.addEventListener("click", () => handlePlanGateClick(button.dataset.planWord, button));
 });
@@ -4148,6 +4187,7 @@ window.addEventListener("popstate", (event) => {
 
 async function initApp() {
   cleanupLegacyPwa();
+  registerPwa();
   const cloudData = await loadCloudState();
   await migrateLocalStorageToCloud(cloudData);
   resetVolatileFlow();

@@ -9,8 +9,12 @@
     />
     <title>鑫婉小屋</title>
     <meta name="theme-color" content="#090912" />
-    <link rel="icon" href="favicon.jpg" type="image/jpeg" />
-    <link rel="apple-touch-icon" href="favicon.jpg" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="鑫婉小屋" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="icon" href="icon-192.png" type="image/png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -795,6 +799,31 @@
         </div>
         <div id="plan-info-content" class="plan-info-content"></div>
       </section>
+    </div>
+    <div id="plan-note-edit-modal" class="plan-info-modal" hidden>
+      <div class="plan-info-backdrop" data-close-plan-note-edit></div>
+      <form id="plan-note-edit-form" class="plan-info-card plan-note-edit-card" role="dialog" aria-modal="true" aria-labelledby="plan-note-edit-title">
+        <div class="plan-info-head">
+          <div>
+            <p class="step-label">VOUCHER EDIT</p>
+            <h2 id="plan-note-edit-title">修改挨揍凭证</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-plan-note-edit aria-label="关闭">×</button>
+        </div>
+        <label class="plan-note-edit-field">
+          <span>凭证内容</span>
+          <textarea id="plan-note-edit-text" rows="6" maxlength="240" placeholder="写下完整凭证内容"></textarea>
+        </label>
+        <label class="plan-note-edit-field">
+          <span>挨揍数量</span>
+          <input id="plan-note-edit-quantity" type="number" min="0" max="9999" step="1" inputmode="numeric" />
+        </label>
+        <p id="plan-note-edit-error" class="diary-form-error" hidden></p>
+        <div class="site-dialog-actions">
+          <button class="secondary-button" type="button" data-close-plan-note-edit>取消</button>
+          <button class="special-password-button" type="submit">保存修改</button>
+        </div>
+      </form>
     </div>
     <div id="site-dialog" class="site-dialog" hidden>
       <form id="site-dialog-form" class="site-dialog-card" role="dialog" aria-modal="true">
