@@ -4947,23 +4947,38 @@ body[data-current-step="intro"] .intro-letter-button {
 }
 
 .notification-swipe-row .notification-item {
+  z-index: 2;
   transform: translateX(var(--swipe-x));
   transition: transform 0.18s ease;
 }
 
 .notification-delete-button {
   position: absolute;
+  z-index: 1;
   inset: 0 0 0 auto;
   width: 86px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
   color: #fff8fc;
   font: inherit;
   font-size: 13px;
   font-weight: 900;
   background:
-    linear-gradient(135deg, rgba(255, 82, 122, 0.92), rgba(255, 143, 199, 0.82)),
-    rgba(255, 255, 255, 0.1);
+    linear-gradient(135deg, rgba(80, 27, 48, 0.98), rgba(54, 39, 82, 0.96)),
+    rgba(8, 8, 18, 0.96);
   border: 0;
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08);
   cursor: pointer;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.notification-swipe-row.is-swiped .notification-delete-button {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .notification-item.important {
@@ -5089,28 +5104,33 @@ body[data-current-step="intro"] .intro-letter-button {
 }
 
 .plan-document-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: stretch;
+  position: relative;
+  display: block;
 }
 
 .plan-document-actions {
-  display: grid;
-  gap: 8px;
-  align-content: stretch;
-  min-width: 74px;
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
 }
 
 .plan-document-edit-button,
 .plan-document-save-button {
-  min-height: 44px;
-  padding: 0 14px;
+  width: 34px;
+  height: 34px;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
   color: #fff8fc;
   font: inherit;
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 900;
-  border-radius: 18px;
+  line-height: 1;
+  border-radius: 999px;
   cursor: pointer;
   border: 1px solid rgba(255, 214, 238, 0.28);
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
@@ -5156,21 +5176,34 @@ body[data-current-step="intro"] .intro-letter-button {
   z-index: 0;
   inset: 0 0 0 auto;
   width: 104px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
   color: #fff8fc;
   font: inherit;
   font-size: 13px;
   font-weight: 900;
   background:
-    linear-gradient(135deg, rgba(255, 143, 199, 0.85), rgba(119, 220, 255, 0.42)),
-    rgba(255, 255, 255, 0.12);
+    linear-gradient(135deg, rgba(60, 28, 56, 0.98), rgba(35, 32, 58, 0.96)),
+    rgba(8, 8, 18, 0.96);
   border: 0;
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.08);
   cursor: pointer;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
 }
 
 .plan-note-menu-button[data-edit-note] {
   background:
-    linear-gradient(135deg, rgba(119, 220, 255, 0.56), rgba(154, 116, 255, 0.52)),
-    rgba(255, 255, 255, 0.12);
+    linear-gradient(135deg, rgba(26, 51, 72, 0.98), rgba(38, 34, 70, 0.96)),
+    rgba(8, 8, 18, 0.96);
+}
+
+.plan-note-item.is-swiped .plan-note-menu-button {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 @media (max-width: 560px) {
@@ -5191,13 +5224,9 @@ body[data-current-step="intro"] .intro-letter-button {
     margin-inline: auto;
   }
 
-  .plan-document-row {
-    grid-template-columns: 1fr;
-  }
-
   .plan-document-actions {
-    grid-template-columns: 1fr 1fr;
-    min-width: 0;
+    top: 8px;
+    right: 8px;
   }
 }
 

@@ -1795,6 +1795,8 @@ function renderNotifications() {
       deleteButton.type = "button";
       deleteButton.className = "notification-delete-button";
       deleteButton.dataset.deleteNotification = notice.id;
+      deleteButton.tabIndex = -1;
+      deleteButton.setAttribute("aria-hidden", "true");
       deleteButton.textContent = "删除";
 
       row.append(deleteButton, button);
@@ -1895,7 +1897,16 @@ function clampSwipe(value, min = -96, max = 96) {
 
 function setSwipeOffset(row, value) {
   row.style.setProperty("--swipe-x", `${Math.round(value)}px`);
-  row.classList.toggle("is-swiped", Math.abs(value) > 4);
+  const isSwiped = Math.abs(value) > 4;
+  row.classList.toggle("is-swiped", isSwiped);
+  row.querySelectorAll(".notification-delete-button").forEach((button) => {
+    button.tabIndex = isSwiped ? 0 : -1;
+    button.setAttribute("aria-hidden", isSwiped ? "false" : "true");
+  });
+  row.querySelectorAll(".plan-note-menu-button").forEach((button) => {
+    button.tabIndex = isSwiped ? 0 : -1;
+    button.setAttribute("aria-hidden", isSwiped ? "false" : "true");
+  });
 }
 
 function resetSiblingSwipes(container, currentRow) {
@@ -2157,11 +2168,13 @@ function renderPlan() {
     elements.planDocumentView.innerHTML = window.PLAN_DOCUMENT_HTML;
   }
   elements.editPlanButton.hidden = planEditable || currentUser === "wanwan";
-  elements.editPlanButton.textContent =
-    currentUser === "wanwan"
-      ? planRequestMode ? "退出申请" : "申请取消或变更"
-      : "修改";
+  elements.editPlanButton.textContent = "✎";
+  elements.editPlanButton.setAttribute("aria-label", "修改婉婉挨揍计划书");
+  elements.editPlanButton.title = "修改计划书";
   elements.savePlanButton.hidden = !planEditable;
+  elements.savePlanButton.textContent = "✓";
+  elements.savePlanButton.setAttribute("aria-label", "保存婉婉挨揍计划书");
+  elements.savePlanButton.title = "保存计划书";
   if (elements.planDocumentActions) {
     elements.planDocumentActions.hidden = currentUser === "wanwan" && !planEditable;
   }
@@ -2319,6 +2332,8 @@ function renderPlanNotes() {
           action.dataset.requestNote = note.id;
           action.textContent = "申请变更";
         }
+        action.tabIndex = -1;
+        action.setAttribute("aria-hidden", "true");
 
         const surface = document.createElement("div");
         surface.className = "plan-note-surface";
