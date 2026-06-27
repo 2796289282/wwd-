@@ -1681,6 +1681,7 @@ function renderHomeDashboard() {
 function notificationDisplayTitle(notice) {
   const source = USER_LABELS[notice.fromUser] || "对方";
   const group = notificationGroup(notice.type);
+  if (notice.type === "plan-change-request") return "重要：婉婉申请取消或变更凭证";
   if (group === "letter") return `${source}给你留了小纸条`;
   if (notice.type.includes("comment") || notice.type.includes("reply")) return `${source}回应了你的日记`;
   if (group === "diary") return `${source}写了新的日记`;
@@ -1738,12 +1739,14 @@ function renderNotifications() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "notification-item";
+      if (notice.type.includes("request")) button.classList.add("important");
       button.dataset.notificationId = notice.id;
 
       const icon = document.createElement("span");
       icon.className = "notification-icon";
       const group = notificationGroup(notice.type);
       icon.textContent =
+        notice.type.includes("request") ? "!" :
         group === "letter" ? "💌" :
         notice.type.includes("comment") || notice.type.includes("reply") ? "💬" :
         group === "diary" ? "📖" :
@@ -2004,6 +2007,7 @@ function renderPlan() {
     elements.planDocumentView.innerHTML = window.PLAN_DOCUMENT_HTML;
   }
   elements.editPlanButton.hidden = planEditable;
+  elements.editPlanButton.textContent = currentUser === "wanwan" ? "申请取消或变更" : "修改";
   elements.savePlanButton.hidden = !planEditable;
   renderPlanNotes();
 }
@@ -2968,6 +2972,10 @@ function handlePlanGateClick(word, button) {
 }
 
 async function unlockPlanEditing() {
+  if (currentUser === "wanwan") {
+    await requestPlanNoteChange();
+    return;
+  }
   const password = await requestPasswordInSiteDialog("修改计划书");
   if (password !== PLAN_EDIT_PASSWORD) {
     if (password !== null) showToast("密码不对");
@@ -2977,6 +2985,57 @@ async function unlockPlanEditing() {
   planDocumentOpen = false;
   renderPlan();
   elements.planInput.focus();
+}
+
+async function requestPlanNoteChange() {
+  const notes = normalizePlanNotes(state.planNotes);
+  if (!notes.length) {
+    showToast("现在还没有可申请变更的凭证");
+    return;
+  }
+  const listText = notes
+    .map((note, index) => `${index + 1}. ${letterExcerpt(note.text, 24)}（数量 ${normalizePlanNoteQuantity(note.quantity)}）`)
+    .join("\n");
+  const selected = await openSiteDialog({
+    title: "申请取消或变更",
+    message: `选择要申请的凭证编号：\n${listText}`,
+    input: true,
+    inputType: "number",
+    placeholder: "输入编号",
+    confirmText: "下一步",
+    cancelText: "取消",
+  });
+  if (!selected?.confirmed) return;
+  const note = notes[Number(selected.value) - 1];
+  if (!note) {
+    showToast("没有找到这条凭证");
+    return;
+  }
+  const reason = await openSiteDialog({
+    title: "申请理由",
+    message: `凭证：${note.text}\n数量：${normalizePlanNoteQuantity(note.quantity)}`,
+    input: true,
+    inputType: "text",
+    placeholder: "写明想取消或变更的原因",
+    confirmText: "提交申请",
+    cancelText: "取消",
+  });
+  const reasonText = reason?.confirmed ? reason.value.trim() : "";
+  if (!reasonText) {
+    if (reason?.confirmed) showToast("需要写一下申请理由");
+    return;
+  }
+  const requestId = `plan-request-${note.id}-${Date.now()}`;
+  addNotification({
+    type: "plan-change-request",
+    title: "重要：婉婉申请取消或变更凭证",
+    content: `凭证：${note.text}（数量 ${normalizePlanNoteQuantity(note.quantity)}）\n理由：${reasonText}`,
+    relatedId: requestId,
+  });
+  saveState();
+  renderNotifications();
+  showToast("申请已发给李家鑫");
+  void saveCloudState();
 }
 
 function addPlanNote(text, quantity = 1) {

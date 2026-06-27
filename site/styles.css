@@ -3880,6 +3880,7 @@ body {
 .plan-note-item {
   padding: 12px;
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
   color: var(--text-main);
   background: rgba(255, 255, 255, 0.07);
@@ -3888,13 +3889,18 @@ body {
 }
 
 .plan-note-text {
+  grid-column: 1 / 2;
   overflow-wrap: anywhere;
   line-height: 1.65;
 }
 
 .plan-note-quantity {
-  justify-self: start;
+  grid-column: 2 / 3;
+  grid-row: 1;
+  align-self: start;
+  justify-self: end;
   width: fit-content;
+  white-space: nowrap;
   padding: 5px 9px;
   color: #fff8fc;
   background: rgba(255, 143, 199, 0.16);
@@ -3905,6 +3911,7 @@ body {
 }
 
 .plan-note-edit-input {
+  grid-column: 1 / -1;
   width: 100%;
   min-height: 42px;
   padding: 10px 12px;
@@ -3923,11 +3930,13 @@ body {
 }
 
 .plan-note-time {
+  grid-column: 1 / 2;
   color: var(--text-sub);
   font-size: 11px;
 }
 
 .plan-note-pin-button {
+  grid-column: 2 / 3;
   justify-self: end;
   min-height: 34px;
   padding: 7px 14px;
@@ -4035,6 +4044,7 @@ body {
   margin: 10px 0 16px;
   color: var(--text-sub);
   line-height: 1.65;
+  white-space: pre-line;
 }
 
 .site-dialog-actions {
@@ -4639,6 +4649,8 @@ body {
 
 .plan-note-item .plan-note-quantity-input {
   max-width: 120px;
+  grid-column: 2 / 3;
+  justify-self: end;
 }
 
 /* Home rollback: keep the screenshot-style landing page, only add notifications above notes. */
@@ -4683,7 +4695,7 @@ body[data-current-step="intro"] .doodle-arrow {
 body[data-current-step="intro"] .intro-letter-button {
   position: absolute;
   right: 0;
-  top: clamp(188px, 17vw, 244px);
+  top: clamp(166px, 14vw, 218px);
 }
 
 .notification-modal {
@@ -4696,11 +4708,18 @@ body[data-current-step="intro"] .intro-letter-button {
   max-height: min(78vh, 680px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   border-radius: 28px 28px 22px 22px;
 }
 
 .notification-list {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 2px 2px 8px;
 }
 
 .notification-item {
@@ -4709,6 +4728,20 @@ body[data-current-step="intro"] .intro-letter-button {
   align-items: flex-start;
   gap: 12px;
   text-align: left;
+}
+
+.notification-item.important {
+  background:
+    linear-gradient(135deg, rgba(255, 196, 87, 0.18), rgba(255, 119, 183, 0.14)),
+    rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 205, 110, 0.34);
+  box-shadow: 0 0 0 1px rgba(255, 205, 110, 0.08);
+}
+
+.notification-item.important .notification-icon {
+  color: #1c1422;
+  background: linear-gradient(135deg, #ffe08a, #ff8fc7);
+  font-weight: 1000;
 }
 
 .notification-icon {
@@ -4727,6 +4760,21 @@ body[data-current-step="intro"] .intro-letter-button {
   gap: 4px;
 }
 
+.notification-copy strong,
+.notification-copy span,
+.notification-copy small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification-copy span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
 .notification-empty {
   display: grid;
   gap: 8px;
@@ -4741,6 +4789,7 @@ body[data-current-step="intro"] .intro-letter-button {
 }
 
 .notification-actions {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -4981,6 +5030,6 @@ body[data-current-step="intro"] .intro-letter-button {
   body[data-current-step="intro"] .intro-letter-button {
     position: absolute;
     right: 0;
-    top: clamp(176px, 47vw, 226px);
+    top: clamp(158px, 43vw, 202px);
   }
 }
