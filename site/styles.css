@@ -4842,6 +4842,30 @@ body[data-current-step="intro"] .doodle-arrow {
   cursor: pointer;
 }
 
+.intro-announcement-button {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  top: clamp(-8px, -1vw, 8px);
+  min-height: 32px;
+  padding: 0 16px;
+  color: rgba(255, 248, 252, 0.92);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(255, 143, 199, 0.28), transparent 42%),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 143, 199, 0.3);
+  border-radius: 999px;
+  box-shadow:
+    0 0 22px rgba(255, 143, 199, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+}
+
 .intro-notification-button .notification-total-badge {
   position: static;
   display: inline-flex;
@@ -4904,6 +4928,7 @@ body[data-current-step="intro"] .intro-letter-button {
 }
 
 .notification-item {
+  position: relative;
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr);
   align-items: flex-start;
@@ -4911,6 +4936,34 @@ body[data-current-step="intro"] .intro-letter-button {
   text-align: left;
   min-height: 96px;
   overflow: hidden;
+  touch-action: pan-y;
+}
+
+.notification-swipe-row {
+  --swipe-x: 0px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.notification-swipe-row .notification-item {
+  transform: translateX(var(--swipe-x));
+  transition: transform 0.18s ease;
+}
+
+.notification-delete-button {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 86px;
+  color: #fff8fc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  background:
+    linear-gradient(135deg, rgba(255, 82, 122, 0.92), rgba(255, 143, 199, 0.82)),
+    rgba(255, 255, 255, 0.1);
+  border: 0;
+  cursor: pointer;
 }
 
 .notification-item.important {
@@ -5033,6 +5086,119 @@ body[data-current-step="intro"] .intro-letter-button {
   color: #fff8fc;
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.24);
+}
+
+.plan-document-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.plan-document-actions {
+  display: grid;
+  gap: 8px;
+  align-content: stretch;
+  min-width: 74px;
+}
+
+.plan-document-edit-button,
+.plan-document-save-button {
+  min-height: 44px;
+  padding: 0 14px;
+  color: #fff8fc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  border-radius: 18px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 214, 238, 0.28);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.plan-document-edit-button {
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.26), rgba(119, 220, 255, 0.16)),
+    rgba(255, 255, 255, 0.08);
+}
+
+.plan-document-save-button {
+  background:
+    linear-gradient(135deg, rgba(255, 119, 183, 0.9), rgba(154, 116, 255, 0.86)),
+    rgba(255, 255, 255, 0.12);
+}
+
+.plan-note-item.is-swipeable {
+  --swipe-x: 0px;
+  position: relative;
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.plan-note-surface {
+  position: relative;
+  z-index: 1;
+  min-height: 74px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  transform: translateX(var(--swipe-x));
+  transition: transform 0.18s ease;
+}
+
+.plan-note-menu-button {
+  position: absolute;
+  z-index: 0;
+  inset: 0 0 0 auto;
+  width: 104px;
+  color: #fff8fc;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.85), rgba(119, 220, 255, 0.42)),
+    rgba(255, 255, 255, 0.12);
+  border: 0;
+  cursor: pointer;
+}
+
+.plan-note-menu-button[data-edit-note] {
+  background:
+    linear-gradient(135deg, rgba(119, 220, 255, 0.56), rgba(154, 116, 255, 0.52)),
+    rgba(255, 255, 255, 0.12);
+}
+
+@media (max-width: 560px) {
+  .diary-dialog {
+    width: min(100%, calc(100vw - 18px));
+    padding: 18px 14px;
+  }
+
+  .diary-dialog textarea,
+  .diary-dialog input,
+  .plan-input,
+  .plan-note-input {
+    width: 100%;
+  }
+
+  .plan-letter {
+    width: min(100%, calc(100vw - 18px));
+    margin-inline: auto;
+  }
+
+  .plan-document-row {
+    grid-template-columns: 1fr;
+  }
+
+  .plan-document-actions {
+    grid-template-columns: 1fr 1fr;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 430px) {

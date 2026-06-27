@@ -49,6 +49,9 @@
       <section class="intro" aria-labelledby="page-title">
         <p class="eyebrow"><span></span> JUST FOR WANWAN</p>
         <h1 id="page-title">鑫婉小屋，<br /><em>专属游戏基地。</em></h1>
+        <button id="announcement-button" class="intro-announcement-button" type="button">
+          公告
+        </button>
         <button id="notification-button" class="intro-notification-button" type="button">
           通知
           <span class="notification-badge notification-total-badge" data-notification-badge="all" hidden>0</span>
@@ -517,16 +520,26 @@
 
             <article class="secret-letter plan-letter" aria-label="神秘计划书">
               <div class="letter-stamp">PLAN</div>
-              <button
-                id="plan-document-entry-button"
-                class="plan-document-entry-button"
-                type="button"
-                aria-expanded="false"
-              >
-                <span>打开计划书</span>
-                <strong>婉婉挨揍计划书</strong>
-                <small>点击查看完整 Word 文档版</small>
-              </button>
+              <div class="plan-document-row">
+                <button
+                  id="plan-document-entry-button"
+                  class="plan-document-entry-button"
+                  type="button"
+                  aria-expanded="false"
+                >
+                  <span>打开计划书</span>
+                  <strong>婉婉挨揍计划书</strong>
+                  <small>点击查看完整 Word 文档版</small>
+                </button>
+                <div class="plan-document-actions">
+                  <button id="edit-plan-button" class="plan-document-edit-button" type="button">
+                    修改
+                  </button>
+                  <button id="save-plan-button" class="plan-document-save-button" type="button" hidden>
+                    保存
+                  </button>
+                </div>
+              </div>
               <div id="plan-document-view" class="plan-document-view" aria-label="计划书文档展示" hidden></div>
               <div id="plan-editor-panel" class="plan-editor-panel" hidden>
                 <label class="sr-only" for="plan-input">计划书内容</label>
@@ -593,12 +606,6 @@
               </div>
               <div class="letter-actions plan-actions">
                 <span id="plan-count" class="letter-count">0 / 12000</span>
-                <button id="edit-plan-button" class="secondary-button" type="button">
-                  修改
-                </button>
-                <button id="save-plan-button" class="special-password-button" type="button" hidden>
-                  保存计划书
-                </button>
               </div>
             </article>
           </div>

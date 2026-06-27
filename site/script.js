@@ -21,6 +21,11 @@ const RELATIONSHIP_START_DATE = "2025-08-31";
 const LETTER_HISTORY_LIMIT = 20;
 const NOTIFICATION_POLL_INTERVAL = 8000;
 const CUSTOM_DIARY_MOOD_VALUE = "__custom";
+const ANNOUNCEMENT_VERSION = "2026-06-27-plan-notice";
+const ANNOUNCEMENT_TITLE = "小屋公告";
+const ANNOUNCEMENT_CONTENT =
+  "这次更新把通知和凭证操作收得更像手机：通知可以滑动删除，挨揍凭证可以左滑操作，申请和回复也会更清楚地提醒。";
+const ANNOUNCEMENT_SEEN_PREFIX = "xw_announcement_seen";
 const DAILY_TASKS = [
   "给李家鑫说一句“我想你了”，不许只发两个字糊弄过去。",
   "今天给婉婉留一句具体夸夸，要说清楚哪里可爱。",
@@ -584,6 +589,7 @@ const elements = {
   brandMark: document.querySelector("#brand-mark"),
   brandText: document.querySelector("#brand-text"),
   introLetterButton: document.querySelector("#intro-letter-button"),
+  announcementButton: document.querySelector("#announcement-button"),
   notificationButton: document.querySelector("#notification-button"),
   togetherDays: document.querySelector("#together-days"),
   moodDateLabel: document.querySelector("#mood-date-label"),
@@ -639,6 +645,7 @@ const elements = {
   planGateUnlocked: document.querySelector("#plan-gate-unlocked"),
   enterPlanButton: document.querySelector("#enter-plan-button"),
   planDocumentEntryButton: document.querySelector("#plan-document-entry-button"),
+  planDocumentActions: document.querySelector(".plan-document-actions"),
   planDocumentView: document.querySelector("#plan-document-view"),
   planEditorPanel: document.querySelector("#plan-editor-panel"),
   planInput: document.querySelector("#plan-input"),
@@ -1744,6 +1751,10 @@ function renderNotifications() {
 
   elements.notificationList.replaceChildren(
     ...unread.map((notice) => {
+      const row = document.createElement("div");
+      row.className = "notification-swipe-row";
+      row.dataset.notificationSwipeId = notice.id;
+
       const button = document.createElement("button");
       button.type = "button";
       button.className = "notification-item";
@@ -1780,7 +1791,14 @@ function renderNotifications() {
 
       body.append(title, content, meta);
       button.append(icon, body);
-      return button;
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.className = "notification-delete-button";
+      deleteButton.dataset.deleteNotification = notice.id;
+      deleteButton.textContent = "删除";
+
+      row.append(deleteButton, button);
+      return row;
     }),
   );
 }
@@ -1794,6 +1812,30 @@ function showNotificationModal() {
 function closeNotificationModal() {
   elements.notificationModal.hidden = true;
   document.body.classList.remove("modal-open");
+}
+
+function announcementSeenKey(user = currentUser) {
+  const safeUser = user === "wanwan" || user === "jiaxin" ? user : "guest";
+  return `${ANNOUNCEMENT_SEEN_PREFIX}_${ANNOUNCEMENT_VERSION}_${safeUser}`;
+}
+
+function hasSeenAnnouncement(user = currentUser) {
+  return localStorage.getItem(announcementSeenKey(user)) === "1";
+}
+
+function markAnnouncementSeen(user = currentUser) {
+  localStorage.setItem(announcementSeenKey(user), "1");
+}
+
+async function showAnnouncement({ auto = false } = {}) {
+  if (auto && hasSeenAnnouncement()) return;
+  await openSiteDialog({
+    title: ANNOUNCEMENT_TITLE,
+    message: ANNOUNCEMENT_CONTENT,
+    confirmText: "知道了",
+    cancelText: "关闭",
+  });
+  markAnnouncementSeen();
 }
 
 function navigateForNotification(notice) {
@@ -1817,16 +1859,115 @@ function navigateForNotification(notice) {
   }
 }
 
-function maybeShowUnreadNotificationPopup() {
+function notificationLoginPopupKey(user = currentUser) {
+  return notificationStorageKey("xw_login_notification_popup", user);
+}
+
+function maybeShowUnreadNotificationPopup({ popup = false } = {}) {
   const unread = unreadNotifications();
   if (!unread.length) return;
   const toasted = new Set(getToastedNotificationIds(currentUser));
   const newIds = unread.map((notice) => notice.id).filter((id) => !toasted.has(id));
   knownUnreadNotificationIds = new Set(unread.map((notice) => notice.id));
+  if (popup) {
+    const signature = unread.map((notice) => notice.id).sort().join("|");
+    if (sessionStorage.getItem(notificationLoginPopupKey()) !== signature) {
+      sessionStorage.setItem(notificationLoginPopupKey(), signature);
+      markNotificationToasted(currentUser, unread.map((notice) => notice.id));
+      showNotificationModal();
+      return;
+    }
+  }
   if (newIds.length) {
     showToast(`你有 ${unread.length > 99 ? "99+" : unread.length} 条新通知`);
     markNotificationToasted(currentUser, newIds);
   }
+}
+
+async function showLoginPopups() {
+  await showAnnouncement({ auto: true });
+  maybeShowUnreadNotificationPopup({ popup: true });
+}
+
+function clampSwipe(value, min = -96, max = 96) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function setSwipeOffset(row, value) {
+  row.style.setProperty("--swipe-x", `${Math.round(value)}px`);
+  row.classList.toggle("is-swiped", Math.abs(value) > 4);
+}
+
+function resetSiblingSwipes(container, currentRow) {
+  container.querySelectorAll(".is-swiped").forEach((row) => {
+    if (row !== currentRow) setSwipeOffset(row, 0);
+  });
+}
+
+function wireSwipeList(container, {
+  rowSelector,
+  surfaceSelector,
+  actionOffset = -88,
+  dismissThreshold = 132,
+  onDismiss = null,
+} = {}) {
+  if (!container) return;
+  let active = null;
+
+  container.addEventListener("pointerdown", (event) => {
+    if (event.button && event.button !== 0) return;
+    const surface = event.target.closest(surfaceSelector);
+    if (!surface || event.target.closest("input, textarea, select")) return;
+    const row = surface.closest(rowSelector);
+    if (!row) return;
+    resetSiblingSwipes(container, row);
+    active = {
+      row,
+      surface,
+      startX: event.clientX,
+      startY: event.clientY,
+      dragging: false,
+      pointerId: event.pointerId,
+    };
+    surface.setPointerCapture?.(event.pointerId);
+  });
+
+  container.addEventListener("pointermove", (event) => {
+    if (!active || event.pointerId !== active.pointerId) return;
+    const dx = event.clientX - active.startX;
+    const dy = event.clientY - active.startY;
+    if (!active.dragging && Math.abs(dx) < 8) return;
+    if (!active.dragging && Math.abs(dy) > Math.abs(dx)) {
+      active = null;
+      return;
+    }
+    active.dragging = true;
+    event.preventDefault();
+    const value = clampSwipe(dx, actionOffset * 1.55, Math.abs(actionOffset) * 1.55);
+    setSwipeOffset(active.row, value);
+  });
+
+  const finish = (event) => {
+    if (!active || event.pointerId !== active.pointerId) return;
+    const dx = event.clientX - active.startX;
+    const row = active.row;
+    const didDrag = active.dragging;
+    active.surface.releasePointerCapture?.(event.pointerId);
+    active = null;
+    if (!didDrag) return;
+    row.dataset.swipedClickGuard = "1";
+    window.setTimeout(() => {
+      delete row.dataset.swipedClickGuard;
+    }, 180);
+    if (onDismiss && Math.abs(dx) >= dismissThreshold) {
+      onDismiss(row);
+      return;
+    }
+    setSwipeOffset(row, dx < -36 ? actionOffset : 0);
+  };
+
+  container.addEventListener("pointerup", finish);
+  container.addEventListener("pointercancel", finish);
 }
 
 async function pollNotifications() {
@@ -2015,12 +2156,15 @@ function renderPlan() {
   if (!elements.planDocumentView.innerHTML && window.PLAN_DOCUMENT_HTML) {
     elements.planDocumentView.innerHTML = window.PLAN_DOCUMENT_HTML;
   }
-  elements.editPlanButton.hidden = planEditable;
+  elements.editPlanButton.hidden = planEditable || currentUser === "wanwan";
   elements.editPlanButton.textContent =
     currentUser === "wanwan"
       ? planRequestMode ? "退出申请" : "申请取消或变更"
       : "修改";
   elements.savePlanButton.hidden = !planEditable;
+  if (elements.planDocumentActions) {
+    elements.planDocumentActions.hidden = currentUser === "wanwan" && !planEditable;
+  }
   renderPlanRequests();
   renderPlanNotes();
 }
@@ -2163,15 +2307,23 @@ function renderPlanNotes() {
         pinButton.dataset.pinNote = note.id;
         pinButton.textContent = "置顶";
         item.append(text, quantity, time, pinButton);
-      } else if (planRequestMode && currentUser === "wanwan") {
-        const requestButton = document.createElement("button");
-        requestButton.className = "plan-note-request-button";
-        requestButton.type = "button";
-        requestButton.dataset.requestNote = note.id;
-        requestButton.textContent = "选择申请";
-        item.append(text, quantity, time, requestButton);
       } else {
-        item.append(text, quantity, time);
+        item.classList.add("is-swipeable");
+        const action = document.createElement("button");
+        action.className = "plan-note-menu-button";
+        action.type = "button";
+        if (currentUser === "jiaxin") {
+          action.dataset.editNote = note.id;
+          action.textContent = "修改";
+        } else {
+          action.dataset.requestNote = note.id;
+          action.textContent = "申请变更";
+        }
+
+        const surface = document.createElement("div");
+        surface.className = "plan-note-surface";
+        surface.append(text, quantity, time);
+        item.append(action, surface);
       }
       return item;
     }),
@@ -3127,6 +3279,60 @@ async function requestPlanNoteChange(noteId) {
   void saveCloudState();
 }
 
+async function editPlanNote(noteId) {
+  if (currentUser !== "jiaxin") return;
+  const notes = normalizePlanNotes(state.planNotes);
+  const note = notes.find((item) => item.id === noteId);
+  if (!note) {
+    showToast("没有找到这条凭证");
+    return;
+  }
+  const text = await openSiteDialog({
+    title: "修改凭证内容",
+    message: "只修改这一条婉婉挨揍凭证。",
+    input: true,
+    inputType: "text",
+    placeholder: "写下凭证内容",
+    defaultValue: note.text,
+    confirmText: "下一步",
+    cancelText: "取消",
+  });
+  const nextText = text?.confirmed ? text.value.trim() : "";
+  if (!nextText) {
+    if (text?.confirmed) showToast("凭证内容不能为空");
+    return;
+  }
+  const quantity = await openSiteDialog({
+    title: "修改挨揍数量",
+    message: nextText,
+    input: true,
+    inputType: "number",
+    placeholder: "输入数量",
+    defaultValue: String(normalizePlanNoteQuantity(note.quantity)),
+    confirmText: "保存修改",
+    cancelText: "取消",
+  });
+  if (!quantity?.confirmed) return;
+  const nextQuantity = normalizePlanNoteQuantity(quantity.value);
+  state.planNotes = notes.map((item) =>
+    item.id === noteId
+      ? {
+          ...item,
+          text: nextText,
+          quantity: nextQuantity,
+          time:
+            nextText === item.text && nextQuantity === normalizePlanNoteQuantity(item.quantity)
+              ? item.time
+              : new Date().toISOString(),
+        }
+      : item,
+  );
+  saveState();
+  renderPlan();
+  showToast("这条凭证已修改");
+  void saveCloudState();
+}
+
 async function respondToPlanRequest(requestId, decision) {
   const request = normalizeNotifications(state.notifications).find((notice) => notice.id === requestId);
   if (!request || request.type !== "plan-change-request") {
@@ -3251,7 +3457,9 @@ function unlockEntrance(user) {
   resetVolatileFlow();
   renderFromState();
   knownUnreadNotificationIds = new Set(unreadNotifications().map((notice) => notice.id));
-  window.setTimeout(() => maybeShowUnreadNotificationPopup({ force: true }), 180);
+  window.setTimeout(() => {
+    void showLoginPopups();
+  }, 180);
   startNotificationPolling();
   showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -3343,13 +3551,37 @@ elements.moodButtons.forEach((button) => {
 });
 
 elements.notificationList.addEventListener("click", (event) => {
+  const deleteButton = event.target.closest("[data-delete-notification]");
+  if (deleteButton) {
+    dismissNotifications(currentUser, [deleteButton.dataset.deleteNotification]);
+    showToast("通知已删除");
+    return;
+  }
   const item = event.target.closest("[data-notification-id]");
   if (!item) return;
+  const row = item.closest(".notification-swipe-row");
+  if (row?.dataset.swipedClickGuard) return;
   const notice = state.notifications.find((entry) => entry.id === item.dataset.notificationId);
   if (notice) navigateForNotification(notice);
 });
 
+wireSwipeList(elements.notificationList, {
+  rowSelector: ".notification-swipe-row",
+  surfaceSelector: ".notification-item",
+  actionOffset: -92,
+  dismissThreshold: 140,
+  onDismiss: (row) => {
+    const id = row.dataset.notificationSwipeId;
+    if (!id) return;
+    dismissNotifications(currentUser, [id]);
+    showToast("通知已删除");
+  },
+});
+
 elements.notificationButton?.addEventListener("click", showNotificationModal);
+elements.announcementButton?.addEventListener("click", () => {
+  void showAnnouncement();
+});
 
 elements.clearNotificationsButton?.addEventListener("click", () => {
   const ids = unreadNotifications().map((notice) => notice.id);
@@ -3462,8 +3694,13 @@ elements.planNoteForm.addEventListener("submit", (event) => {
 
 elements.planNotesList.addEventListener("click", (event) => {
   const requestButton = event.target.closest("[data-request-note]");
-  if (requestButton && planRequestMode) {
+  if (requestButton) {
     void requestPlanNoteChange(requestButton.dataset.requestNote);
+    return;
+  }
+  const editNoteButton = event.target.closest("[data-edit-note]");
+  if (editNoteButton) {
+    void editPlanNote(editNoteButton.dataset.editNote);
     return;
   }
   const pinButton = event.target.closest("[data-pin-note]");
@@ -3472,6 +3709,13 @@ elements.planNotesList.addEventListener("click", (event) => {
   if (!item || item === elements.planNotesList.firstElementChild) return;
   elements.planNotesList.prepend(item);
   showToast("保存后置顶生效");
+});
+
+wireSwipeList(elements.planNotesList, {
+  rowSelector: ".plan-note-item",
+  surfaceSelector: ".plan-note-surface",
+  actionOffset: -104,
+  dismissThreshold: 9999,
 });
 
 elements.planRequestsList?.addEventListener("click", (event) => {
