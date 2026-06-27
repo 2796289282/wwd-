@@ -542,7 +542,6 @@
                   </button>
                 </div>
               </div>
-              <div id="plan-document-view" class="plan-document-view" aria-label="计划书文档展示" hidden></div>
               <div id="plan-editor-panel" class="plan-editor-panel" hidden>
                 <label class="sr-only" for="plan-input">计划书内容</label>
                 <textarea
@@ -598,10 +597,6 @@
                     </span>
                     <strong id="plan-requests-count">0 条</strong>
                   </button>
-                  <div id="plan-requests-panel" class="plan-requests-panel" hidden>
-                    <ul id="plan-requests-list" class="plan-requests-list"></ul>
-                    <p id="plan-requests-empty" class="history-empty">还没有申请记录。</p>
-                  </div>
                 </section>
                 <ul id="plan-notes-list" class="plan-notes-list"></ul>
                 <p id="plan-notes-empty" class="history-empty">还没有记录。</p>
@@ -787,6 +782,19 @@
         </div>
         <button id="close-plan-gate-button" class="text-button" type="button">关闭</button>
       </div>
+    </div>
+    <div id="plan-info-modal" class="plan-info-modal" hidden>
+      <div class="plan-info-backdrop" data-close-plan-info></div>
+      <section class="plan-info-card" role="dialog" aria-modal="true" aria-labelledby="plan-info-title">
+        <div class="plan-info-head">
+          <div>
+            <p class="step-label">PLAN ROOM</p>
+            <h2 id="plan-info-title">计划书</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-plan-info aria-label="关闭">×</button>
+        </div>
+        <div id="plan-info-content" class="plan-info-content"></div>
+      </section>
     </div>
     <div id="site-dialog" class="site-dialog" hidden>
       <form id="site-dialog-form" class="site-dialog-card" role="dialog" aria-modal="true">

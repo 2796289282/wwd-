@@ -646,7 +646,9 @@ const elements = {
   enterPlanButton: document.querySelector("#enter-plan-button"),
   planDocumentEntryButton: document.querySelector("#plan-document-entry-button"),
   planDocumentActions: document.querySelector(".plan-document-actions"),
-  planDocumentView: document.querySelector("#plan-document-view"),
+  planInfoModal: document.querySelector("#plan-info-modal"),
+  planInfoTitle: document.querySelector("#plan-info-title"),
+  planInfoContent: document.querySelector("#plan-info-content"),
   planEditorPanel: document.querySelector("#plan-editor-panel"),
   planInput: document.querySelector("#plan-input"),
   planNoteForm: document.querySelector("#plan-note-form"),
@@ -655,9 +657,6 @@ const elements = {
   planNotesTotal: document.querySelector("#plan-notes-total"),
   planRequestsEntryButton: document.querySelector("#plan-requests-entry-button"),
   planRequestsCount: document.querySelector("#plan-requests-count"),
-  planRequestsPanel: document.querySelector("#plan-requests-panel"),
-  planRequestsList: document.querySelector("#plan-requests-list"),
-  planRequestsEmpty: document.querySelector("#plan-requests-empty"),
   planNotesList: document.querySelector("#plan-notes-list"),
   planNotesEmpty: document.querySelector("#plan-notes-empty"),
   planCount: document.querySelector("#plan-count"),
@@ -1195,6 +1194,7 @@ function normalizePlanNotes(value) {
           text,
           quantity: normalizePlanNoteQuantity(item.quantity),
           time: typeof item.time === "string" ? item.time : new Date().toISOString(),
+          settled: Boolean(item.settled),
         };
       })
       .filter(Boolean);
@@ -1206,6 +1206,7 @@ function normalizePlanNotes(value) {
         text: value.trim(),
         quantity: 0,
         time: new Date().toISOString(),
+        settled: false,
       },
     ];
   }
@@ -1842,6 +1843,10 @@ function closeVisibleModalFromHistory() {
     closePlanGate({ fromHistory: true });
     return true;
   }
+  if (!elements.planInfoModal.hidden) {
+    closePlanInfoModal({ fromHistory: true });
+    return true;
+  }
   return false;
 }
 
@@ -1852,7 +1857,8 @@ function updateModalOpenState() {
       !elements.notificationModal.hidden ||
       !elements.diaryEditorModal.hidden ||
       !elements.diaryDetailModal.hidden ||
-      !elements.planGateModal.hidden,
+      !elements.planGateModal.hidden ||
+      !elements.planInfoModal.hidden,
   );
 }
 
@@ -1956,9 +1962,11 @@ function setSwipeOffset(row, value) {
     button.tabIndex = isSwiped ? 0 : -1;
     button.setAttribute("aria-hidden", isSwiped ? "false" : "true");
   });
-  row.querySelectorAll(".plan-note-menu-button").forEach((button) => {
-    button.tabIndex = isSwiped ? 0 : -1;
-    button.setAttribute("aria-hidden", isSwiped ? "false" : "true");
+  row.querySelectorAll(".plan-note-menu").forEach((menu) => {
+    menu.setAttribute("aria-hidden", isSwiped ? "false" : "true");
+    menu.querySelectorAll("button").forEach((button) => {
+      button.tabIndex = isSwiped ? 0 : -1;
+    });
   });
 }
 
@@ -2214,12 +2222,8 @@ function renderPlan() {
   elements.planInput.readOnly = !planEditable;
   elements.planInput.classList.toggle("is-editing", planEditable);
   elements.planEditorPanel.hidden = !planEditable;
-  elements.planDocumentView.hidden = !planDocumentOpen || planEditable;
-  elements.planDocumentEntryButton.setAttribute("aria-expanded", String(planDocumentOpen));
-  elements.planDocumentEntryButton.classList.toggle("is-open", planDocumentOpen);
-  if (!elements.planDocumentView.innerHTML && window.PLAN_DOCUMENT_HTML) {
-    elements.planDocumentView.innerHTML = window.PLAN_DOCUMENT_HTML;
-  }
+  elements.planDocumentEntryButton.setAttribute("aria-expanded", "false");
+  elements.planDocumentEntryButton.classList.remove("is-open");
   elements.editPlanButton.hidden = planEditable || currentUser === "wanwan";
   elements.editPlanButton.textContent = "✎";
   elements.editPlanButton.setAttribute("aria-label", "修改婉婉挨揍计划书");
@@ -2252,20 +2256,17 @@ function planRequestRecords() {
 }
 
 function renderPlanRequests() {
-  if (!elements.planRequestsList) return;
   const records = planRequestRecords();
   if (elements.planRequestsCount) {
     elements.planRequestsCount.textContent = `${records.length} 条`;
   }
   if (elements.planRequestsEntryButton) {
-    elements.planRequestsEntryButton.setAttribute("aria-expanded", String(planRequestsOpen));
-    elements.planRequestsEntryButton.classList.toggle("is-open", planRequestsOpen);
+    elements.planRequestsEntryButton.setAttribute("aria-expanded", "false");
+    elements.planRequestsEntryButton.classList.remove("is-open");
   }
-  if (elements.planRequestsPanel) {
-    elements.planRequestsPanel.hidden = !planRequestsOpen;
-  }
-  elements.planRequestsList.replaceChildren(
-    ...records.map(({ request, response }) => {
+}
+
+function createPlanRequestItem({ request, response }) {
       const item = document.createElement("li");
       item.className = `plan-request-item${response ? " answered" : ""}`;
 
@@ -2311,9 +2312,50 @@ function renderPlanRequests() {
       }
 
       return item;
-    }),
-  );
-  elements.planRequestsEmpty.hidden = records.length > 0;
+}
+
+function renderPlanRequestList(container) {
+  const records = planRequestRecords();
+  if (!records.length) {
+    const empty = document.createElement("p");
+    empty.className = "history-empty";
+    empty.textContent = "还没有申请记录。";
+    container.replaceChildren(empty);
+    return;
+  }
+  const list = document.createElement("ul");
+  list.className = "plan-requests-list";
+  list.replaceChildren(...records.map(createPlanRequestItem));
+  container.replaceChildren(list);
+}
+
+function showPlanInfoModal(title, renderContent) {
+  elements.planInfoTitle.textContent = title;
+  elements.planInfoContent.replaceChildren();
+  renderContent(elements.planInfoContent);
+  elements.planInfoModal.hidden = false;
+  updateModalOpenState();
+  pushModalHistory("plan-info");
+}
+
+function closePlanInfoModal({ fromHistory = false } = {}) {
+  elements.planInfoModal.hidden = true;
+  elements.planInfoContent.replaceChildren();
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("plan-info");
+}
+
+function showPlanDocumentModal() {
+  showPlanInfoModal("婉婉挨揍计划书", (container) => {
+    const wrap = document.createElement("div");
+    wrap.className = "plan-document-view in-modal";
+    wrap.innerHTML = window.PLAN_DOCUMENT_HTML || "<p>计划书还没有内容。</p>";
+    container.append(wrap);
+  });
+}
+
+function showPlanRequestsModal() {
+  showPlanInfoModal("申请变更记录", renderPlanRequestList);
 }
 
 function renderPlanNotes() {
@@ -2326,6 +2368,7 @@ function renderPlanNotes() {
     ...notes.map((note) => {
       const item = document.createElement("li");
       item.className = "plan-note-item";
+      item.classList.toggle("is-settled", Boolean(note.settled));
       item.dataset.noteId = note.id;
 
       const text = document.createElement(planEditable ? "input" : "span");
@@ -2375,23 +2418,37 @@ function renderPlanNotes() {
         item.append(text, quantity, time, pinButton);
       } else {
         item.classList.add("is-swipeable");
-        const action = document.createElement("button");
-        action.className = "plan-note-menu-button";
-        action.type = "button";
+        const menu = document.createElement("div");
+        menu.className = "plan-note-menu";
+        menu.setAttribute("aria-hidden", "true");
         if (currentUser === "jiaxin") {
-          action.dataset.editNote = note.id;
-          action.textContent = "修改";
+          const editButton = document.createElement("button");
+          editButton.className = "plan-note-menu-pill";
+          editButton.type = "button";
+          editButton.dataset.editNote = note.id;
+          editButton.textContent = "修改";
+          const settleButton = document.createElement("button");
+          settleButton.className = "plan-note-menu-pill settle";
+          settleButton.type = "button";
+          settleButton.dataset.settleNote = note.id;
+          settleButton.textContent = note.settled ? "取消结算" : "已结算";
+          menu.append(editButton, settleButton);
         } else {
-          action.dataset.requestNote = note.id;
-          action.textContent = "申请变更";
+          const requestButton = document.createElement("button");
+          requestButton.className = "plan-note-menu-pill";
+          requestButton.type = "button";
+          requestButton.dataset.requestNote = note.id;
+          requestButton.textContent = "申请变更";
+          menu.append(requestButton);
         }
-        action.tabIndex = -1;
-        action.setAttribute("aria-hidden", "true");
+        menu.querySelectorAll("button").forEach((button) => {
+          button.tabIndex = -1;
+        });
 
         const surface = document.createElement("div");
         surface.className = "plan-note-surface";
         surface.append(text, quantity, time);
-        item.append(action, surface);
+        item.append(menu, surface);
       }
       return item;
     }),
@@ -3459,6 +3516,28 @@ async function editPlanNote(noteId) {
   void saveCloudState();
 }
 
+function togglePlanNoteSettled(noteId) {
+  if (currentUser !== "jiaxin") return;
+  let changed = false;
+  state.planNotes = normalizePlanNotes(state.planNotes).map((note) => {
+    if (note.id !== noteId) return note;
+    changed = true;
+    return {
+      ...note,
+      settled: !note.settled,
+      time: new Date().toISOString(),
+    };
+  });
+  if (!changed) {
+    showToast("没有找到这条凭证");
+    return;
+  }
+  saveState();
+  renderPlan();
+  showToast("凭证状态已更新");
+  void saveCloudState();
+}
+
 async function respondToPlanRequest(requestId, decision) {
   const request = normalizeNotifications(state.notifications).find((notice) => notice.id === requestId);
   if (!request || request.type !== "plan-change-request") {
@@ -3506,6 +3585,7 @@ function addPlanNote(text, quantity = 1) {
     text: value,
     quantity: normalizedQuantity,
     time: new Date().toISOString(),
+    settled: false,
   });
   addNotification({
     type: "plan-note-added",
@@ -3548,7 +3628,7 @@ function savePlan() {
       .filter(Boolean);
   }
   planEditable = false;
-  planDocumentOpen = true;
+  planDocumentOpen = false;
   if (wasEditing) {
     addNotification({
       type: "plan-completed",
@@ -3755,6 +3835,10 @@ elements.planGateModal.addEventListener("click", (event) => {
   if (event.target === elements.planGateModal) closePlanGate();
 });
 
+document.querySelectorAll("[data-close-plan-info]").forEach((button) => {
+  button.addEventListener("click", () => closePlanInfoModal());
+});
+
 elements.planGateButtons.forEach((button) => {
   button.addEventListener("click", () => handlePlanGateClick(button.dataset.planWord, button));
 });
@@ -3797,18 +3881,14 @@ elements.planInput.addEventListener("input", () => {
 });
 
 elements.planDocumentEntryButton.addEventListener("click", () => {
-  planDocumentOpen = !planDocumentOpen;
+  showPlanDocumentModal();
   planEditable = false;
   planRequestMode = false;
   renderPlan();
-  if (planDocumentOpen) {
-    elements.planDocumentView.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
 });
 
 elements.planRequestsEntryButton?.addEventListener("click", () => {
-  planRequestsOpen = !planRequestsOpen;
-  renderPlanRequests();
+  showPlanRequestsModal();
 });
 
 elements.editPlanButton.addEventListener("click", unlockPlanEditing);
@@ -3830,6 +3910,11 @@ elements.planNotesList.addEventListener("click", (event) => {
     void editPlanNote(editNoteButton.dataset.editNote);
     return;
   }
+  const settleNoteButton = event.target.closest("[data-settle-note]");
+  if (settleNoteButton) {
+    togglePlanNoteSettled(settleNoteButton.dataset.settleNote);
+    return;
+  }
   const pinButton = event.target.closest("[data-pin-note]");
   if (!pinButton || !planEditable) return;
   const item = pinButton.closest(".plan-note-item");
@@ -3841,11 +3926,11 @@ elements.planNotesList.addEventListener("click", (event) => {
 wireSwipeList(elements.planNotesList, {
   rowSelector: ".plan-note-item",
   surfaceSelector: ".plan-note-surface",
-  actionOffset: -104,
+  actionOffset: -154,
   dismissThreshold: 9999,
 });
 
-elements.planRequestsList?.addEventListener("click", (event) => {
+elements.planInfoContent?.addEventListener("click", (event) => {
   const responseButton = event.target.closest("[data-plan-request-response]");
   if (!responseButton || currentUser !== "jiaxin") return;
   void respondToPlanRequest(

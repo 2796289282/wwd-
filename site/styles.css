@@ -5336,6 +5336,79 @@ body[data-current-step="intro"] .intro-letter-button {
   transition: transform 0.18s ease;
 }
 
+.plan-note-item.is-settled .plan-note-surface {
+  opacity: 0.62;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.03)),
+    rgba(255, 255, 255, 0.045);
+}
+
+.plan-note-item.is-settled .plan-note-text {
+  color: rgba(255, 244, 249, 0.54);
+  text-decoration: line-through;
+  text-decoration-thickness: 2px;
+  text-decoration-color: rgba(255, 143, 199, 0.72);
+}
+
+.plan-note-menu {
+  position: absolute;
+  z-index: 0;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: 146px;
+  padding: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  background:
+    radial-gradient(circle at 24% 16%, rgba(255, 255, 255, 0.11), transparent 34%),
+    linear-gradient(135deg, rgba(29, 18, 35, 0.98), rgba(16, 17, 31, 0.98)),
+    rgba(7, 7, 15, 0.98);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 14px 28px rgba(0, 0, 0, 0.22);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.plan-note-menu-pill {
+  min-height: 32px;
+  padding: 0 12px;
+  color: #fff8fc;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: 0;
+  background:
+    radial-gradient(circle at 22% 12%, rgba(255, 255, 255, 0.18), transparent 36%),
+    linear-gradient(135deg, rgba(255, 143, 199, 0.28), rgba(119, 220, 255, 0.12)),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 244, 249, 0.16);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.plan-note-menu-pill.settle {
+  background:
+    radial-gradient(circle at 22% 12%, rgba(255, 255, 255, 0.16), transparent 36%),
+    linear-gradient(135deg, rgba(119, 220, 255, 0.2), rgba(154, 116, 255, 0.16)),
+    rgba(255, 255, 255, 0.07);
+}
+
+.plan-note-item.is-swiped .plan-note-menu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
 .plan-note-menu-button {
   position: absolute;
   z-index: 0;
@@ -5385,6 +5458,70 @@ body[data-current-step="intro"] .intro-letter-button {
   box-shadow:
     inset 1px 0 0 rgba(255, 255, 255, 0.09),
     0 16px 32px rgba(0, 0, 0, 0.26);
+}
+
+.plan-info-modal {
+  position: fixed;
+  z-index: 84;
+  inset: 0;
+  padding: 16px;
+  display: grid;
+  place-items: center;
+}
+
+.plan-info-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 4, 12, 0.66);
+  backdrop-filter: blur(12px);
+  animation: fade-in 0.2s ease both;
+}
+
+.plan-info-card {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 560px);
+  max-height: min(82vh, 760px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at top left, rgba(255, 143, 199, 0.22), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.055)),
+    rgba(18, 18, 37, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 26px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.48);
+  animation: panel-rise 0.24s ease both;
+}
+
+.plan-info-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding-bottom: 12px;
+}
+
+.plan-info-head h2 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.plan-info-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 2px 2px 4px;
+}
+
+.plan-info-content .plan-requests-list {
+  gap: 10px;
+}
+
+.plan-document-view.in-modal {
+  max-height: none;
+  border-radius: 20px;
 }
 
 @media (max-width: 560px) {
