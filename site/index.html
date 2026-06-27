@@ -571,12 +571,22 @@
                   <strong id="plan-notes-total">0</strong>
                 </div>
                 <section class="plan-requests-block" aria-labelledby="plan-requests-title">
-                  <div class="plan-requests-head">
-                    <span id="plan-requests-title" class="plan-notes-label">申请变更记录</span>
-                    <small>婉婉的申请和李家鑫的回复会放在这里</small>
+                  <button
+                    id="plan-requests-entry-button"
+                    class="plan-requests-entry-button"
+                    type="button"
+                    aria-expanded="false"
+                  >
+                    <span>
+                      <span id="plan-requests-title" class="plan-notes-label">申请变更记录</span>
+                      <small>点开查看完整申请和回复</small>
+                    </span>
+                    <strong id="plan-requests-count">0 条</strong>
+                  </button>
+                  <div id="plan-requests-panel" class="plan-requests-panel" hidden>
+                    <ul id="plan-requests-list" class="plan-requests-list"></ul>
+                    <p id="plan-requests-empty" class="history-empty">还没有申请记录。</p>
                   </div>
-                  <ul id="plan-requests-list" class="plan-requests-list"></ul>
-                  <p id="plan-requests-empty" class="history-empty">还没有申请记录。</p>
                 </section>
                 <ul id="plan-notes-list" class="plan-notes-list"></ul>
                 <p id="plan-notes-empty" class="history-empty">还没有记录。</p>

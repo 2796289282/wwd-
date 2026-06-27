@@ -646,6 +646,9 @@ const elements = {
   planNoteInput: document.querySelector("#plan-note-input"),
   planNoteQuantityInput: document.querySelector("#plan-note-quantity-input"),
   planNotesTotal: document.querySelector("#plan-notes-total"),
+  planRequestsEntryButton: document.querySelector("#plan-requests-entry-button"),
+  planRequestsCount: document.querySelector("#plan-requests-count"),
+  planRequestsPanel: document.querySelector("#plan-requests-panel"),
   planRequestsList: document.querySelector("#plan-requests-list"),
   planRequestsEmpty: document.querySelector("#plan-requests-empty"),
   planNotesList: document.querySelector("#plan-notes-list"),
@@ -753,6 +756,7 @@ let planGateIndex = 0;
 let planEditable = false;
 let planRequestMode = false;
 let planDocumentOpen = false;
+let planRequestsOpen = false;
 let siteDialogResolver = null;
 let browserHistoryReady = false;
 let editingDiaryId = null;
@@ -2040,6 +2044,16 @@ function planRequestRecords() {
 function renderPlanRequests() {
   if (!elements.planRequestsList) return;
   const records = planRequestRecords();
+  if (elements.planRequestsCount) {
+    elements.planRequestsCount.textContent = `${records.length} 条`;
+  }
+  if (elements.planRequestsEntryButton) {
+    elements.planRequestsEntryButton.setAttribute("aria-expanded", String(planRequestsOpen));
+    elements.planRequestsEntryButton.classList.toggle("is-open", planRequestsOpen);
+  }
+  if (elements.planRequestsPanel) {
+    elements.planRequestsPanel.hidden = !planRequestsOpen;
+  }
   elements.planRequestsList.replaceChildren(
     ...records.map(({ request, response }) => {
       const item = document.createElement("li");
@@ -3406,6 +3420,7 @@ elements.backFromPlanButton.addEventListener("click", () => {
   planEditable = false;
   planRequestMode = false;
   planDocumentOpen = false;
+  planRequestsOpen = false;
   renderPlan();
   backToStep(planReturnStep);
 });
@@ -3430,6 +3445,11 @@ elements.planDocumentEntryButton.addEventListener("click", () => {
   if (planDocumentOpen) {
     elements.planDocumentView.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+});
+
+elements.planRequestsEntryButton?.addEventListener("click", () => {
+  planRequestsOpen = !planRequestsOpen;
+  renderPlanRequests();
 });
 
 elements.editPlanButton.addEventListener("click", unlockPlanEditing);

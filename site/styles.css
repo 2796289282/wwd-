@@ -3867,25 +3867,67 @@ body {
 
 .plan-requests-block {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+}
+
+.plan-requests-entry-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
   padding: 12px;
+  color: inherit;
+  text-align: left;
+  font: inherit;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 16px;
+  cursor: pointer;
 }
 
-.plan-requests-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
+.plan-requests-entry-button::after {
+  content: "›";
+  color: rgba(255, 244, 249, 0.7);
+  font-size: 22px;
+  line-height: 1;
+  transition: transform 0.18s ease;
 }
 
-.plan-requests-head small {
+.plan-requests-entry-button.is-open::after {
+  transform: rotate(90deg);
+}
+
+.plan-requests-entry-button span {
+  display: grid;
+  gap: 3px;
+}
+
+.plan-requests-entry-button small {
   color: var(--text-sub);
   font-size: 11px;
   line-height: 1.5;
-  text-align: right;
+}
+
+.plan-requests-entry-button strong {
+  margin-left: auto;
+  padding: 5px 9px;
+  color: #fff8fc;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+  background: rgba(119, 220, 255, 0.12);
+  border: 1px solid rgba(119, 220, 255, 0.2);
+  border-radius: 999px;
+}
+
+.plan-requests-panel {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
 }
 
 .plan-requests-list {
