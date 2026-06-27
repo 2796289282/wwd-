@@ -690,14 +690,18 @@
         <div class="diary-form-grid">
           <label>
             <span>作者</span>
-            <select id="diary-author-input">
+            <select id="diary-author-input" class="native-select-hidden" tabindex="-1" aria-hidden="true">
               <option value="me">家鑫</option>
               <option value="ta">婉婉</option>
             </select>
+            <div class="diary-choice-group diary-author-choices" data-diary-choice="author" role="group" aria-label="选择作者">
+              <button type="button" data-diary-author-value="me">家鑫</button>
+              <button type="button" data-diary-author-value="ta">婉婉</button>
+            </div>
           </label>
           <label>
             <span>心情</span>
-            <select id="diary-mood-input">
+            <select id="diary-mood-input" class="native-select-hidden" tabindex="-1" aria-hidden="true">
               <option value="">不选择</option>
               <option value="开心">开心</option>
               <option value="想念">想念</option>
@@ -712,6 +716,21 @@
               <option value="平静">平静</option>
               <option value="__custom">自定义</option>
             </select>
+            <div class="diary-choice-group diary-mood-choices" data-diary-choice="mood" role="group" aria-label="选择心情">
+              <button type="button" data-diary-mood-value="">不选择</button>
+              <button type="button" data-diary-mood-value="开心">开心</button>
+              <button type="button" data-diary-mood-value="想念">想念</button>
+              <button type="button" data-diary-mood-value="委屈">委屈</button>
+              <button type="button" data-diary-mood-value="甜蜜">甜蜜</button>
+              <button type="button" data-diary-mood-value="害羞">害羞</button>
+              <button type="button" data-diary-mood-value="幸福">幸福</button>
+              <button type="button" data-diary-mood-value="难过">难过</button>
+              <button type="button" data-diary-mood-value="吃醋">吃醋</button>
+              <button type="button" data-diary-mood-value="期待">期待</button>
+              <button type="button" data-diary-mood-value="迷茫">迷茫</button>
+              <button type="button" data-diary-mood-value="平静">平静</button>
+              <button type="button" data-diary-mood-value="__custom">自定义</button>
+            </div>
             <input id="diary-mood-custom-input" class="diary-mood-custom-input" maxlength="16" placeholder="输入自定义心情" hidden />
           </label>
         </div>

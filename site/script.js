@@ -720,6 +720,8 @@ const elements = {
   diaryAuthorInput: document.querySelector("#diary-author-input"),
   diaryMoodInput: document.querySelector("#diary-mood-input"),
   diaryMoodCustomInput: document.querySelector("#diary-mood-custom-input"),
+  diaryAuthorChoiceButtons: [...document.querySelectorAll("[data-diary-author-value]")],
+  diaryMoodChoiceButtons: [...document.querySelectorAll("[data-diary-mood-value]")],
   diaryImageInput: document.querySelector("#diary-image-input"),
   diaryFormError: document.querySelector("#diary-form-error"),
   diaryDetailMeta: document.querySelector("#diary-detail-meta"),
@@ -773,6 +775,7 @@ let activeDiaryId = null;
 let editingDiaryCommentId = null;
 let notificationPollTimer = null;
 let knownUnreadNotificationIds = new Set();
+let suppressNextModalPop = false;
 
 const stepTargets = {
   intro: () => elements.introSection,
@@ -1807,15 +1810,63 @@ function renderNotifications() {
   );
 }
 
-function showNotificationModal() {
-  renderNotifications();
-  elements.notificationModal.hidden = false;
-  document.body.classList.add("modal-open");
+function pushModalHistory(type) {
+  if (!browserHistoryReady || window.history.state?.wanwanModal === type) return;
+  window.history.pushState({ ...(window.history.state || {}), wanwanModal: type }, "");
 }
 
-function closeNotificationModal() {
+function removeModalHistory(type) {
+  if (!browserHistoryReady || window.history.state?.wanwanModal !== type) return;
+  suppressNextModalPop = true;
+  window.history.back();
+}
+
+function closeVisibleModalFromHistory() {
+  if (!elements.siteDialog.hidden) {
+    closeSiteDialog({ confirmed: false, value: "" }, { fromHistory: true });
+    return true;
+  }
+  if (!elements.notificationModal.hidden) {
+    closeNotificationModal({ fromHistory: true });
+    return true;
+  }
+  if (!elements.diaryEditorModal.hidden) {
+    closeDiaryEditor({ fromHistory: true });
+    return true;
+  }
+  if (!elements.diaryDetailModal.hidden) {
+    closeDiaryDetail({ fromHistory: true });
+    return true;
+  }
+  if (!elements.planGateModal.hidden) {
+    closePlanGate({ fromHistory: true });
+    return true;
+  }
+  return false;
+}
+
+function updateModalOpenState() {
+  document.body.classList.toggle(
+    "modal-open",
+    !elements.siteDialog.hidden ||
+      !elements.notificationModal.hidden ||
+      !elements.diaryEditorModal.hidden ||
+      !elements.diaryDetailModal.hidden ||
+      !elements.planGateModal.hidden,
+  );
+}
+
+function showNotificationModal({ fromHistory = false } = {}) {
+  renderNotifications();
+  elements.notificationModal.hidden = false;
+  updateModalOpenState();
+  if (!fromHistory) pushModalHistory("notification");
+}
+
+function closeNotificationModal({ fromHistory = false } = {}) {
   elements.notificationModal.hidden = true;
-  document.body.classList.remove("modal-open");
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("notification");
 }
 
 function announcementSeenKey(user = currentUser) {
@@ -2558,14 +2609,29 @@ function diaryMoodOptions() {
     .filter((value) => value && value !== CUSTOM_DIARY_MOOD_VALUE);
 }
 
+function updateDiaryChoiceControls() {
+  elements.diaryAuthorChoiceButtons.forEach((button) => {
+    const active = button.dataset.diaryAuthorValue === elements.diaryAuthorInput.value;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+  elements.diaryMoodChoiceButtons.forEach((button) => {
+    const active = button.dataset.diaryMoodValue === elements.diaryMoodInput.value;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
 function updateDiaryMoodCustomVisibility() {
   if (!elements.diaryMoodInput || !elements.diaryMoodCustomInput) return;
   const isCustom = elements.diaryMoodInput.value === CUSTOM_DIARY_MOOD_VALUE;
   elements.diaryMoodCustomInput.hidden = !isCustom;
   if (!isCustom) {
     elements.diaryMoodCustomInput.value = "";
+    updateDiaryChoiceControls();
     return;
   }
+  updateDiaryChoiceControls();
   window.setTimeout(() => elements.diaryMoodCustomInput.focus(), 0);
 }
 
@@ -2578,6 +2644,7 @@ function setDiaryMoodValue(value = "") {
       elements.diaryMoodCustomInput.hidden = true;
       elements.diaryMoodCustomInput.value = "";
     }
+    updateDiaryChoiceControls();
     return;
   }
   elements.diaryMoodInput.value = CUSTOM_DIARY_MOOD_VALUE;
@@ -2585,6 +2652,7 @@ function setDiaryMoodValue(value = "") {
     elements.diaryMoodCustomInput.hidden = false;
     elements.diaryMoodCustomInput.value = mood;
   }
+  updateDiaryChoiceControls();
 }
 
 function selectedDiaryMood() {
@@ -2602,17 +2670,20 @@ function openDiaryEditor(entry = null) {
   elements.diaryBodyInput.value = entry?.body || "";
   elements.diaryAuthorInput.value = entry?.author || (currentUser === "wanwan" ? "ta" : "me");
   setDiaryMoodValue(entry?.mood || "");
+  updateDiaryChoiceControls();
   elements.diaryImageInput.value = entry?.image || "";
   elements.diaryFormError.hidden = true;
   elements.diaryEditorModal.hidden = false;
-  document.body.classList.add("modal-open");
+  updateModalOpenState();
+  pushModalHistory("diary-editor");
   window.setTimeout(() => elements.diaryTitleInput.focus(), 80);
 }
 
-function closeDiaryEditor() {
+function closeDiaryEditor({ fromHistory = false } = {}) {
   elements.diaryEditorModal.hidden = true;
   editingDiaryId = null;
-  document.body.classList.remove("modal-open");
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("diary-editor");
 }
 
 function openDiaryDetail(id) {
@@ -2639,14 +2710,16 @@ function openDiaryDetail(id) {
   if (dismissedDiaryIds.length) renderDiary();
   elements.diaryFavoriteButton.textContent = entry.favorite ? "取消收藏" : "收藏";
   elements.diaryDetailModal.hidden = false;
-  document.body.classList.add("modal-open");
+  updateModalOpenState();
+  pushModalHistory("diary-detail");
 }
 
-function closeDiaryDetail() {
+function closeDiaryDetail({ fromHistory = false } = {}) {
   elements.diaryDetailModal.hidden = true;
   activeDiaryId = null;
   resetDiaryCommentEditor();
-  document.body.classList.remove("modal-open");
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("diary-detail");
 }
 
 function saveDiaryFromForm(event) {
@@ -3125,12 +3198,14 @@ function showToast(message) {
   toastTimer = window.setTimeout(() => elements.toast.classList.remove("show"), 2200);
 }
 
-function closeSiteDialog(result) {
+function closeSiteDialog(result, { fromHistory = false } = {}) {
   if (!siteDialogResolver) return;
   const resolver = siteDialogResolver;
   siteDialogResolver = null;
   elements.siteDialog.hidden = true;
   elements.siteDialogInput.value = "";
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("site-dialog");
   resolver(result);
 }
 
@@ -3153,6 +3228,8 @@ function openSiteDialog({
   elements.siteDialogInput.placeholder = placeholder;
   elements.siteDialogInput.value = defaultValue;
   elements.siteDialog.hidden = false;
+  updateModalOpenState();
+  pushModalHistory("site-dialog");
   if (input) {
     window.setTimeout(() => {
       elements.siteDialogInput.focus();
@@ -3228,16 +3305,20 @@ function saveLetter() {
   void saveCloudState();
 }
 
-function openPlanGate() {
+function openPlanGate({ fromHistory = false } = {}) {
   planGateIndex = 0;
   elements.planGateModal.hidden = false;
   elements.planGateUnlocked.hidden = true;
+  updateModalOpenState();
+  if (!fromHistory) pushModalHistory("plan-gate");
 }
 
-function closePlanGate() {
+function closePlanGate({ fromHistory = false } = {}) {
   planGateIndex = 0;
   elements.planGateModal.hidden = true;
   elements.planGateUnlocked.hidden = true;
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("plan-gate");
 }
 
 function unlockPlanStep() {
@@ -3854,6 +3935,18 @@ elements.diaryList.addEventListener("click", (event) => {
 elements.diaryForm.addEventListener("submit", saveDiaryFromForm);
 elements.diaryCommentForm?.addEventListener("submit", saveDiaryComment);
 elements.diaryMoodInput?.addEventListener("change", updateDiaryMoodCustomVisibility);
+elements.diaryAuthorChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    elements.diaryAuthorInput.value = button.dataset.diaryAuthorValue || "me";
+    updateDiaryChoiceControls();
+  });
+});
+elements.diaryMoodChoiceButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    elements.diaryMoodInput.value = button.dataset.diaryMoodValue || "";
+    updateDiaryMoodCustomVisibility();
+  });
+});
 elements.diaryCommentsList?.addEventListener("click", (event) => {
   const button = event.target.closest(".diary-comment-edit-button");
   if (!button) return;
@@ -3956,6 +4049,11 @@ elements.openLetterPromptButton.addEventListener("click", () => {
 });
 
 window.addEventListener("popstate", (event) => {
+  if (suppressNextModalPop) {
+    suppressNextModalPop = false;
+    return;
+  }
+  if (closeVisibleModalFromHistory()) return;
   const step = event.state?.wanwanStep;
   if (!step || !stepTargets[step]) return;
   planEditable = false;
