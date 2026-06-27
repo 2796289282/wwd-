@@ -1,5 +1,6 @@
 const STORAGE_KEY = "wanwan-picker-v6";
 const CURRENT_USER_KEY = "wanwan-current-user";
+const REMEMBERED_USER_KEY = "xw-remembered-user";
 const HISTORY_LIMIT = 10;
 const PLAN_BOOK_LIMIT = 12000;
 const IDENTITY_PASSWORDS = {
@@ -751,7 +752,7 @@ const elements = {
 };
 
 let state = loadState();
-let currentUser = localStorage.getItem(CURRENT_USER_KEY) || "";
+let currentUser = rememberedUser();
 let isPicking = false;
 let toastTimer;
 let hiddenTapTimer;
@@ -994,6 +995,27 @@ function letterExcerpt(text, max = 46) {
   const value = String(text || "").replace(/\s+/g, " ").trim();
   if (!value) return "";
   return value.length > max ? `${value.slice(0, max)}...` : value;
+}
+
+function normalizeUser(value) {
+  return value === "wanwan" || value === "jiaxin" ? value : "";
+}
+
+function rememberedUser() {
+  return normalizeUser(localStorage.getItem(REMEMBERED_USER_KEY)) ||
+    normalizeUser(localStorage.getItem(CURRENT_USER_KEY));
+}
+
+function rememberUser(user) {
+  const safeUser = normalizeUser(user);
+  if (!safeUser) return;
+  localStorage.setItem(CURRENT_USER_KEY, safeUser);
+  localStorage.setItem(REMEMBERED_USER_KEY, safeUser);
+}
+
+function forgetRememberedUser() {
+  localStorage.removeItem(CURRENT_USER_KEY);
+  localStorage.removeItem(REMEMBERED_USER_KEY);
 }
 
 function otherUser(user = currentUser) {
@@ -3021,7 +3043,7 @@ function returnToEntranceGate() {
   resetBrandLoginTaps();
   window.clearInterval(notificationPollTimer);
   currentUser = "";
-  localStorage.removeItem(CURRENT_USER_KEY);
+  forgetRememberedUser();
   siteUnlocked = false;
   resetVolatileFlow();
   renderFromState();
@@ -3689,16 +3711,18 @@ function sendReconcileRequest() {
   void saveCloudState();
 }
 
-function unlockEntrance(user, { silent = false } = {}) {
+function unlockEntrance(user, { silent = false, deferPopups = false } = {}) {
   currentUser = user || currentUser;
-  if (currentUser) localStorage.setItem(CURRENT_USER_KEY, currentUser);
+  if (currentUser) rememberUser(currentUser);
   siteUnlocked = true;
   resetVolatileFlow();
   renderFromState();
   knownUnreadNotificationIds = new Set(unreadNotifications().map((notice) => notice.id));
-  window.setTimeout(() => {
-    void showLoginPopups();
-  }, 180);
+  if (!deferPopups) {
+    window.setTimeout(() => {
+      void showLoginPopups();
+    }, 180);
+  }
   startNotificationPolling();
   if (!silent) showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -4188,11 +4212,16 @@ window.addEventListener("popstate", (event) => {
 async function initApp() {
   cleanupLegacyPwa();
   registerPwa();
+  const savedUser = rememberedUser();
+  if (savedUser) {
+    unlockEntrance(savedUser, { silent: true, deferPopups: true });
+  }
   const cloudData = await loadCloudState();
   await migrateLocalStorageToCloud(cloudData);
   resetVolatileFlow();
   saveState();
-  if (currentUser === "wanwan" || currentUser === "jiaxin") {
+  currentUser = rememberedUser();
+  if (currentUser) {
     unlockEntrance(currentUser, { silent: true });
   } else {
     renderFromState();
