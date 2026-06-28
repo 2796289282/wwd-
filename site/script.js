@@ -650,6 +650,19 @@ const elements = {
   planInfoModal: document.querySelector("#plan-info-modal"),
   planInfoTitle: document.querySelector("#plan-info-title"),
   planInfoContent: document.querySelector("#plan-info-content"),
+  planNoteDetailModal: document.querySelector("#plan-note-detail-modal"),
+  planNoteDetailMeta: document.querySelector("#plan-note-detail-meta"),
+  planNoteDetailTitle: document.querySelector("#plan-note-detail-title"),
+  planNoteDetailBody: document.querySelector("#plan-note-detail-body"),
+  planNoteDetailTags: document.querySelector("#plan-note-detail-tags"),
+  planNoteDetailRequestButton: document.querySelector("#plan-note-detail-request-button"),
+  planNoteDetailEditButton: document.querySelector("#plan-note-detail-edit-button"),
+  planNoteDetailSettleButton: document.querySelector("#plan-note-detail-settle-button"),
+  planNoteMessagesCount: document.querySelector("#plan-note-messages-count"),
+  planNoteMessagesList: document.querySelector("#plan-note-messages-list"),
+  planNoteMessagesEmpty: document.querySelector("#plan-note-messages-empty"),
+  planNoteMessageForm: document.querySelector("#plan-note-message-form"),
+  planNoteMessageInput: document.querySelector("#plan-note-message-input"),
   planNoteEditModal: document.querySelector("#plan-note-edit-modal"),
   planNoteEditForm: document.querySelector("#plan-note-edit-form"),
   planNoteEditText: document.querySelector("#plan-note-edit-text"),
@@ -676,6 +689,14 @@ const elements = {
   siteDialogInput: document.querySelector("#site-dialog-input"),
   siteDialogCancel: document.querySelector("#site-dialog-cancel"),
   siteDialogConfirm: document.querySelector("#site-dialog-confirm"),
+  announcementModal: document.querySelector("#announcement-modal"),
+  announcementForm: document.querySelector("#announcement-form"),
+  announcementTitle: document.querySelector("#announcement-title"),
+  announcementTitleInput: document.querySelector("#announcement-title-input"),
+  announcementContentInput: document.querySelector("#announcement-content-input"),
+  announcementReadonlyContent: document.querySelector("#announcement-readonly-content"),
+  announcementNotifyButton: document.querySelector("#announcement-notify-button"),
+  announcementSaveButton: document.querySelector("#announcement-save-button"),
   notificationModal: document.querySelector("#notification-modal"),
   notificationTitle: document.querySelector("#notification-title"),
   notificationSummary: document.querySelector("#notification-summary"),
@@ -777,11 +798,13 @@ let planRequestMode = false;
 let planDocumentOpen = false;
 let planRequestsOpen = false;
 let siteDialogResolver = null;
+let announcementResolver = null;
 let browserHistoryReady = false;
 let editingDiaryId = null;
 let activeDiaryId = null;
 let editingDiaryCommentId = null;
 let editingPlanNoteId = null;
+let activePlanNoteId = null;
 let notificationPollTimer = null;
 let knownUnreadNotificationIds = new Set();
 let suppressNextModalPop = false;
@@ -828,6 +851,7 @@ function createDefaultState() {
       jiaxin: "",
       wanwan: "",
     },
+    announcement: defaultAnnouncement(),
     planBook: "",
     planNotes: [],
     diaryFilter: "month",
@@ -864,6 +888,7 @@ function loadState() {
           : fallback.secretLetter,
       letterHistory: normalizeLetterHistory(stored.letterHistory),
       todayMoods: normalizeTodayMoods(stored.todayMoods),
+      announcement: normalizeAnnouncement(stored.announcement),
       planBook: typeof stored.planBook === "string" ? stored.planBook : "",
       planNotes: normalizePlanNotes(stored.planNotes),
       diaryFilter: typeof stored.diaryFilter === "string" ? stored.diaryFilter : fallback.diaryFilter,
@@ -885,6 +910,7 @@ function saveState() {
     secretLetter: state.secretLetter,
     letterHistory: state.letterHistory,
     todayMoods: state.todayMoods,
+    announcement: normalizeAnnouncement(state.announcement),
     planBook: state.planBook,
     planNotes: state.planNotes,
     diaryFilter: state.diaryFilter,
@@ -1002,6 +1028,40 @@ function letterExcerpt(text, max = 46) {
 
 function normalizeUser(value) {
   return value === "wanwan" || value === "jiaxin" ? value : "";
+}
+
+function defaultAnnouncement() {
+  return {
+    title: ANNOUNCEMENT_TITLE,
+    content: ANNOUNCEMENT_CONTENT,
+    updatedAt: ANNOUNCEMENT_VERSION,
+    notifyWanwanAt: "",
+    editor: "jiaxin",
+  };
+}
+
+function normalizeAnnouncement(value) {
+  const fallback = defaultAnnouncement();
+  if (!value || typeof value !== "object") return fallback;
+  const title = typeof value.title === "string" && value.title.trim()
+    ? value.title.trim().slice(0, 40)
+    : fallback.title;
+  const content = typeof value.content === "string" && value.content.trim()
+    ? value.content.trim().slice(0, 600)
+    : fallback.content;
+  return {
+    title,
+    content,
+    updatedAt:
+      typeof value.updatedAt === "string" && value.updatedAt
+        ? value.updatedAt
+        : fallback.updatedAt,
+    notifyWanwanAt:
+      typeof value.notifyWanwanAt === "string" && value.notifyWanwanAt
+        ? value.notifyWanwanAt
+        : "",
+    editor: normalizeUser(value.editor) || "jiaxin",
+  };
 }
 
 function rememberedUser() {
@@ -1139,7 +1199,11 @@ function unreadNotifications() {
   if (!currentUser) return [];
   const dismissed = new Set(getDismissedNotificationIds(currentUser));
   return normalizeNotifications(state.notifications).filter(
-    (notice) => notice.toUser === currentUser && !notice.isRead && !dismissed.has(notice.id),
+    (notice) =>
+      notice.toUser === currentUser &&
+      notificationGroup(notice.type) !== "draw" &&
+      !notice.isRead &&
+      !dismissed.has(notice.id),
   );
 }
 
@@ -1220,17 +1284,21 @@ function normalizePlanNotes(value) {
             quantity: 0,
             time: new Date().toISOString(),
             settled: false,
+            messages: [],
           };
         }
         if (!item || typeof item !== "object") return null;
         const text = typeof item.text === "string" ? item.text.trim() : "";
         if (!text) return null;
+        const id = typeof item.id === "string" && item.id ? item.id : `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const messages = normalizePlanNoteMessages(item.messages || item.comments || item.replies, id);
         return {
-          id: typeof item.id === "string" && item.id ? item.id : `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+          id,
           text,
           quantity: normalizePlanNoteQuantity(item.quantity),
           time: typeof item.time === "string" ? item.time : new Date().toISOString(),
           settled: Boolean(item.settled),
+          ...(messages.length ? { messages } : {}),
         };
       })
       .filter(Boolean);
@@ -1243,6 +1311,7 @@ function normalizePlanNotes(value) {
         quantity: 0,
         time: new Date().toISOString(),
         settled: false,
+        messages: [],
       },
     ];
   }
@@ -1253,6 +1322,53 @@ function normalizePlanNoteQuantity(value) {
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0) return 0;
   return Math.min(9999, Math.floor(number));
+}
+
+function planNoteMessageAuthor(value) {
+  if (value === "wanwan" || value === "婉婉") return "wanwan";
+  if (value === "jiaxin" || value === "家鑫") return "jiaxin";
+  return "";
+}
+
+function normalizePlanNoteMessages(value, noteId = "") {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const content = typeof item.content === "string"
+        ? item.content.trim()
+        : typeof item.text === "string"
+          ? item.text.trim()
+          : "";
+      if (!content) return null;
+      const createdAt =
+        typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+          ? item.createdAt
+          : typeof item.time === "string" && !Number.isNaN(Date.parse(item.time))
+            ? item.time
+            : new Date().toISOString();
+      const author = planNoteMessageAuthor(item.author || item.fromUser) || "jiaxin";
+      return {
+        id:
+          typeof item.id === "string" && item.id
+            ? item.id
+            : `plan-note-message-${noteId || "note"}-${createdAt}`,
+        noteId: typeof item.noteId === "string" && item.noteId ? item.noteId : noteId,
+        author,
+        nickname: typeof item.nickname === "string" ? item.nickname : USER_LABELS[author] || "",
+        content,
+        createdAt,
+      };
+    })
+    .filter(Boolean)
+    .filter((message) => {
+      const key = message.id || `${message.noteId}-${message.author}-${message.createdAt}-${message.content}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
 function planNotesTotal(notes = state.planNotes) {
@@ -1275,6 +1391,7 @@ function planNotesSignature(notes = []) {
       quantity: normalizePlanNoteQuantity(note.quantity),
       time: note.time,
       settled: Boolean(note.settled),
+      messages: normalizePlanNoteMessages(note.messages, note.id),
     })),
   );
 }
@@ -1448,6 +1565,7 @@ function cloudDataFromState() {
     letter: state.secretLetter || DEFAULT_SECRET_LETTER,
     letterHistory: normalizeLetterHistory(state.letterHistory),
     todayMoods: normalizeTodayMoods(state.todayMoods),
+    announcement: normalizeAnnouncement(state.announcement),
     planBook: state.planBook || "",
     planNotes: normalizePlanNotes(state.planNotes),
     diaryFilter: state.diaryFilter || "month",
@@ -1474,6 +1592,7 @@ function applyCloudData(data) {
         : state.secretLetter || fallback.secretLetter,
     letterHistory: mergeLetterHistory(data.letterHistory, state.letterHistory),
     todayMoods: normalizeTodayMoods(data.todayMoods || state.todayMoods),
+    announcement: normalizeAnnouncement(data.announcement || state.announcement),
     planBook: typeof data.planBook === "string" ? data.planBook : state.planBook || "",
     planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
     diaryEntries: mergeDiaryEntries(data.diaryEntries, state.diaryEntries),
@@ -1562,6 +1681,7 @@ function isCloudStateEmpty(data) {
     !hasRemainingCards &&
     !data.letter &&
     !(Array.isArray(data.letterHistory) && data.letterHistory.length) &&
+    !data.announcement &&
     !data.planBook &&
     !(Array.isArray(data.planNotes) && data.planNotes.length) &&
     !(Array.isArray(data.diaryEntries) && data.diaryEntries.length) &&
@@ -1587,6 +1707,14 @@ function mergeLocalStateIntoCloud(localState) {
   state.todayMoods = normalizeTodayMoods(state.todayMoods.jiaxin || state.todayMoods.wanwan
     ? state.todayMoods
     : localState.todayMoods);
+  if (localState.announcement) {
+    const localAnnouncement = normalizeAnnouncement(localState.announcement);
+    const currentAnnouncement = normalizeAnnouncement(state.announcement);
+    state.announcement =
+      Date.parse(localAnnouncement.updatedAt) > Date.parse(currentAnnouncement.updatedAt)
+        ? localAnnouncement
+        : currentAnnouncement;
+  }
 
   if (!state.planBook && typeof localState.planBook === "string") {
     state.planBook = localState.planBook;
@@ -1812,6 +1940,7 @@ function notificationDisplayTitle(notice) {
   const group = notificationGroup(notice.type);
   if (notice.type === "plan-change-request") return "重要：婉婉申请取消或变更凭证";
   if (notice.type === "plan-change-response") return "李家鑫回复了你的凭证申请";
+  if (notice.type.startsWith("announcement")) return "李家鑫更新了小屋公告";
   if (group === "letter") return `${source}给你留了小纸条`;
   if (notice.type.includes("comment") || notice.type.includes("reply")) return `${source}回应了你的日记`;
   if (group === "diary") return `${source}写了新的日记`;
@@ -1883,6 +2012,7 @@ function renderNotifications() {
         notice.type.includes("request") ? "!" :
         group === "letter" ? "💌" :
         notice.type.includes("comment") || notice.type.includes("reply") ? "💬" :
+        notice.type.startsWith("announcement") ? "📣" :
         group === "diary" ? "📖" :
         notice.type.includes("login") ? "🏠" :
         "🔔";
@@ -1940,6 +2070,10 @@ function closeVisibleModalFromHistory() {
     closeNotificationModal({ fromHistory: true });
     return true;
   }
+  if (!elements.announcementModal.hidden) {
+    closeAnnouncementModal({ fromHistory: true });
+    return true;
+  }
   if (!elements.diaryEditorModal.hidden) {
     closeDiaryEditor({ fromHistory: true });
     return true;
@@ -1956,6 +2090,10 @@ function closeVisibleModalFromHistory() {
     closePlanInfoModal({ fromHistory: true });
     return true;
   }
+  if (!elements.planNoteDetailModal.hidden) {
+    closePlanNoteDetail({ fromHistory: true });
+    return true;
+  }
   if (!elements.planNoteEditModal.hidden) {
     closePlanNoteEditModal({ fromHistory: true });
     return true;
@@ -1966,12 +2104,14 @@ function closeVisibleModalFromHistory() {
 function updateModalOpenState() {
   document.body.classList.toggle(
     "modal-open",
-    !elements.siteDialog.hidden ||
+      !elements.siteDialog.hidden ||
       !elements.notificationModal.hidden ||
+      !elements.announcementModal.hidden ||
       !elements.diaryEditorModal.hidden ||
       !elements.diaryDetailModal.hidden ||
       !elements.planGateModal.hidden ||
       !elements.planInfoModal.hidden ||
+      !elements.planNoteDetailModal.hidden ||
       !elements.planNoteEditModal.hidden,
   );
 }
@@ -1991,7 +2131,12 @@ function closeNotificationModal({ fromHistory = false } = {}) {
 
 function announcementSeenKey(user = currentUser) {
   const safeUser = user === "wanwan" || user === "jiaxin" ? user : "guest";
-  return `${ANNOUNCEMENT_SEEN_PREFIX}_${ANNOUNCEMENT_VERSION}_${safeUser}`;
+  const announcement = normalizeAnnouncement(state.announcement);
+  const version =
+    safeUser === "wanwan" && announcement.notifyWanwanAt
+      ? announcement.notifyWanwanAt
+      : ANNOUNCEMENT_VERSION;
+  return `${ANNOUNCEMENT_SEEN_PREFIX}_${version}_${safeUser}`;
 }
 
 function hasSeenAnnouncement(user = currentUser) {
@@ -2002,15 +2147,90 @@ function markAnnouncementSeen(user = currentUser) {
   localStorage.setItem(announcementSeenKey(user), "1");
 }
 
-async function showAnnouncement({ auto = false } = {}) {
+function renderAnnouncementModal() {
+  const announcement = normalizeAnnouncement(state.announcement);
+  const editable = currentUser === "jiaxin";
+  elements.announcementTitle.textContent = announcement.title;
+  elements.announcementTitleInput.value = announcement.title;
+  elements.announcementContentInput.value = announcement.content;
+  elements.announcementReadonlyContent.textContent = announcement.content;
+  elements.announcementTitleInput.closest("label").hidden = !editable;
+  elements.announcementContentInput.closest("label").hidden = !editable;
+  elements.announcementReadonlyContent.hidden = editable;
+  elements.announcementSaveButton.hidden = !editable;
+  elements.announcementNotifyButton.hidden = !editable;
+}
+
+async function showAnnouncement({ auto = false, fromHistory = false } = {}) {
   if (auto && hasSeenAnnouncement()) return;
-  await openSiteDialog({
-    title: ANNOUNCEMENT_TITLE,
-    message: ANNOUNCEMENT_CONTENT,
-    confirmText: "知道了",
-    cancelText: "关闭",
-  });
+  const announcement = normalizeAnnouncement(state.announcement);
+  if (
+    auto &&
+    currentUser === "wanwan" &&
+    !announcement.notifyWanwanAt &&
+    announcement.updatedAt !== ANNOUNCEMENT_VERSION
+  ) return;
+  renderAnnouncementModal();
+  elements.announcementModal.hidden = false;
+  updateModalOpenState();
+  if (!fromHistory) pushModalHistory("announcement");
   markAnnouncementSeen();
+  return new Promise((resolve) => {
+    announcementResolver = resolve;
+  });
+}
+
+function closeAnnouncementModal({ fromHistory = false } = {}) {
+  const resolver = announcementResolver;
+  announcementResolver = null;
+  elements.announcementModal.hidden = true;
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("announcement");
+  if (resolver) resolver();
+}
+
+function saveAnnouncement(event) {
+  event.preventDefault();
+  if (currentUser !== "jiaxin") return;
+  const title = elements.announcementTitleInput.value.trim() || ANNOUNCEMENT_TITLE;
+  const content = elements.announcementContentInput.value.trim();
+  if (!content) {
+    showToast("公告内容不能为空");
+    return;
+  }
+  state.announcement = normalizeAnnouncement({
+    ...state.announcement,
+    title,
+    content,
+    updatedAt: new Date().toISOString(),
+    editor: currentUser,
+  });
+  saveState();
+  renderAnnouncementModal();
+  showToast("公告已保存");
+  void saveCloudState();
+}
+
+function notifyWanwanAnnouncement() {
+  if (currentUser !== "jiaxin") return;
+  const now = new Date().toISOString();
+  state.announcement = normalizeAnnouncement({
+    ...state.announcement,
+    notifyWanwanAt: now,
+    updatedAt: now,
+    editor: currentUser,
+  });
+  addNotification({
+    type: "announcement-updated",
+    title: "李家鑫更新了小屋公告",
+    content: normalizeAnnouncement(state.announcement).content,
+    relatedId: `announcement-${now}`,
+  });
+  markAnnouncementSeen("jiaxin");
+  saveState();
+  renderNotifications();
+  showToast("已通知婉婉");
+  void saveCloudState();
 }
 
 function navigateForNotification(notice) {
@@ -2027,8 +2247,13 @@ function navigateForNotification(notice) {
     }
   } else if (group === "plan") {
     unlockPlanStep();
+    if (notice.relatedId?.startsWith("note-")) {
+      window.setTimeout(() => openPlanNoteDetail(notice.relatedId), 120);
+    }
   } else if (group === "draw") {
     openStep("play");
+  } else if (notice.type.startsWith("announcement")) {
+    void showAnnouncement();
   } else {
     openStep("intro");
   }
@@ -2533,43 +2758,112 @@ function renderPlanNotes() {
         pinButton.textContent = "置顶";
         item.append(text, quantity, time, pinButton);
       } else {
-        item.classList.add("is-swipeable");
-        const menu = document.createElement("div");
-        menu.className = "plan-note-menu";
-        menu.setAttribute("aria-hidden", "true");
-        if (currentUser === "jiaxin") {
-          const editButton = document.createElement("button");
-          editButton.className = "plan-note-menu-pill";
-          editButton.type = "button";
-          editButton.dataset.editNote = note.id;
-          editButton.textContent = "修改";
-          const settleButton = document.createElement("button");
-          settleButton.className = "plan-note-menu-pill settle";
-          settleButton.type = "button";
-          settleButton.dataset.settleNote = note.id;
-          settleButton.textContent = note.settled ? "取消结算" : "已结算";
-          menu.append(editButton, settleButton);
-        } else {
-          const requestButton = document.createElement("button");
-          requestButton.className = "plan-note-menu-pill";
-          requestButton.type = "button";
-          requestButton.dataset.requestNote = note.id;
-          requestButton.textContent = "申请变更";
-          menu.append(requestButton);
-        }
-        menu.querySelectorAll("button").forEach((button) => {
-          button.tabIndex = -1;
-        });
-
-        const surface = document.createElement("div");
+        const messages = normalizePlanNoteMessages(note.messages, note.id);
+        const surface = document.createElement("button");
+        surface.type = "button";
         surface.className = "plan-note-surface";
-        surface.append(text, quantity, time);
-        item.append(menu, surface);
+        surface.dataset.openPlanNote = note.id;
+        if (messages.length) {
+          const messageCount = document.createElement("span");
+          messageCount.className = "plan-note-message-count";
+          messageCount.textContent = `${messages.length} 条留言`;
+          surface.append(text, quantity, messageCount, time);
+        } else {
+          surface.append(text, quantity, time);
+        }
+        item.append(surface);
       }
       return item;
     }),
   );
   elements.planNotesEmpty.hidden = notes.length > 0;
+}
+
+function renderPlanNoteMessages(note) {
+  const messages = normalizePlanNoteMessages(note?.messages, note?.id);
+  elements.planNoteMessagesCount.textContent = `${messages.length} 条留言`;
+  elements.planNoteMessagesEmpty.hidden = messages.length > 0;
+  elements.planNoteMessagesList.replaceChildren(
+    ...messages.map((message) => {
+      const item = document.createElement("article");
+      item.className = "diary-comment-item";
+
+      const avatar = document.createElement("span");
+      avatar.className = "diary-comment-avatar";
+      avatar.textContent = message.author === "wanwan" ? "婉" : "鑫";
+
+      const body = document.createElement("div");
+      const head = document.createElement("p");
+      head.className = "diary-comment-headline";
+      const author = document.createElement("strong");
+      author.textContent = message.nickname || USER_LABELS[message.author] || "家鑫";
+      const time = document.createElement("small");
+      const dateInfo = formatDiaryDate(message.createdAt);
+      time.textContent = `${dateInfo.monthDay} ${dateInfo.time}`;
+      head.append(author, time);
+
+      const content = document.createElement("p");
+      content.className = "diary-comment-content";
+      content.textContent = message.content;
+      body.append(head, content);
+      item.append(avatar, body);
+      return item;
+    }),
+  );
+}
+
+function renderPlanNoteDetail(note) {
+  const dateInfo = formatDiaryDate(note.time);
+  elements.planNoteDetailMeta.textContent = `VOUCHER DETAIL · ${dateInfo.monthDay} ${dateInfo.time}`;
+  elements.planNoteDetailTitle.textContent = "婉婉挨揍凭证";
+  elements.planNoteDetailBody.textContent = note.text;
+  elements.planNoteDetailTags.replaceChildren(
+    ...[
+      `数量 ${normalizePlanNoteQuantity(note.quantity)}`,
+      note.settled ? "已结算" : "未结算",
+    ].map((text) => {
+      const tag = document.createElement("span");
+      tag.textContent = text;
+      return tag;
+    }),
+  );
+  elements.planNoteDetailEditButton.hidden = currentUser !== "jiaxin";
+  elements.planNoteDetailSettleButton.hidden = currentUser !== "jiaxin";
+  elements.planNoteDetailRequestButton.hidden = currentUser !== "wanwan";
+  elements.planNoteDetailSettleButton.textContent = note.settled ? "取消结算" : "已结算";
+  renderPlanNoteMessages(note);
+}
+
+function openPlanNoteDetail(noteId, { fromHistory = false } = {}) {
+  const note = normalizePlanNotes(state.planNotes).find((item) => item.id === noteId);
+  if (!note) {
+    showToast("没有找到这条凭证");
+    return;
+  }
+  activePlanNoteId = note.id;
+  renderPlanNoteDetail(note);
+  elements.planNoteMessageInput.value = "";
+  elements.planNoteDetailModal.hidden = false;
+  updateModalOpenState();
+  if (!fromHistory) pushModalHistory("plan-note-detail");
+}
+
+function refreshActivePlanNoteDetail() {
+  if (!activePlanNoteId || elements.planNoteDetailModal.hidden) return;
+  const note = normalizePlanNotes(state.planNotes).find((item) => item.id === activePlanNoteId);
+  if (!note) {
+    closePlanNoteDetail();
+    return;
+  }
+  renderPlanNoteDetail(note);
+}
+
+function closePlanNoteDetail({ fromHistory = false } = {}) {
+  elements.planNoteDetailModal.hidden = true;
+  activePlanNoteId = null;
+  elements.planNoteMessageInput.value = "";
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("plan-note-detail");
 }
 
 function diaryMonthTitle(date = new Date()) {
@@ -3287,12 +3581,6 @@ async function pickRandomOption() {
     mode: state.mode,
     time: new Date().toISOString(),
   });
-  addNotification({
-    type: "draw-card",
-    title: "刚刚抽了一张卡",
-    content: `${state.player}抽到：${letterExcerpt(result, 42)}`,
-    relatedId: resultKey,
-  });
   state.history = state.history.slice(0, HISTORY_LIMIT);
   saveState();
 
@@ -3646,6 +3934,7 @@ function savePlanNoteEdit(event) {
   saveState();
   renderPlan();
   closePlanNoteEditModal();
+  refreshActivePlanNoteDetail();
   showToast("这条凭证已修改");
   void saveCloudState();
 }
@@ -3668,8 +3957,54 @@ function togglePlanNoteSettled(noteId) {
   }
   saveState();
   renderPlan();
+  refreshActivePlanNoteDetail();
   showToast("凭证状态已更新");
   void saveCloudState();
+}
+
+function savePlanNoteMessage(event) {
+  event.preventDefault();
+  const content = elements.planNoteMessageInput.value.trim();
+  if (!content) {
+    showToast("先写一句留言吧");
+    return;
+  }
+  if (!activePlanNoteId) return;
+  const author = currentUser === "wanwan" ? "wanwan" : "jiaxin";
+  let changed = false;
+  state.planNotes = normalizePlanNotes(state.planNotes).map((note) => {
+    if (note.id !== activePlanNoteId) return note;
+    changed = true;
+    const message = {
+      id: `plan-note-message-${Date.now()}-${secureRandomIndex(100000)}`,
+      noteId: note.id,
+      author,
+      nickname: USER_LABELS[author] || "",
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    return {
+      ...note,
+      messages: normalizePlanNoteMessages([...(note.messages || []), message], note.id),
+      time: new Date().toISOString(),
+    };
+  });
+  if (!changed) {
+    showToast("没有找到这条凭证");
+    return;
+  }
+  addNotification({
+    type: "plan-note-message",
+    title: "凭证收到一条留言",
+    content: letterExcerpt(content, 52),
+    relatedId: activePlanNoteId,
+  });
+  saveState();
+  renderPlan();
+  refreshActivePlanNoteDetail();
+  elements.planNoteMessageInput.value = "";
+  showToast("留言已保存");
+  void saveCloudState({ silent: true });
 }
 
 async function respondToPlanRequest(requestId, decision) {
@@ -3720,6 +4055,7 @@ function addPlanNote(text, quantity = 1) {
     quantity: normalizedQuantity,
     time: new Date().toISOString(),
     settled: false,
+    messages: [],
   });
   addNotification({
     type: "plan-note-added",
@@ -3979,7 +4315,30 @@ document.querySelectorAll("[data-close-plan-note-edit]").forEach((button) => {
   button.addEventListener("click", () => closePlanNoteEditModal());
 });
 
+document.querySelectorAll("[data-close-plan-note-detail]").forEach((button) => {
+  button.addEventListener("click", () => closePlanNoteDetail());
+});
+
 elements.planNoteEditForm?.addEventListener("submit", savePlanNoteEdit);
+elements.planNoteMessageForm?.addEventListener("submit", savePlanNoteMessage);
+elements.planNoteDetailEditButton?.addEventListener("click", () => {
+  if (!activePlanNoteId) return;
+  void editPlanNote(activePlanNoteId);
+});
+elements.planNoteDetailSettleButton?.addEventListener("click", () => {
+  if (!activePlanNoteId) return;
+  togglePlanNoteSettled(activePlanNoteId);
+});
+elements.planNoteDetailRequestButton?.addEventListener("click", () => {
+  if (!activePlanNoteId) return;
+  void requestPlanNoteChange(activePlanNoteId);
+});
+
+document.querySelectorAll("[data-close-announcement]").forEach((button) => {
+  button.addEventListener("click", () => closeAnnouncementModal());
+});
+elements.announcementForm?.addEventListener("submit", saveAnnouncement);
+elements.announcementNotifyButton?.addEventListener("click", notifyWanwanAnnouncement);
 
 elements.planGateButtons.forEach((button) => {
   button.addEventListener("click", () => handlePlanGateClick(button.dataset.planWord, button));
@@ -4042,6 +4401,11 @@ elements.planNoteForm.addEventListener("submit", (event) => {
 });
 
 elements.planNotesList.addEventListener("click", (event) => {
+  const openButton = event.target.closest("[data-open-plan-note]");
+  if (openButton && !planEditable) {
+    openPlanNoteDetail(openButton.dataset.openPlanNote);
+    return;
+  }
   const requestButton = event.target.closest("[data-request-note]");
   if (requestButton) {
     void requestPlanNoteChange(requestButton.dataset.requestNote);
@@ -4063,13 +4427,6 @@ elements.planNotesList.addEventListener("click", (event) => {
   if (!item || item === elements.planNotesList.firstElementChild) return;
   elements.planNotesList.prepend(item);
   showToast("保存后置顶生效");
-});
-
-wireSwipeList(elements.planNotesList, {
-  rowSelector: ".plan-note-item",
-  surfaceSelector: ".plan-note-surface",
-  actionOffset: -154,
-  dismissThreshold: 9999,
 });
 
 elements.planInfoContent?.addEventListener("click", (event) => {

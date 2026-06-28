@@ -5330,15 +5330,37 @@ body[data-current-step="intro"] .intro-letter-button {
 .plan-note-surface {
   position: relative;
   z-index: 1;
+  grid-column: 1 / -1;
+  width: 100%;
   min-height: 74px;
   padding: 12px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px;
+  color: var(--text-main);
+  text-align: left;
   background: rgba(255, 255, 255, 0.07);
+  border: 0;
   border-radius: 16px;
   transform: translateX(var(--swipe-x));
   transition: transform 0.18s ease;
+  cursor: pointer;
+  font: inherit;
+}
+
+.plan-note-surface::after {
+  content: "›";
+  grid-column: 2 / 3;
+  grid-row: 2;
+  align-self: end;
+  justify-self: end;
+  color: rgba(255, 244, 249, 0.46);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.plan-note-surface:active {
+  transform: scale(0.99);
 }
 
 .plan-note-item.is-settled .plan-note-surface {
@@ -5577,10 +5599,78 @@ body[data-current-step="intro"] .intro-letter-button {
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
+.diary-detail-card,
+.plan-note-detail-card {
+  width: min(500px, calc(100vw - 36px));
+  max-height: min(680px, calc(100dvh - 72px));
+  padding: 20px;
+  gap: 13px;
+}
+
+.plan-note-detail-card .diary-detail-body,
+.diary-detail-card .diary-detail-body {
+  max-height: 24dvh;
+  overflow-y: auto;
+}
+
+.plan-note-message-count {
+  grid-column: 1 / 2;
+  width: fit-content;
+  padding: 4px 8px;
+  color: rgba(255, 244, 249, 0.78);
+  background: rgba(125, 211, 252, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.2);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.announcement-card {
+  width: min(500px, calc(100vw - 36px));
+}
+
+.announcement-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 @media (max-width: 560px) {
+  .diary-modal {
+    align-items: center;
+    padding: 14px;
+  }
+
   .diary-dialog {
-    width: min(100%, calc(100vw - 18px));
-    padding: 18px 14px;
+    width: min(100%, calc(100vw - 24px));
+    max-height: min(78dvh, 680px);
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .diary-detail-card,
+  .plan-note-detail-card {
+    width: min(100%, calc(100vw - 24px));
+    max-height: min(76dvh, 640px);
+    padding: 16px;
+  }
+
+  .diary-detail-card .diary-dialog-actions,
+  .plan-note-detail-card .diary-dialog-actions {
+    position: static;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border-top: 0;
+  }
+
+  .plan-note-detail-card .diary-detail-body,
+  .diary-detail-card .diary-detail-body {
+    max-height: 20dvh;
+  }
+
+  .plan-note-detail-actions,
+  .announcement-actions {
+    display: grid;
+    grid-template-columns: 1fr;
   }
 
   .diary-dialog textarea,

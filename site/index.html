@@ -800,6 +800,37 @@
         <div id="plan-info-content" class="plan-info-content"></div>
       </section>
     </div>
+    <div id="plan-note-detail-modal" class="diary-modal" hidden>
+      <div class="diary-modal-backdrop" data-close-plan-note-detail></div>
+      <article class="diary-dialog diary-detail-card plan-note-detail-card">
+        <div class="diary-dialog-head">
+          <div>
+            <p id="plan-note-detail-meta" class="step-label">VOUCHER DETAIL</p>
+            <h2 id="plan-note-detail-title">挨揍凭证</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-plan-note-detail aria-label="关闭">×</button>
+        </div>
+        <p id="plan-note-detail-body" class="diary-detail-body"></p>
+        <div id="plan-note-detail-tags" class="diary-detail-tags"></div>
+        <div class="diary-dialog-actions diary-detail-actions plan-note-detail-actions">
+          <button id="plan-note-detail-request-button" class="secondary-button" type="button">申请变更</button>
+          <button id="plan-note-detail-edit-button" class="secondary-button" type="button">修改</button>
+          <button id="plan-note-detail-settle-button" class="special-password-button" type="button">已结算</button>
+        </div>
+        <section class="diary-comments" aria-labelledby="plan-note-messages-title">
+          <div class="diary-comments-head">
+            <h3 id="plan-note-messages-title">留言</h3>
+            <span id="plan-note-messages-count">0 条留言</span>
+          </div>
+          <div id="plan-note-messages-list" class="diary-comments-list"></div>
+          <p id="plan-note-messages-empty" class="diary-comments-empty">还没有留言，写一句备注吧。</p>
+          <form id="plan-note-message-form" class="diary-comment-form" autocomplete="off">
+            <textarea id="plan-note-message-input" rows="2" maxlength="300" placeholder="写一句留言…"></textarea>
+            <button class="special-password-button" type="submit">发送留言</button>
+          </form>
+        </section>
+      </article>
+    </div>
     <div id="plan-note-edit-modal" class="plan-info-modal" hidden>
       <div class="plan-info-backdrop" data-close-plan-note-edit></div>
       <form id="plan-note-edit-form" class="plan-info-card plan-note-edit-card" role="dialog" aria-modal="true" aria-labelledby="plan-note-edit-title">
@@ -822,6 +853,32 @@
         <div class="site-dialog-actions">
           <button class="secondary-button" type="button" data-close-plan-note-edit>取消</button>
           <button class="special-password-button" type="submit">保存修改</button>
+        </div>
+      </form>
+    </div>
+    <div id="announcement-modal" class="plan-info-modal" hidden>
+      <div class="plan-info-backdrop" data-close-announcement></div>
+      <form id="announcement-form" class="plan-info-card announcement-card" role="dialog" aria-modal="true" aria-labelledby="announcement-title">
+        <div class="plan-info-head">
+          <div>
+            <p class="step-label">HOUSE NOTICE</p>
+            <h2 id="announcement-title">小屋公告</h2>
+          </div>
+          <button class="diary-icon-button" type="button" data-close-announcement aria-label="关闭">×</button>
+        </div>
+        <label class="plan-note-edit-field">
+          <span>公告标题</span>
+          <input id="announcement-title-input" maxlength="40" placeholder="小屋公告" />
+        </label>
+        <label class="plan-note-edit-field">
+          <span>公告内容</span>
+          <textarea id="announcement-content-input" rows="6" maxlength="600" placeholder="写给婉婉看的公告"></textarea>
+        </label>
+        <p id="announcement-readonly-content" class="diary-detail-body"></p>
+        <div class="site-dialog-actions announcement-actions">
+          <button id="announcement-close-button" class="secondary-button" type="button" data-close-announcement>知道了</button>
+          <button id="announcement-notify-button" class="secondary-button" type="button">通知婉婉</button>
+          <button id="announcement-save-button" class="special-password-button" type="submit">保存公告</button>
         </div>
       </form>
     </div>
