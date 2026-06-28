@@ -23,7 +23,7 @@ const LETTER_HISTORY_LIMIT = 20;
 const NOTIFICATION_POLL_INTERVAL = 8000;
 const CUSTOM_DIARY_MOOD_VALUE = "__custom";
 const ANNOUNCEMENT_VERSION = "2026-06-27-plan-notice";
-const ANNOUNCEMENT_TITLE = "小屋公告";
+const ANNOUNCEMENT_TITLE = "重要通知";
 const ANNOUNCEMENT_CONTENT =
   "这次更新把通知和凭证操作收得更像手机：通知可以滑动删除，挨揍凭证可以左滑操作，申请和回复也会更清楚地提醒。";
 const ANNOUNCEMENT_SEEN_PREFIX = "xw_announcement_seen";
@@ -1064,6 +1064,12 @@ function normalizeAnnouncement(value) {
   };
 }
 
+function announcementUpdatedAtMs(value) {
+  const announcement = normalizeAnnouncement(value);
+  const time = Date.parse(announcement.updatedAt);
+  return Number.isFinite(time) ? time : 0;
+}
+
 function rememberedUser() {
   return normalizeUser(localStorage.getItem(REMEMBERED_USER_KEY)) ||
     normalizeUser(localStorage.getItem(CURRENT_USER_KEY));
@@ -1659,7 +1665,14 @@ async function mergeLatestCloudPlanNotesBeforeSave() {
     if (!response.ok) return;
     const payload = await response.json();
     const data = payload.data || {};
-    if (shouldIgnoreStaleCloudData(data) || !Array.isArray(data.planNotes)) return;
+    if (shouldIgnoreStaleCloudData(data)) return;
+    if (
+      data.announcement &&
+      announcementUpdatedAtMs(data.announcement) > announcementUpdatedAtMs(state.announcement)
+    ) {
+      state.announcement = normalizeAnnouncement(data.announcement);
+    }
+    if (!Array.isArray(data.planNotes)) return;
     const remoteNotes = normalizePlanNotes(data.planNotes);
     const localSignature = planNotesSignature(state.planNotes);
     state.planNotes =
@@ -1669,6 +1682,24 @@ async function mergeLatestCloudPlanNotesBeforeSave() {
     lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
   } catch {
     // Saving should still continue if this pre-save merge cannot reach the cloud.
+  }
+}
+
+async function refreshLatestCloudAnnouncement() {
+  try {
+    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const announcement = payload.data?.announcement;
+    if (
+      announcement &&
+      announcementUpdatedAtMs(announcement) >= announcementUpdatedAtMs(state.announcement)
+    ) {
+      state.announcement = normalizeAnnouncement(announcement);
+      saveState();
+    }
+  } catch {
+    // Keep the local notice if the cloud is temporarily unreachable.
   }
 }
 
@@ -2090,12 +2121,12 @@ function closeVisibleModalFromHistory() {
     closePlanInfoModal({ fromHistory: true });
     return true;
   }
-  if (!elements.planNoteDetailModal.hidden) {
-    closePlanNoteDetail({ fromHistory: true });
-    return true;
-  }
   if (!elements.planNoteEditModal.hidden) {
     closePlanNoteEditModal({ fromHistory: true });
+    return true;
+  }
+  if (!elements.planNoteDetailModal.hidden) {
+    closePlanNoteDetail({ fromHistory: true });
     return true;
   }
   return false;
@@ -2162,6 +2193,7 @@ function renderAnnouncementModal() {
 }
 
 async function showAnnouncement({ auto = false, fromHistory = false } = {}) {
+  await refreshLatestCloudAnnouncement();
   if (auto && hasSeenAnnouncement()) return;
   const announcement = normalizeAnnouncement(state.announcement);
   if (
@@ -4650,7 +4682,7 @@ async function initApp() {
   registerPwa();
   const savedUser = rememberedUser();
   if (savedUser) {
-    unlockEntrance(savedUser, { silent: true, deferPopups: true });
+    currentUser = savedUser;
   }
   const cloudData = await loadCloudState();
   await migrateLocalStorageToCloud(cloudData);
