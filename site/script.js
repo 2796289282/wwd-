@@ -762,6 +762,9 @@ let brandLoginTapCount = 0;
 let letterReturnStep = "intro";
 let cloudReady = false;
 let lastSavedCloudPayload = "";
+let latestLocalCloudUpdatedAt = "";
+let cloudSaveInFlightCount = 0;
+let lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
 let siteUnlocked = false;
 let specialBoundaryConfirmed = false;
 let specialUnlocked = false;
@@ -1216,6 +1219,7 @@ function normalizePlanNotes(value) {
             text: item.trim(),
             quantity: 0,
             time: new Date().toISOString(),
+            settled: false,
           };
         }
         if (!item || typeof item !== "object") return null;
@@ -1252,7 +1256,40 @@ function normalizePlanNoteQuantity(value) {
 }
 
 function planNotesTotal(notes = state.planNotes) {
-  return normalizePlanNotes(notes).reduce((sum, note) => sum + normalizePlanNoteQuantity(note.quantity), 0);
+  return normalizePlanNotes(notes).reduce(
+    (sum, note) => note.settled ? sum : sum + normalizePlanNoteQuantity(note.quantity),
+    0,
+  );
+}
+
+function planNoteTimeMs(note) {
+  const time = typeof note?.time === "string" ? Date.parse(note.time) : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
+function planNotesSignature(notes = []) {
+  return JSON.stringify(
+    normalizePlanNotes(notes).map((note) => ({
+      id: note.id,
+      text: note.text,
+      quantity: normalizePlanNoteQuantity(note.quantity),
+      time: note.time,
+      settled: Boolean(note.settled),
+    })),
+  );
+}
+
+function mergePlanNotesByLatest(localNotes = [], remoteNotes = []) {
+  const notesById = new Map();
+  const order = [];
+  [...normalizePlanNotes(localNotes), ...normalizePlanNotes(remoteNotes)].forEach((note) => {
+    if (!notesById.has(note.id)) order.push(note.id);
+    const existing = notesById.get(note.id);
+    if (!existing || planNoteTimeMs(note) >= planNoteTimeMs(existing)) {
+      notesById.set(note.id, note);
+    }
+  });
+  return order.map((id) => notesById.get(id)).filter(Boolean);
 }
 
 function diaryCommentAuthor(value) {
@@ -1468,6 +1505,7 @@ function applyCloudData(data) {
       data.customCards,
     );
   }
+  lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
 }
 
 function applyCloudDataPreservingFlow(data) {
@@ -1481,6 +1519,38 @@ function applyCloudDataPreservingFlow(data) {
   };
   applyCloudData(data);
   state = { ...state, ...volatileState };
+}
+
+function cloudUpdatedAtMs(data) {
+  const time = typeof data?.updatedAt === "string" ? Date.parse(data.updatedAt) : 0;
+  return Number.isFinite(time) ? time : 0;
+}
+
+function shouldIgnoreStaleCloudData(data) {
+  if (cloudSaveInFlightCount > 0) return true;
+  const localSavedAt = latestLocalCloudUpdatedAt ? Date.parse(latestLocalCloudUpdatedAt) : 0;
+  if (!Number.isFinite(localSavedAt) || localSavedAt <= 0) return false;
+  const incomingAt = cloudUpdatedAtMs(data);
+  return incomingAt <= 0 || incomingAt < localSavedAt;
+}
+
+async function mergeLatestCloudPlanNotesBeforeSave() {
+  try {
+    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    if (!response.ok) return;
+    const payload = await response.json();
+    const data = payload.data || {};
+    if (shouldIgnoreStaleCloudData(data) || !Array.isArray(data.planNotes)) return;
+    const remoteNotes = normalizePlanNotes(data.planNotes);
+    const localSignature = planNotesSignature(state.planNotes);
+    state.planNotes =
+      localSignature === lastAcceptedCloudPlanNotesSignature
+        ? remoteNotes
+        : mergePlanNotesByLatest(state.planNotes, remoteNotes);
+    lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
+  } catch {
+    // Saving should still continue if this pre-save merge cannot reach the cloud.
+  }
 }
 
 function isCloudStateEmpty(data) {
@@ -1569,10 +1639,13 @@ async function loadCloudState() {
 
 async function saveCloudState({ silent = false } = {}) {
   saveState();
+  await mergeLatestCloudPlanNotesBeforeSave();
+  saveState();
   const data = cloudDataFromState();
   const serialized = JSON.stringify(data);
   if (serialized === lastSavedCloudPayload && cloudReady) return;
 
+  cloudSaveInFlightCount += 1;
   try {
     const response = await fetch(CLOUD_SAVE_ENDPOINT, {
       method: "POST",
@@ -1581,12 +1654,16 @@ async function saveCloudState({ silent = false } = {}) {
     });
     if (!response.ok) throw new Error(`Cloud save failed: ${response.status}`);
     lastSavedCloudPayload = serialized;
+    latestLocalCloudUpdatedAt = data.updatedAt;
+    lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
     cloudReady = true;
     if (!silent) showToast("已同步");
   } catch (error) {
     cloudReady = false;
     console.error("saveCloudState failed, state kept in localStorage.", error);
     if (!silent) showToast("已保存到本地，云同步失败");
+  } finally {
+    cloudSaveInFlightCount = Math.max(0, cloudSaveInFlightCount - 1);
   }
 }
 
@@ -2085,7 +2162,9 @@ async function pollNotifications() {
     const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
     if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
     const payload = await response.json();
-    applyCloudDataPreservingFlow(payload.data || {});
+    const data = payload.data || {};
+    if (shouldIgnoreStaleCloudData(data)) return;
+    applyCloudDataPreservingFlow(data);
     saveState();
     renderNotifications();
     maybeShowUnreadNotificationPopup();
