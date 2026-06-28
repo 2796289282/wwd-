@@ -23,7 +23,7 @@ const LETTER_HISTORY_LIMIT = 20;
 const NOTIFICATION_POLL_INTERVAL = 8000;
 const CUSTOM_DIARY_MOOD_VALUE = "__custom";
 const ANNOUNCEMENT_VERSION = "2026-06-27-plan-notice";
-const ANNOUNCEMENT_TITLE = "重要通知";
+const ANNOUNCEMENT_TITLE = "公告";
 const ANNOUNCEMENT_CONTENT =
   "这次更新把通知和凭证操作收得更像手机：通知可以滑动删除，挨揍凭证可以左滑操作，申请和回复也会更清楚地提醒。";
 const ANNOUNCEMENT_SEEN_PREFIX = "xw_announcement_seen";
@@ -1691,11 +1691,12 @@ async function refreshLatestCloudAnnouncement() {
     if (!response.ok) return;
     const payload = await response.json();
     const announcement = payload.data?.announcement;
-    if (
-      announcement &&
-      announcementUpdatedAtMs(announcement) >= announcementUpdatedAtMs(state.announcement)
-    ) {
-      state.announcement = normalizeAnnouncement(announcement);
+    if (!announcement) return;
+    const remoteAnnouncement = normalizeAnnouncement(announcement);
+    const remoteAt = announcementUpdatedAtMs(remoteAnnouncement);
+    const localAt = announcementUpdatedAtMs(state.announcement);
+    if (remoteAt >= localAt || JSON.stringify(remoteAnnouncement) !== JSON.stringify(normalizeAnnouncement(state.announcement))) {
+      state.announcement = remoteAnnouncement;
       saveState();
     }
   } catch {
@@ -1934,6 +1935,7 @@ function renderFromState() {
 function renderEntranceGate() {
   elements.entranceGate.hidden = siteUnlocked;
   elements.appContent.hidden = !siteUnlocked;
+  document.documentElement.classList.toggle("remembered-device", !siteUnlocked && Boolean(rememberedUser()));
   if (!siteUnlocked) {
     elements.entranceError.hidden = true;
   }
@@ -1971,7 +1973,7 @@ function notificationDisplayTitle(notice) {
   const group = notificationGroup(notice.type);
   if (notice.type === "plan-change-request") return "重要：婉婉申请取消或变更凭证";
   if (notice.type === "plan-change-response") return "李家鑫回复了你的凭证申请";
-  if (notice.type.startsWith("announcement")) return "李家鑫更新了小屋公告";
+  if (notice.type.startsWith("announcement")) return "李家鑫更新了公告";
   if (group === "letter") return `${source}给你留了小纸条`;
   if (notice.type.includes("comment") || notice.type.includes("reply")) return `${source}回应了你的日记`;
   if (group === "diary") return `${source}写了新的日记`;
@@ -2033,7 +2035,9 @@ function renderNotifications() {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "notification-item";
-      if (notice.type.includes("request")) button.classList.add("important");
+      if (notice.type.includes("request") || notice.type.startsWith("announcement")) {
+        button.classList.add("important");
+      }
       button.dataset.notificationId = notice.id;
 
       const icon = document.createElement("span");
@@ -2254,7 +2258,7 @@ function notifyWanwanAnnouncement() {
   });
   addNotification({
     type: "announcement-updated",
-    title: "李家鑫更新了小屋公告",
+    title: "李家鑫更新了公告",
     content: normalizeAnnouncement(state.announcement).content,
     relatedId: `announcement-${now}`,
   });

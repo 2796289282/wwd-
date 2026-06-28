@@ -37,6 +37,10 @@
   display: none !important;
 }
 
+html.remembered-device #entrance-gate {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }

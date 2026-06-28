@@ -8,6 +8,13 @@
       content="给小裴同学准备的真心话与大冒险随机抽取小游戏。"
     />
     <title>鑫婉小屋</title>
+    <script>
+      try {
+        if (localStorage.getItem("xw-remembered-user") || localStorage.getItem("wanwan-current-user")) {
+          document.documentElement.classList.add("remembered-device");
+        }
+      } catch {}
+    </script>
     <meta name="theme-color" content="#090912" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="鑫婉小屋" />
@@ -56,7 +63,7 @@
         <p class="eyebrow"><span></span> JUST FOR WANWAN</p>
         <h1 id="page-title">鑫婉小屋，<br /><em>专属游戏基地。</em></h1>
         <button id="announcement-button" class="intro-announcement-button" type="button">
-          重要通知
+          公告
         </button>
         <button id="notification-button" class="intro-notification-button" type="button">
           通知
@@ -862,17 +869,17 @@
         <div class="plan-info-head">
           <div>
             <p class="step-label">HOUSE NOTICE</p>
-            <h2 id="announcement-title">重要通知</h2>
+            <h2 id="announcement-title">公告</h2>
           </div>
           <button class="diary-icon-button" type="button" data-close-announcement aria-label="关闭">×</button>
         </div>
         <label class="plan-note-edit-field">
-          <span>通知标题</span>
-          <input id="announcement-title-input" maxlength="40" placeholder="重要通知" />
+          <span>公告标题</span>
+          <input id="announcement-title-input" maxlength="40" placeholder="公告" />
         </label>
         <label class="plan-note-edit-field">
-          <span>通知内容</span>
-          <textarea id="announcement-content-input" rows="6" maxlength="600" placeholder="写给婉婉看的重要通知"></textarea>
+          <span>公告内容</span>
+          <textarea id="announcement-content-input" rows="6" maxlength="600" placeholder="写给婉婉看的公告"></textarea>
         </label>
         <p id="announcement-readonly-content" class="diary-detail-body"></p>
         <div class="site-dialog-actions announcement-actions">
