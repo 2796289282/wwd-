@@ -6127,7 +6127,684 @@ select:focus {
   backdrop-filter: blur(18px) saturate(1.16);
 }
 
+@keyframes xw-page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.992);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes xw-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes xw-modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes xw-backdrop-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes xw-sheen {
+  from {
+    transform: translateX(-135%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(135%) skewX(-18deg);
+  }
+}
+
+@keyframes xw-badge-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 8px 18px rgba(255, 79, 121, 0.34);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 10px 28px rgba(255, 79, 121, 0.52);
+  }
+}
+
+@keyframes xw-soft-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+body[data-current-step="intro"] .intro:not([hidden]),
+#mode-step:not([hidden]),
+#special-step:not([hidden]),
+#play-step:not([hidden]),
+#letter-step:not([hidden]),
+#plan-step:not([hidden]),
+#diary-step:not([hidden]) {
+  animation: xw-page-rise 0.34s var(--ease-apple) both;
+}
+
+.landing-card,
+.special-entry-button,
+.mode-button,
+.recent-letter-card,
+.letter-history-card,
+.plan-document-entry-button,
+.plan-requests-entry-button,
+.diary-item,
+.plan-note-item,
+.notification-swipe-row {
+  animation: xw-card-rise 0.34s var(--ease-apple) both;
+}
+
+.special-entry-button:nth-child(2),
+.mode-button:nth-child(2),
+.diary-item:nth-child(2),
+.plan-note-item:nth-child(2),
+.notification-swipe-row:nth-child(2) {
+  animation-delay: 0.035s;
+}
+
+.special-entry-button:nth-child(3),
+.mode-button:nth-child(3),
+.diary-item:nth-child(3),
+.plan-note-item:nth-child(3),
+.notification-swipe-row:nth-child(3) {
+  animation-delay: 0.07s;
+}
+
+.special-entry-button:nth-child(4),
+.mode-button:nth-child(4),
+.diary-item:nth-child(4),
+.plan-note-item:nth-child(4),
+.notification-swipe-row:nth-child(4) {
+  animation-delay: 0.105s;
+}
+
+.notification-badge:not([hidden]) {
+  animation: xw-badge-breathe 1.8s var(--ease-apple) infinite;
+  transform-origin: center;
+}
+
+.brand-mark {
+  animation: xw-soft-float 4.8s var(--ease-apple) infinite;
+}
+
+.diary-modal-backdrop,
+.notification-modal-backdrop,
+.plan-info-backdrop,
+.plan-gate-modal,
+.site-dialog {
+  animation: xw-backdrop-fade 0.22s var(--ease-apple) both;
+}
+
+.diary-modal-card,
+.notification-card,
+.plan-info-card,
+.plan-gate-card,
+.site-dialog-card,
+.entrance-card {
+  animation: xw-modal-pop 0.28s var(--ease-apple) both;
+  transform-origin: center bottom;
+}
+
+.start-game-button,
+.special-password-button,
+.add-button,
+.pick-button,
+.notification-clear-button,
+.plan-document-save-button,
+.diary-write-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.start-game-button::after,
+.special-password-button::after,
+.add-button::after,
+.pick-button::after,
+.notification-clear-button::after,
+.plan-document-save-button::after,
+.diary-write-button::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -35% auto -35% 0;
+  width: 48%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.32), transparent);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.start-game-button:hover::after,
+.special-password-button:hover::after,
+.add-button:hover::after,
+.pick-button:hover::after,
+.notification-clear-button:hover::after,
+.plan-document-save-button:hover::after,
+.diary-write-button:hover::after {
+  opacity: 1;
+  animation: xw-sheen 0.72s var(--ease-apple);
+}
+
+.notification-item,
+.diary-card,
+.plan-note-item,
+.letter-history-list li,
+.history-list li,
+.option-list li {
+  transition:
+    transform 0.2s var(--ease-apple),
+    background 0.2s var(--ease-apple),
+    border-color 0.2s var(--ease-apple),
+    box-shadow 0.2s var(--ease-apple);
+}
+
+.notification-item:hover,
+.diary-card:hover,
+.plan-note-item:hover,
+.letter-history-list li:hover,
+.history-list li:hover,
+.option-list li:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.24);
+  box-shadow: var(--shadow-apple-md);
+}
+
+@media (max-width: 640px) {
+  body {
+    background-attachment: fixed;
+  }
+
+  .app-shell {
+    width: min(100% - 24px, 1120px);
+  }
+
+  .site-header {
+    width: min(100% - 24px, 1180px);
+    padding-top: calc(18px + env(safe-area-inset-top));
+  }
+
+  .diary-modal,
+  .notification-modal,
+  .plan-info-modal {
+    padding: 14px 12px calc(14px + env(safe-area-inset-bottom));
+  }
+
+  .diary-modal-card,
+  .notification-card,
+  .plan-info-card,
+  .plan-gate-card,
+  .site-dialog-card {
+    max-height: min(82vh, 720px);
+    border-radius: 24px;
+  }
+
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  .special-entry-button,
+  .mode-button,
+  .plan-document-entry-button,
+  .plan-requests-entry-button,
+  .recent-letter-card,
+  .diary-card {
+    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+  }
+}
+
+/* Apple glass v2: broader restyle based on the installed frontend design skill. */
+body {
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.12), transparent 30%),
+    linear-gradient(225deg, rgba(125, 211, 252, 0.11), transparent 34%),
+    linear-gradient(180deg, #070711 0%, #101020 48%, #080810 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 0 18%, rgba(255, 255, 255, 0.035) 18% 18.4%, transparent 18.4% 100%),
+    linear-gradient(245deg, transparent 0 28%, rgba(125, 211, 252, 0.045) 28% 28.35%, transparent 28.35% 100%);
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.86), rgba(0, 0, 0, 0.2));
+}
+
+.site-header {
+  position: sticky;
+  z-index: 30;
+  top: 0;
+  width: min(1180px, calc(100% - 32px));
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06)),
+    rgba(9, 9, 18, 0.68);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.26);
+  backdrop-filter: blur(20px) saturate(1.18);
+}
+
+.brand {
+  letter-spacing: 0;
+}
+
+.brand-mark {
+  background:
+    linear-gradient(145deg, rgba(255, 143, 199, 0.95), rgba(167, 139, 250, 0.86));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 10px 24px rgba(255, 143, 199, 0.24);
+}
+
+.header-note {
+  padding: 7px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(247, 241, 255, 0.72);
+}
+
+.app-shell {
+  width: min(1080px, calc(100% - 32px));
+  padding-top: 34px;
+}
+
+.intro {
+  min-height: min(720px, calc(100vh - 140px));
+  padding: clamp(32px, 6vw, 72px) 0 34px;
+}
+
+.intro::before {
+  content: "";
+  position: absolute;
+  inset: 12% -8% auto auto;
+  width: min(360px, 64vw);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.26), transparent);
+  transform: rotate(-12deg);
+}
+
+.eyebrow {
+  width: fit-content;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.intro h1 {
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.intro-copy,
+.setup-note,
+.zone-heading span,
+.mode-button small,
+.special-entry-copy small,
+.plan-document-entry-button small,
+.notification-copy span,
+.diary-card-summary {
+  color: rgba(247, 241, 255, 0.68);
+}
+
+.landing-card {
+  max-width: 560px;
+  padding: 22px;
+  border-radius: 28px;
+  transform-origin: center;
+}
+
+.landing-card .flow-preview,
+.landing-card span:not(.notification-badge) {
+  color: rgba(247, 241, 255, 0.7);
+}
+
+.home-dashboard,
+.mode-zones,
+.classic-zone,
+.special-zone,
+.flow-panel,
+.letter-step,
+.plan-step,
+.diary-step {
+  position: relative;
+}
+
+.flow-panel,
+.letter-step,
+.plan-step,
+.diary-step {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)),
+    rgba(9, 9, 18, 0.48);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(22px) saturate(1.14);
+}
+
+.panel-topline,
+.zone-heading,
+.setup-copy {
+  border-radius: 22px;
+}
+
+.mode-zone {
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.mode-buttons,
+.special-buttons,
+.classic-buttons {
+  gap: 12px;
+}
+
+.mode-button,
+.special-entry-button,
+.plan-document-entry-button,
+.plan-requests-entry-button,
+.recent-letter-card,
+.letter-history-item,
+.diary-card,
+.plan-note-surface,
+.notification-item {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.052)),
+    rgba(255, 255, 255, 0.055);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 14px 36px rgba(0, 0, 0, 0.22);
+}
+
+.mode-button:hover,
+.special-entry-button:hover,
+.plan-document-entry-button:hover,
+.plan-requests-entry-button:hover,
+.recent-letter-card:hover,
+.diary-card:hover,
+.plan-note-surface:hover,
+.notification-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.26);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.065)),
+    rgba(255, 255, 255, 0.07);
+}
+
+.mode-button.active,
+.player-switch button.active,
+.draw-switch button.active,
+.diary-filter button.active,
+.diary-choice-group button.active {
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.32), rgba(125, 211, 252, 0.18)),
+    rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 143, 199, 0.38);
+}
+
+.mode-button > span,
+.special-entry-mark,
+.button-icon,
+.notification-icon,
+.diary-comment-avatar {
+  background:
+    linear-gradient(145deg, rgba(255, 143, 199, 0.28), rgba(125, 211, 252, 0.16));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.start-game-button,
+.special-password-button,
+.add-button,
+.pick-button,
+.diary-write-button,
+.notification-clear-button,
+.plan-document-save-button {
+  background:
+    linear-gradient(135deg, rgba(255, 143, 199, 0.95), rgba(167, 139, 250, 0.92));
+  color: #fff;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.24);
+}
+
+.secondary-button,
+.ghost-back-button,
+.text-button,
+.notification-close-button,
+.diary-cancel-button {
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+input,
+textarea,
+select,
+.entrance-password,
+.plan-note-input,
+.plan-note-quantity-input,
+.plan-note-edit-field textarea,
+.plan-note-edit-field input {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.045)),
+    rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-main);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.notification-modal,
+.diary-modal,
+.plan-info-modal,
+.plan-gate-modal,
+.site-dialog {
+  background: rgba(5, 5, 11, 0.48);
+}
+
+.notification-card,
+.diary-modal-card,
+.plan-info-card,
+.plan-gate-card,
+.site-dialog-card {
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  background:
+    linear-gradient(180deg, rgba(31, 31, 46, 0.95), rgba(12, 12, 24, 0.92)),
+    rgba(12, 12, 24, 0.9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    0 30px 88px rgba(0, 0, 0, 0.56);
+}
+
+.notification-head,
+.diary-modal-head,
+.plan-info-head,
+.site-dialog-card h2 {
+  text-wrap: balance;
+}
+
+.notification-actions,
+.diary-dialog-actions,
+.site-dialog-actions,
+.announcement-actions {
+  gap: 10px;
+}
+
+.notification-list,
+.plan-info-card,
+.diary-modal-card {
+  overscroll-behavior: contain;
+}
+
+.toast {
+  border-radius: 18px;
+  transform-origin: center bottom;
+}
+
+footer {
+  background:
+    linear-gradient(180deg, rgba(14, 14, 24, 0.8), rgba(9, 9, 18, 0.94));
+  backdrop-filter: blur(20px) saturate(1.14);
+}
+
+@media (max-width: 760px) {
+  .site-header {
+    top: 8px;
+    width: min(100% - 20px, 1180px);
+    border-radius: 20px;
+  }
+
+  .brand {
+    font-size: 17px;
+  }
+
+  .header-note {
+    display: none;
+  }
+
+  .app-shell {
+    width: min(100% - 20px, 1080px);
+    padding-top: 24px;
+  }
+
+  .intro {
+    min-height: calc(100vh - 132px);
+    padding-top: 28px;
+  }
+
+  .intro h1 {
+    max-width: 9em;
+  }
+
+  .landing-card,
+  .flow-panel,
+  .letter-step,
+  .plan-step,
+  .diary-step,
+  .mode-zone {
+    border-radius: 24px;
+  }
+
+  .mode-button,
+  .special-entry-button,
+  .plan-document-entry-button,
+  .plan-requests-entry-button,
+  .recent-letter-card,
+  .diary-card,
+  .plan-note-surface,
+  .notification-item {
+    border-radius: 18px;
+  }
+
+  .notification-modal,
+  .diary-modal,
+  .plan-info-modal {
+    align-items: flex-end;
+  }
+
+  .notification-card,
+  .diary-modal-card,
+  .plan-info-card {
+    width: 100%;
+    max-height: min(84vh, 760px);
+    border-radius: 28px 28px 18px 18px;
+  }
+
+  .notification-card::before,
+  .diary-modal-card::before,
+  .plan-info-card::before {
+    content: "";
+    width: 42px;
+    height: 4px;
+    margin: 0 auto 8px;
+    display: block;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.26);
+  }
+
+  .notification-actions,
+  .diary-dialog-actions,
+  .site-dialog-actions,
+  .announcement-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 10px;
+    background: linear-gradient(180deg, transparent, rgba(12, 12, 24, 0.92) 28%);
+  }
+}
+
+@media (max-width: 430px) {
+  .intro-announcement-button,
+  .intro-notification-button {
+    min-height: 34px;
+    font-size: 12px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  }
+
+  .intro-announcement-button {
+    top: 0;
+  }
+
+  .intro-notification-button {
+    top: 42px;
+  }
+
+  body[data-current-step="intro"] .intro-letter-button {
+    top: clamp(150px, 41vw, 194px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+
   button,
   .start-game-button,
   .special-password-button,
