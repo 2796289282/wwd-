@@ -20,7 +20,7 @@ const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
 const LETTER_HISTORY_LIMIT = 20;
-const NOTIFICATION_POLL_INTERVAL = 8000;
+const CLOUD_SYNC_POLL_INTERVAL = 5000;
 const CUSTOM_DIARY_MOOD_VALUE = "__custom";
 const ANNOUNCEMENT_VERSION = "2026-06-27-plan-notice";
 const ANNOUNCEMENT_TITLE = "公告";
@@ -812,7 +812,8 @@ let activeDiaryId = null;
 let editingDiaryCommentId = null;
 let editingPlanNoteId = null;
 let activePlanNoteId = null;
-let notificationPollTimer = null;
+let cloudSyncTimer = null;
+let cloudSyncInFlight = false;
 let knownUnreadNotificationIds = new Set();
 let suppressNextModalPop = false;
 
@@ -1653,6 +1654,36 @@ function applyCloudDataPreservingFlow(data) {
   state = { ...state, ...volatileState };
 }
 
+function isUserEditingCloudState() {
+  if (
+    (elements.siteDialog && !elements.siteDialog.hidden) ||
+    (elements.diaryEditorModal && !elements.diaryEditorModal.hidden) ||
+    (elements.planNoteEditModal && !elements.planNoteEditModal.hidden) ||
+    (elements.announcementModal && !elements.announcementModal.hidden && currentUser === "jiaxin")
+  ) {
+    return true;
+  }
+  const active = document.activeElement;
+  if (!active || active === document.body) return false;
+  if (!active.matches?.("input, textarea, select")) return false;
+  return Boolean(elements.appContent?.contains(active));
+}
+
+function renderAfterCloudSync() {
+  if (!siteUnlocked) return;
+  renderHomeDashboard();
+  renderControls();
+  renderPlayer();
+  renderHistory();
+  renderFlow();
+  renderDeckPanel();
+  renderPlan();
+  renderDiary();
+  renderNotifications();
+  refreshActivePlanNoteDetail();
+  refreshActiveDiaryDetail();
+}
+
 function cloudUpdatedAtMs(data) {
   const time = typeof data?.updatedAt === "string" ? Date.parse(data.updatedAt) : 0;
   return Number.isFinite(time) ? time : 0;
@@ -2424,27 +2455,43 @@ function wireSwipeList(container, {
   container.addEventListener("pointercancel", finish);
 }
 
-async function pollNotifications() {
-  if (!siteUnlocked || !currentUser) return;
+async function syncCloudState({ force = false } = {}) {
+  if (!siteUnlocked || !currentUser || cloudSyncInFlight) return;
+  if (!force && document.hidden) return;
+  const onlyUpdateNotifications = isUserEditingCloudState();
+  cloudSyncInFlight = true;
   try {
     const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
     if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
     const payload = await response.json();
     const data = payload.data || {};
     if (shouldIgnoreStaleCloudData(data)) return;
+    const before = JSON.stringify(state);
     applyCloudDataPreservingFlow(data);
     saveState();
-    renderNotifications();
+    if (before !== JSON.stringify(state)) {
+      if (onlyUpdateNotifications) {
+        renderNotifications();
+      } else {
+        renderAfterCloudSync();
+      }
+    } else {
+      renderNotifications();
+    }
     maybeShowUnreadNotificationPopup();
   } catch (error) {
-    console.error("pollNotifications failed.", error);
+    console.error("syncCloudState failed.", error);
+  } finally {
+    cloudSyncInFlight = false;
   }
 }
 
-function startNotificationPolling() {
-  window.clearInterval(notificationPollTimer);
+function startCloudSyncPolling() {
+  window.clearInterval(cloudSyncTimer);
   if (!currentUser) return;
-  notificationPollTimer = window.setInterval(pollNotifications, NOTIFICATION_POLL_INTERVAL);
+  cloudSyncTimer = window.setInterval(() => {
+    void syncCloudState();
+  }, CLOUD_SYNC_POLL_INTERVAL);
 }
 
 function currentOptions() {
@@ -3224,6 +3271,30 @@ function openDiaryDetail(id) {
   pushModalHistory("diary-detail");
 }
 
+function refreshActiveDiaryDetail() {
+  if (!activeDiaryId || elements.diaryDetailModal.hidden) return;
+  const entry = state.diaryEntries.find((item) => item.id === activeDiaryId);
+  if (!entry) {
+    closeDiaryDetail();
+    return;
+  }
+  const dateInfo = formatDiaryDate(entry.createdAt);
+  elements.diaryDetailMeta.textContent = `${diaryAuthorLabel(entry.author)} 路 ${dateInfo.monthDay} ${dateInfo.time}`;
+  elements.diaryDetailTitle.textContent = entry.title || dateInfo.monthDay;
+  elements.diaryDetailBody.textContent = entry.body;
+  elements.diaryDetailTags.replaceChildren(
+    ...[entry.mood, entry.image ? "有图片备注" : "", entry.favorite ? "已收藏" : ""]
+      .filter(Boolean)
+      .map((text) => {
+        const tag = document.createElement("span");
+        tag.textContent = text;
+        return tag;
+      }),
+  );
+  renderDiaryComments(entry);
+  elements.diaryFavoriteButton.textContent = entry.favorite ? "鍙栨秷鏀惰棌" : "鏀惰棌";
+}
+
 function closeDiaryDetail({ fromHistory = false } = {}) {
   elements.diaryDetailModal.hidden = true;
   activeDiaryId = null;
@@ -3457,7 +3528,7 @@ function resetBrandLoginTaps() {
 
 function returnToEntranceGate() {
   resetBrandLoginTaps();
-  window.clearInterval(notificationPollTimer);
+  window.clearInterval(cloudSyncTimer);
   currentUser = "";
   forgetRememberedUser();
   siteUnlocked = false;
@@ -4181,7 +4252,7 @@ function unlockEntrance(user, { silent = false, deferPopups = false } = {}) {
       void showLoginPopups();
     }, 180);
   }
-  startNotificationPolling();
+  startCloudSyncPolling();
   if (!silent) showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -4686,6 +4757,16 @@ window.addEventListener("popstate", (event) => {
   planEditable = false;
   planDocumentOpen = false;
   openStep(step, { pushHistory: false });
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    void syncCloudState({ force: true });
+  }
+});
+
+window.addEventListener("online", () => {
+  void syncCloudState({ force: true });
 });
 
 async function initApp() {
