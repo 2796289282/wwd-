@@ -5,6 +5,7 @@ const DEFAULT_DATA = {
   letter: "",
   letterHistory: [],
   todayMoods: {},
+  announcement: {},
   planBook: "",
   planNotes: [],
   diaryFilter: "month",

@@ -580,6 +580,7 @@ const playerCopy = {
 };
 
 const elements = {
+  bootLoading: document.querySelector("#boot-loading"),
   appContent: document.querySelector("#app-content"),
   entranceGate: document.querySelector("#entrance-gate"),
   entranceForm: document.querySelector("#entrance-form"),
@@ -771,6 +772,12 @@ const elements = {
   drawButtons: [...document.querySelectorAll(".draw-switch button")],
   toast: document.querySelector("#toast"),
 };
+
+function setBootLoading(active) {
+  if (!elements.bootLoading) return;
+  elements.bootLoading.hidden = !active;
+  document.body.classList.toggle("boot-loading-active", active);
+}
 
 let state = loadState();
 let currentUser = rememberedUser();
@@ -4682,24 +4689,34 @@ window.addEventListener("popstate", (event) => {
 });
 
 async function initApp() {
-  cleanupLegacyPwa();
-  registerPwa();
-  const savedUser = rememberedUser();
-  if (savedUser) {
-    currentUser = savedUser;
-  }
-  const cloudData = await loadCloudState();
-  await migrateLocalStorageToCloud(cloudData);
-  resetVolatileFlow();
-  saveState();
-  currentUser = rememberedUser();
-  if (currentUser) {
-    unlockEntrance(currentUser, { silent: true });
-  } else {
+  setBootLoading(true);
+  try {
+    cleanupLegacyPwa();
+    registerPwa();
+    const savedUser = rememberedUser();
+    if (savedUser) {
+      currentUser = savedUser;
+    }
+    const cloudData = await loadCloudState();
+    await migrateLocalStorageToCloud(cloudData);
+    resetVolatileFlow();
+    saveState();
+    currentUser = rememberedUser();
+    if (currentUser) {
+      unlockEntrance(currentUser, { silent: true });
+    } else {
+      renderFromState();
+    }
+    browserHistoryReady = true;
+    syncBrowserHistory(state.currentStep, { replace: true });
+  } catch (error) {
+    console.error("initApp failed.", error);
     renderFromState();
+    browserHistoryReady = true;
+    syncBrowserHistory(state.currentStep, { replace: true });
+  } finally {
+    setBootLoading(false);
   }
-  browserHistoryReady = true;
-  syncBrowserHistory(state.currentStep, { replace: true });
 }
 
 void initApp();

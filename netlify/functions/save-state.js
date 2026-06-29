@@ -43,6 +43,7 @@ exports.handler = async (event) => {
       ? data.remainingCards
       : {},
     letter: typeof data.letter === "string" ? data.letter : "",
+    announcement: data.announcement && typeof data.announcement === "object" ? data.announcement : {},
     planBook: typeof data.planBook === "string" ? data.planBook : "",
     planNotes: Array.isArray(data.planNotes) ? data.planNotes : [],
     history: Array.isArray(data.history) ? data.history : [],

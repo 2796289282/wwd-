@@ -41,6 +41,69 @@ html.remembered-device #entrance-gate {
   display: none !important;
 }
 
+body.boot-loading-active {
+  overflow: hidden;
+}
+
+.boot-loading {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  color: var(--text-main);
+  background:
+    radial-gradient(circle at 50% 22%, rgba(255, 143, 199, 0.22), transparent 34%),
+    linear-gradient(145deg, rgba(9, 9, 18, 0.98), rgba(18, 18, 37, 0.98));
+  transition: opacity 0.24s ease, visibility 0.24s ease;
+}
+
+.boot-loading[hidden] {
+  display: none !important;
+}
+
+.boot-loading-card {
+  width: min(360px, 100%);
+  padding: 28px 24px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(22px);
+}
+
+.boot-loading-spinner {
+  width: 46px;
+  height: 46px;
+  display: inline-block;
+  margin-bottom: 16px;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: var(--accent-pink);
+  border-radius: 999px;
+  animation: bootSpin 0.9s linear infinite;
+}
+
+.boot-loading-card h1 {
+  margin: 8px 0 10px;
+  font-size: 24px;
+  line-height: 1.2;
+}
+
+.boot-loading-card p:last-child {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+@keyframes bootSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 html {
   scroll-behavior: smooth;
 }

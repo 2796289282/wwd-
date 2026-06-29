@@ -3,6 +3,7 @@ const DEFAULT_DATA = {
   drawnCards: [],
   remainingCards: {},
   letter: "",
+  announcement: {},
   history: [],
   updatedAt: "",
 };

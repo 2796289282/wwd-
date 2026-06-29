@@ -19,6 +19,7 @@ function normalizeData(data) {
     letter: typeof data.letter === "string" ? data.letter : "",
     letterHistory: Array.isArray(data.letterHistory) ? data.letterHistory : [],
     todayMoods: data.todayMoods && typeof data.todayMoods === "object" ? data.todayMoods : {},
+    announcement: data.announcement && typeof data.announcement === "object" ? data.announcement : {},
     planBook: typeof data.planBook === "string" ? data.planBook : "",
     planNotes: Array.isArray(data.planNotes) ? data.planNotes : [],
     diaryFilter: typeof data.diaryFilter === "string" ? data.diaryFilter : "month",
