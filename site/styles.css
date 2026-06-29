@@ -11,6 +11,13 @@
   --accent-purple: #a78bfa;
   --accent-blue: #7dd3fc;
   --border-soft: rgba(255, 255, 255, 0.16);
+  --border-glass: rgba(255, 255, 255, 0.2);
+  --surface-glass: rgba(255, 255, 255, 0.085);
+  --surface-glass-strong: rgba(255, 255, 255, 0.13);
+  --shadow-apple-sm: 0 8px 24px rgba(0, 0, 0, 0.18);
+  --shadow-apple-md: 0 18px 46px rgba(0, 0, 0, 0.26);
+  --shadow-apple-lg: 0 28px 84px rgba(0, 0, 0, 0.44);
+  --ease-apple: cubic-bezier(0.25, 0.1, 0.25, 1);
   --danger: #ff6b81;
   --paper: #090912;
   --paper-deep: #17172b;
@@ -116,7 +123,9 @@ body {
     radial-gradient(circle at top left, rgba(255, 143, 199, 0.22), transparent 32%),
     radial-gradient(circle at bottom right, rgba(125, 211, 252, 0.16), transparent 36%),
     linear-gradient(135deg, #090912 0%, #121225 48%, #090912 100%);
-  font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 body[data-theme="mixed"] {
@@ -5925,5 +5934,221 @@ body[data-current-step="intro"] .intro-letter-button {
     position: absolute;
     right: 0;
     top: clamp(158px, 43vw, 202px);
+  }
+}
+
+/* Design skill polish: keep the existing pages, tighten the Apple-like glass system. */
+::selection {
+  color: #fff;
+  background: rgba(255, 143, 199, 0.42);
+}
+
+html {
+  scrollbar-color: rgba(255, 255, 255, 0.26) rgba(255, 255, 255, 0.04);
+  scrollbar-width: thin;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 143, 199, 0.46), rgba(125, 211, 252, 0.34));
+  border-radius: 999px;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+.start-game-button,
+.special-password-button,
+.add-button,
+.pick-button,
+.secondary-button,
+.ghost-back-button,
+.text-button,
+.mode-button,
+.special-entry-button,
+.plan-document-entry-button,
+.plan-requests-entry-button,
+.plan-document-edit-button,
+.plan-document-save-button,
+.diary-write-button,
+.diary-icon-button,
+.notification-clear-button,
+.notification-close-button,
+.intro-notification-button,
+.intro-announcement-button,
+.intro-letter-button {
+  transition:
+    transform 0.18s var(--ease-apple),
+    box-shadow 0.2s var(--ease-apple),
+    border-color 0.2s var(--ease-apple),
+    background 0.2s var(--ease-apple),
+    opacity 0.2s var(--ease-apple);
+}
+
+button:active,
+.start-game-button:active,
+.special-password-button:active,
+.add-button:active,
+.secondary-button:active,
+.ghost-back-button:active,
+.text-button:active,
+.mode-button:active,
+.special-entry-button:active,
+.plan-document-entry-button:active,
+.plan-requests-entry-button:active,
+.plan-document-edit-button:active,
+.plan-document-save-button:active,
+.diary-icon-button:active,
+.notification-clear-button:active,
+.notification-close-button:active,
+.intro-notification-button:active,
+.intro-announcement-button:active,
+.intro-letter-button:active {
+  transform: translateY(1px) scale(0.985);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(255, 143, 199, 0.74);
+  outline-offset: 3px;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(255, 143, 199, 0.46) !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 143, 199, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.landing-card,
+.home-days-card,
+.mood-card,
+.daily-task-card,
+.recent-letter-card,
+.letter-history-card,
+.picker-card,
+.diary-card,
+.diary-modal-card,
+.notification-card,
+.plan-info-card,
+.plan-gate-card,
+.site-dialog-card,
+.entrance-card,
+.plan-document-entry-button,
+.plan-document-view,
+.plan-note-item,
+.diary-comment-item {
+  border-color: var(--border-glass);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.065)),
+    var(--surface-glass);
+  box-shadow: var(--shadow-apple-md);
+  backdrop-filter: blur(20px) saturate(1.18);
+}
+
+.diary-modal-card,
+.notification-card,
+.plan-info-card,
+.plan-gate-card,
+.site-dialog-card,
+.entrance-card {
+  box-shadow: var(--shadow-apple-lg);
+}
+
+.notification-item,
+.notification-swipe-row .notification-item,
+.plan-note-menu-button,
+.diary-comment-edit-button,
+.diary-choice-group button,
+.template-button,
+.mood-options button {
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+.notification-clear-button,
+.notification-close-button,
+.plan-document-edit-button,
+.plan-document-save-button,
+.special-password-button,
+.start-game-button,
+.pick-button,
+.add-button {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 14px 34px rgba(255, 143, 199, 0.18);
+}
+
+.notification-clear-button:hover,
+.notification-close-button:hover,
+.plan-document-edit-button:hover,
+.plan-document-save-button:hover,
+.special-password-button:hover,
+.start-game-button:hover,
+.pick-button:hover:not(:disabled),
+.add-button:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 18px 42px rgba(255, 143, 199, 0.24);
+}
+
+.notification-list,
+.diary-filter,
+.history-list,
+.option-list,
+.plan-info-card,
+.diary-modal-card {
+  scrollbar-color: rgba(255, 143, 199, 0.42) rgba(255, 255, 255, 0.06);
+}
+
+.toast {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08)),
+    rgba(12, 12, 24, 0.84);
+  box-shadow: var(--shadow-apple-sm);
+  backdrop-filter: blur(18px) saturate(1.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  .start-game-button,
+  .special-password-button,
+  .add-button,
+  .pick-button,
+  .secondary-button,
+  .ghost-back-button,
+  .text-button,
+  .mode-button,
+  .special-entry-button,
+  .plan-document-entry-button,
+  .plan-requests-entry-button,
+  .plan-document-edit-button,
+  .plan-document-save-button,
+  .diary-write-button,
+  .diary-icon-button,
+  .notification-clear-button,
+  .notification-close-button,
+  .intro-notification-button,
+  .intro-announcement-button,
+  .intro-letter-button {
+    transition: none;
   }
 }
