@@ -7202,9 +7202,9 @@ select {
 /* Mobile density pass for the voucher record list only. */
 @media (max-width: 760px) {
   .plan-notes-list {
-    width: 100%;
+    width: calc(100% + 8px);
     gap: 10px;
-    margin-inline: 0;
+    margin-inline: -4px;
     padding-inline: 0;
   }
 
