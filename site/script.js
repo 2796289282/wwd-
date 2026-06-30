@@ -641,6 +641,9 @@ const elements = {
   toggleLetterVisibilityButton: document.querySelector("#toggle-letter-visibility-button"),
   letterHistoryList: document.querySelector("#letter-history-list"),
   letterHistoryEmpty: document.querySelector("#letter-history-empty"),
+  letterDetailModal: document.querySelector("#letter-detail-modal"),
+  letterDetailMeta: document.querySelector("#letter-detail-meta"),
+  letterDetailBody: document.querySelector("#letter-detail-body"),
   planGateModal: document.querySelector("#plan-gate-modal"),
   closePlanGateButton: document.querySelector("#close-plan-gate-button"),
   planGateButtons: [...document.querySelectorAll("[data-plan-word]")],
@@ -2147,6 +2150,10 @@ function closeVisibleModalFromHistory() {
     closeAnnouncementModal({ fromHistory: true });
     return true;
   }
+  if (!elements.letterDetailModal.hidden) {
+    closeLetterHistoryDetail({ fromHistory: true });
+    return true;
+  }
   if (!elements.diaryEditorModal.hidden) {
     closeDiaryEditor({ fromHistory: true });
     return true;
@@ -2180,6 +2187,7 @@ function updateModalOpenState() {
       !elements.siteDialog.hidden ||
       !elements.notificationModal.hidden ||
       !elements.announcementModal.hidden ||
+      !elements.letterDetailModal.hidden ||
       !elements.diaryEditorModal.hidden ||
       !elements.diaryDetailModal.hidden ||
       !elements.planGateModal.hidden ||
@@ -2626,6 +2634,11 @@ function renderLetterHistory() {
       const item = document.createElement("li");
       item.className = "letter-history-item";
 
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "letter-history-button";
+      button.dataset.openLetterHistory = letter.id;
+
       const meta = document.createElement("span");
       meta.className = "letter-history-meta";
       meta.textContent = `小纸条 ${String(index + 1).padStart(2, "0")} · ${new Intl.DateTimeFormat("zh-CN", {
@@ -2638,12 +2651,41 @@ function renderLetterHistory() {
       const text = document.createElement("p");
       text.textContent = letterExcerpt(letter.text, 88);
 
-      item.append(meta, text);
+      const hint = document.createElement("span");
+      hint.className = "letter-history-open";
+      hint.textContent = "点开查看完整内容";
+
+      button.append(meta, text, hint);
+      item.append(button);
       return item;
     }),
   );
   elements.letterHistoryList.hidden = letters.length === 0;
   elements.letterHistoryEmpty.hidden = letters.length > 0;
+}
+
+function openLetterHistoryDetail(letterId, { fromHistory = false } = {}) {
+  const letters = normalizeLetterHistory(state.letterHistory);
+  const letter = letters.find((item) => item.id === letterId);
+  if (!letter) return;
+  elements.letterDetailMeta.textContent = new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(letter.time));
+  elements.letterDetailBody.textContent = letter.text;
+  elements.letterDetailModal.hidden = false;
+  updateModalOpenState();
+  if (!fromHistory) pushModalHistory("letter-detail");
+}
+
+function closeLetterHistoryDetail({ fromHistory = false } = {}) {
+  elements.letterDetailModal.hidden = true;
+  updateModalOpenState();
+  if (!fromHistory) removeModalHistory("letter-detail");
 }
 
 function renderPlan() {
@@ -2800,6 +2842,7 @@ function renderPlanNotes() {
       const item = document.createElement("li");
       item.className = "plan-note-item";
       item.classList.toggle("is-settled", Boolean(note.settled));
+      item.classList.toggle("is-display", !planEditable);
       item.dataset.noteId = note.id;
 
       const text = document.createElement(planEditable ? "input" : "span");
@@ -4433,6 +4476,10 @@ document.querySelectorAll("[data-close-plan-note-detail]").forEach((button) => {
   button.addEventListener("click", () => closePlanNoteDetail());
 });
 
+document.querySelectorAll("[data-close-letter-detail]").forEach((button) => {
+  button.addEventListener("click", () => closeLetterHistoryDetail());
+});
+
 elements.planNoteEditForm?.addEventListener("submit", savePlanNoteEdit);
 elements.planNoteMessageForm?.addEventListener("submit", savePlanNoteMessage);
 elements.planNoteDetailEditButton?.addEventListener("click", () => {
@@ -4489,6 +4536,12 @@ elements.backFromDiaryButton.addEventListener("click", () => {
 
 elements.letterInput.addEventListener("input", () => {
   elements.letterCount.textContent = `${elements.letterInput.value.length} / 1200`;
+});
+
+elements.letterHistoryList?.addEventListener("click", (event) => {
+  const openButton = event.target.closest("[data-open-letter-history]");
+  if (!openButton) return;
+  openLetterHistoryDetail(openButton.dataset.openLetterHistory);
 });
 
 elements.planInput.addEventListener("input", () => {

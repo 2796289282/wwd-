@@ -7299,3 +7299,146 @@ select {
     padding-inline: 9px;
   }
 }
+
+/* Restore the voucher list to the calmer glass-card rhythm from the reference. */
+.plan-notes-list {
+  gap: 12px;
+}
+
+.plan-note-item.is-display {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.plan-note-surface {
+  position: relative;
+  min-height: 0;
+  padding: 16px 18px;
+  padding-right: 92px;
+  border-radius: 20px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.055)),
+    rgba(255, 255, 255, 0.055);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 12px 28px rgba(0, 0, 0, 0.22);
+}
+
+.plan-note-text {
+  width: 100%;
+  max-width: none;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  font-size: 16px;
+  line-height: 1.46;
+}
+
+.plan-note-quantity {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  white-space: nowrap;
+  font-size: 13px;
+  line-height: 1;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.105);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.plan-note-time {
+  margin-top: 7px;
+  color: rgba(247, 241, 255, 0.66);
+  font-size: 12.5px;
+  line-height: 1.2;
+}
+
+.plan-note-message-count {
+  width: fit-content;
+  margin-top: 6px;
+  padding: 4px 9px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.plan-note-item.is-settled .plan-note-surface {
+  opacity: 0.52;
+}
+
+.letter-history-button {
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.letter-history-open {
+  display: inline-flex;
+  margin-top: 9px;
+  color: rgba(125, 211, 252, 0.82);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.letter-detail-card {
+  width: min(480px, calc(100vw - 36px));
+}
+
+.letter-detail-body {
+  margin: 0;
+  max-height: min(42dvh, 360px);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  color: rgba(255, 250, 253, 0.92);
+  font-size: 15px;
+  line-height: 1.72;
+}
+
+@media (max-width: 760px) {
+  .plan-notes-list {
+    width: 100%;
+    margin-inline: 0;
+    gap: 12px;
+  }
+
+  .plan-note-surface {
+    padding: 15px 16px;
+    padding-right: 82px;
+    border-radius: 19px;
+  }
+
+  .plan-note-text {
+    font-size: 15.5px;
+    line-height: 1.44;
+  }
+
+  .plan-note-quantity {
+    top: 15px;
+    right: 14px;
+    height: 28px;
+    padding-inline: 10px;
+    font-size: 12.5px;
+  }
+
+  .plan-note-time {
+    margin-top: 6px;
+    font-size: 12px;
+  }
+
+  .letter-detail-card {
+    width: min(100%, calc(100vw - 24px));
+  }
+}
