@@ -6976,3 +6976,181 @@ body[data-current-step="intro"] .intro-letter-button {
     transition: none;
   }
 }
+
+/* Plan voucher flattening + calmer motion pass. */
+:root {
+  --motion-fast: 0.16s;
+  --motion-normal: 0.24s;
+  --motion-slow: 0.32s;
+}
+
+@keyframes xw-page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: none;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: none;
+  }
+}
+
+@keyframes xw-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes xw-modal-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+    filter: none;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+
+body[data-current-step="intro"] .intro:not([hidden]),
+#mode-step:not([hidden]),
+#special-step:not([hidden]),
+#play-step:not([hidden]),
+#letter-step:not([hidden]),
+#plan-step:not([hidden]),
+#diary-step:not([hidden]) {
+  animation-duration: var(--motion-slow);
+}
+
+.landing-card,
+.special-entry-button,
+.mode-button,
+.recent-letter-card,
+.letter-history-card,
+.plan-document-entry-button,
+.plan-requests-entry-button,
+.diary-item,
+.plan-note-item,
+.notification-swipe-row {
+  animation-duration: var(--motion-normal);
+  animation-delay: 0s !important;
+}
+
+button,
+.mode-button,
+.special-entry-button,
+.plan-document-entry-button,
+.plan-requests-entry-button,
+.recent-letter-card,
+.diary-card,
+.plan-note-surface,
+.notification-item,
+input,
+textarea,
+select {
+  transition-duration: var(--motion-fast), var(--motion-fast), var(--motion-fast), var(--motion-fast), var(--motion-fast) !important;
+  transition-timing-function: var(--ease-apple) !important;
+}
+
+.plan-notes-block {
+  padding: 0;
+  gap: 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.plan-notes-head {
+  padding: 0 2px;
+}
+
+.plan-note-form,
+.plan-notes-total {
+  margin-inline: 0;
+}
+
+.plan-notes-list {
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.plan-note-item {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.plan-note-item.is-swipeable {
+  overflow: visible;
+  border-radius: 16px;
+}
+
+.plan-note-surface {
+  min-height: 64px;
+  padding: 14px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(12px) saturate(1.08);
+  will-change: transform;
+}
+
+.plan-note-surface:hover {
+  transform: translateY(-1px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0.045)),
+    rgba(255, 255, 255, 0.045);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+}
+
+.plan-note-text {
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.plan-note-quantity,
+.plan-note-message-count,
+.plan-note-time {
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.plan-note-menu {
+  top: 6px;
+  right: 6px;
+  bottom: 6px;
+  border-radius: 16px;
+}
+
+@media (max-width: 760px) {
+  .plan-notes-block {
+    padding: 0;
+  }
+
+  .plan-notes-list {
+    gap: 9px;
+  }
+
+  .plan-note-surface {
+    min-height: 72px;
+    padding: 14px;
+  }
+}
