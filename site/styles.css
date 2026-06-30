@@ -7154,3 +7154,47 @@ select {
     padding: 14px;
   }
 }
+
+/* Compact voucher alignment: match the input/total width and reduce list gaps. */
+.plan-notes-block {
+  gap: 10px;
+}
+
+.plan-notes-list {
+  gap: 6px;
+}
+
+.plan-note-item.is-swipeable {
+  border-radius: 14px;
+}
+
+.plan-note-surface {
+  min-height: 54px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+
+.plan-note-text {
+  line-height: 1.5;
+}
+
+.plan-note-quantity,
+.plan-note-message-count {
+  padding-block: 2px;
+}
+
+@media (max-width: 760px) {
+  .plan-notes-block {
+    width: 100%;
+    gap: 9px;
+  }
+
+  .plan-notes-list {
+    gap: 6px;
+  }
+
+  .plan-note-surface {
+    min-height: 60px;
+    padding: 11px 12px;
+  }
+}
