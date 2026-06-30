@@ -7198,3 +7198,104 @@ select {
     padding: 11px 12px;
   }
 }
+
+/* Mobile density pass for the voucher record list only. */
+@media (max-width: 760px) {
+  .plan-notes-list {
+    width: 100%;
+    gap: 10px;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+
+  .plan-note-item,
+  .plan-note-item.is-swipeable {
+    margin: 0;
+    border-radius: 18px;
+  }
+
+  .plan-note-surface {
+    position: relative;
+    min-height: 0;
+    padding: 14px 16px;
+    padding-right: 76px;
+    border-radius: 18px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .plan-note-item.is-settled .plan-note-surface {
+    padding: 12px 16px;
+    padding-right: 76px;
+    opacity: 0.5;
+  }
+
+  .plan-note-text {
+    width: 100%;
+    max-width: none;
+    color: rgba(255, 250, 253, 0.92);
+    font-size: 15.5px;
+    line-height: 1.45;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .plan-note-quantity {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    height: 27px;
+    display: inline-flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    border-radius: 999px;
+  }
+
+  .plan-note-time {
+    margin-top: 5px;
+    color: rgba(247, 241, 255, 0.64);
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .plan-note-message-count {
+    margin-top: 4px;
+    padding: 2px 7px;
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .plan-note-item.is-settled {
+    opacity: 1;
+  }
+
+  .plan-note-item.is-settled .plan-note-text {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+}
+
+@media (max-width: 390px) {
+  .plan-note-surface {
+    padding: 13px 14px;
+    padding-right: 72px;
+  }
+
+  .plan-note-item.is-settled .plan-note-surface {
+    padding: 11px 14px;
+    padding-right: 72px;
+  }
+
+  .plan-note-quantity {
+    top: 13px;
+    right: 12px;
+    height: 26px;
+    padding-inline: 9px;
+  }
+}
