@@ -6796,6 +6796,153 @@ footer {
   }
 }
 
+/* Interaction stability pass: homepage quick actions and secret-plan controls. */
+body[data-current-step="intro"] .intro {
+  padding-bottom: 44px;
+}
+
+body[data-current-step="intro"] .intro-letter-button {
+  z-index: 4;
+  min-width: 74px;
+  justify-content: center;
+}
+
+.plan-notes-block {
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035)),
+    rgba(255, 255, 255, 0.035);
+}
+
+.plan-note-form {
+  align-items: stretch;
+}
+
+.plan-note-form button {
+  min-width: 0;
+}
+
+.plan-note-input,
+.plan-note-quantity-input {
+  min-width: 0;
+}
+
+.plan-notes-total {
+  position: relative;
+  overflow: hidden;
+}
+
+.plan-notes-total::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(255, 143, 199, 0.13), transparent 55%);
+}
+
+.plan-notes-total span,
+.plan-notes-total strong {
+  position: relative;
+  z-index: 1;
+}
+
+.plan-note-item.is-swipeable {
+  border-radius: 18px;
+}
+
+.plan-note-surface {
+  min-height: 58px;
+  padding: 12px 14px;
+  border-radius: 18px;
+}
+
+.plan-note-text {
+  align-self: center;
+  line-height: 1.55;
+}
+
+.plan-note-quantity,
+.plan-note-message-count {
+  align-self: center;
+}
+
+.plan-note-menu {
+  width: min(154px, 42vw);
+}
+
+.plan-note-menu-pill {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  body[data-current-step="intro"] .intro {
+    min-height: calc(100vh - 96px);
+    padding-top: 30px;
+  }
+
+  body[data-current-step="intro"] .intro-copy {
+    max-width: min(270px, 70vw);
+  }
+
+  body[data-current-step="intro"] .intro-letter-button {
+    top: clamp(220px, 54vw, 250px);
+    right: 0;
+  }
+
+  .plan-note-form {
+    grid-template-columns: minmax(0, 1fr) 86px;
+  }
+
+  .plan-note-form button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .plan-notes-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .plan-notes-head small {
+    text-align: left;
+  }
+
+  .plan-note-surface {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding-right: 16px;
+  }
+
+  .plan-note-quantity,
+  .plan-note-time,
+  .plan-note-message-count {
+    width: fit-content;
+  }
+}
+
+@media (max-width: 430px) {
+  body[data-current-step="intro"] .intro-letter-button {
+    top: clamp(224px, 55vw, 252px);
+  }
+
+  .landing-card {
+    margin-top: 12px;
+  }
+
+  .plan-notes-block {
+    padding: 12px;
+    border-radius: 20px;
+  }
+
+  .plan-note-form {
+    grid-template-columns: minmax(0, 1fr) 78px;
+    gap: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
