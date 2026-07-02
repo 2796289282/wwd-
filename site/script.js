@@ -2317,7 +2317,7 @@ function notifyWanwanAnnouncement() {
 
 function navigateForNotification(notice) {
   const group = notificationGroup(notice.type);
-  closeNotificationModal();
+  closeNotificationModal({ fromHistory: true });
   dismissNotifications(currentUser, [notice.id]);
   if (group === "letter") {
     unlockLetterStep();
@@ -4807,6 +4807,9 @@ window.addEventListener("popstate", (event) => {
   if (closeVisibleModalFromHistory()) return;
   const step = event.state?.wanwanStep;
   if (!step || !stepTargets[step]) return;
+  if (event.state?.wanwanModal) {
+    window.history.replaceState({ wanwanStep: step }, document.title);
+  }
   planEditable = false;
   planDocumentOpen = false;
   openStep(step, { pushHistory: false });
