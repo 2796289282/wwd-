@@ -17,10 +17,15 @@ const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/api/load-state";
 const CLOUD_SAVE_ENDPOINT = "/api/save-state";
+const CLOUD_REMOTE_ORIGIN = "https://peiwanjie.pages.dev";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
 const LETTER_HISTORY_LIMIT = 20;
 const CLOUD_SYNC_POLL_INTERVAL = 5000;
+const CLOUD_LOAD_TIMEOUT_MS = 4500;
+const CLOUD_SAVE_TIMEOUT_MS = 6500;
+const SYNC_STATUS_SUCCESS_HIDE_MS = 850;
+const SYNC_STATUS_ERROR_HIDE_MS = 4200;
 const CUSTOM_DIARY_MOOD_VALUE = "__custom";
 const ANNOUNCEMENT_VERSION = "2026-06-27-plan-notice";
 const ANNOUNCEMENT_TITLE = "公告";
@@ -693,6 +698,10 @@ const elements = {
   siteDialogInput: document.querySelector("#site-dialog-input"),
   siteDialogCancel: document.querySelector("#site-dialog-cancel"),
   siteDialogConfirm: document.querySelector("#site-dialog-confirm"),
+  syncWaitModal: document.querySelector("#sync-wait-modal"),
+  syncWaitTitle: document.querySelector("#sync-wait-title"),
+  syncWaitMessage: document.querySelector("#sync-wait-message"),
+  syncWaitClose: document.querySelector("#sync-wait-close"),
   announcementModal: document.querySelector("#announcement-modal"),
   announcementForm: document.querySelector("#announcement-form"),
   announcementTitle: document.querySelector("#announcement-title"),
@@ -773,6 +782,8 @@ const elements = {
   modeButtons: [...document.querySelectorAll(".mode-button[data-mode]")],
   playerButtons: [...document.querySelectorAll(".player-switch button")],
   drawButtons: [...document.querySelectorAll(".draw-switch button")],
+  syncStatus: document.querySelector("#sync-status"),
+  syncStatusText: document.querySelector("#sync-status-text"),
   toast: document.querySelector("#toast"),
 };
 
@@ -782,10 +793,79 @@ function setBootLoading(active) {
   document.body.classList.toggle("boot-loading-active", active);
 }
 
+function cloudEndpoint(path) {
+  const isLocalPreview =
+    window.location.protocol === "file:" ||
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1";
+  return `${isLocalPreview ? CLOUD_REMOTE_ORIGIN : ""}${path}`;
+}
+
+function fetchWithTimeout(url, options = {}, timeoutMs = CLOUD_LOAD_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, {
+    ...options,
+    signal: controller.signal,
+  }).finally(() => window.clearTimeout(timeoutId));
+}
+
+function setSyncStatus(message, { error = false, autoHideMs = 0 } = {}) {
+  if (!elements.syncStatus || !elements.syncStatusText) return;
+  window.clearTimeout(syncStatusTimer);
+  elements.syncStatusText.textContent = message;
+  elements.syncStatus.classList.toggle("error", error);
+  elements.syncStatus.hidden = false;
+  if (autoHideMs > 0) {
+    syncStatusTimer = window.setTimeout(() => {
+      elements.syncStatus.hidden = true;
+      elements.syncStatus.classList.remove("error");
+    }, autoHideMs);
+  }
+}
+
+function hideSyncStatus() {
+  if (!elements.syncStatus) return;
+  window.clearTimeout(syncStatusTimer);
+  elements.syncStatus.hidden = true;
+  elements.syncStatus.classList.remove("error");
+}
+
+function setSyncWaitModal({
+  title = "正在同步",
+  message = "正在把内容保存到云端，请稍等。",
+  error = false,
+  closable = false,
+  autoHideMs = 0,
+} = {}) {
+  if (!elements.syncWaitModal) return;
+  window.clearTimeout(syncWaitTimer);
+  elements.syncWaitTitle.textContent = title;
+  elements.syncWaitMessage.textContent = message;
+  elements.syncWaitModal.classList.toggle("error", error);
+  elements.syncWaitClose.hidden = !closable;
+  elements.syncWaitModal.hidden = false;
+  document.body.classList.add("modal-open");
+  if (autoHideMs > 0) {
+    syncWaitTimer = window.setTimeout(hideSyncWaitModal, autoHideMs);
+  }
+}
+
+function hideSyncWaitModal() {
+  if (!elements.syncWaitModal) return;
+  window.clearTimeout(syncWaitTimer);
+  elements.syncWaitModal.hidden = true;
+  elements.syncWaitModal.classList.remove("error");
+  elements.syncWaitClose.hidden = true;
+  updateModalOpenState();
+}
+
 let state = loadState();
 let currentUser = rememberedUser();
 let isPicking = false;
 let toastTimer;
+let syncStatusTimer;
+let syncWaitTimer;
 let hiddenTapTimer;
 let hiddenTapSequence = [];
 let brandLoginTapTimer;
@@ -817,6 +897,7 @@ let editingPlanNoteId = null;
 let activePlanNoteId = null;
 let cloudSyncTimer = null;
 let cloudSyncInFlight = false;
+let lastCloudSyncErrorAt = 0;
 let knownUnreadNotificationIds = new Set();
 let suppressNextModalPop = false;
 
@@ -1702,7 +1783,7 @@ function shouldIgnoreStaleCloudData(data) {
 
 async function mergeLatestCloudPlanNotesBeforeSave() {
   try {
-    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
     if (!response.ok) return;
     const payload = await response.json();
     const data = payload.data || {};
@@ -1728,7 +1809,7 @@ async function mergeLatestCloudPlanNotesBeforeSave() {
 
 async function refreshLatestCloudAnnouncement() {
   try {
-    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
     if (!response.ok) return;
     const payload = await response.json();
     const announcement = payload.data?.announcement;
@@ -1820,16 +1901,21 @@ function mergeLocalStateIntoCloud(localState) {
   return before !== JSON.stringify(state);
 }
 
-async function loadCloudState() {
+async function loadCloudState({ preserveFlow = false } = {}) {
   try {
-    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
     if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
     const payload = await response.json();
     const data = payload.data || {};
     if (!isCloudStateEmpty(data)) {
-      applyCloudData(data);
+      if (preserveFlow) {
+        applyCloudDataPreservingFlow(data);
+      } else {
+        applyCloudData(data);
+      }
     }
     cloudReady = true;
+    lastCloudSyncErrorAt = 0;
     return data;
   } catch (error) {
     console.error("loadCloudState failed, using local cache.", error);
@@ -1847,21 +1933,56 @@ async function saveCloudState({ silent = false } = {}) {
   if (serialized === lastSavedCloudPayload && cloudReady) return;
 
   cloudSaveInFlightCount += 1;
-  try {
-    const response = await fetch(CLOUD_SAVE_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: serialized,
+  if (silent) {
+    setSyncStatus("正在同步");
+  } else {
+    setSyncWaitModal({
+      title: "正在同步",
+      message: "正在把内容保存到云端，请稍等。",
     });
+  }
+  try {
+    const response = await fetchWithTimeout(
+      cloudEndpoint(CLOUD_SAVE_ENDPOINT),
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: serialized,
+      },
+      CLOUD_SAVE_TIMEOUT_MS,
+    );
     if (!response.ok) throw new Error(`Cloud save failed: ${response.status}`);
     lastSavedCloudPayload = serialized;
     latestLocalCloudUpdatedAt = data.updatedAt;
     lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
     cloudReady = true;
+    lastCloudSyncErrorAt = 0;
+    if (silent) {
+      setSyncStatus("已同步", { autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS });
+    } else {
+      setSyncWaitModal({
+        title: "同步完成",
+        message: "内容已经保存到云端。",
+        autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS,
+      });
+    }
     if (!silent) showToast("已同步");
   } catch (error) {
     cloudReady = false;
     console.error("saveCloudState failed, state kept in localStorage.", error);
+    if (silent) {
+      setSyncStatus("已保存到本地，云同步失败", {
+        error: true,
+        autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
+      });
+    } else {
+      setSyncWaitModal({
+        title: "云同步失败",
+        message: "内容已经保存到本地。网络恢复后，再保存一次就会继续同步到云端。",
+        error: true,
+        closable: true,
+      });
+    }
     if (!silent) showToast("已保存到本地，云同步失败");
   } finally {
     cloudSaveInFlightCount = Math.max(0, cloudSaveInFlightCount - 1);
@@ -2469,7 +2590,7 @@ async function syncCloudState({ force = false } = {}) {
   const onlyUpdateNotifications = isUserEditingCloudState();
   cloudSyncInFlight = true;
   try {
-    const response = await fetch(CLOUD_LOAD_ENDPOINT, { cache: "no-store" });
+    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
     if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
     const payload = await response.json();
     const data = payload.data || {};
@@ -2487,8 +2608,19 @@ async function syncCloudState({ force = false } = {}) {
       renderNotifications();
     }
     maybeShowUnreadNotificationPopup();
+    cloudReady = true;
+    lastCloudSyncErrorAt = 0;
   } catch (error) {
+    cloudReady = false;
     console.error("syncCloudState failed.", error);
+    const now = Date.now();
+    if (force || now - lastCloudSyncErrorAt > 30000) {
+      lastCloudSyncErrorAt = now;
+      setSyncStatus("云同步暂时失败，已保留本地内容", {
+        error: true,
+        autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
+      });
+    }
   } finally {
     cloudSyncInFlight = false;
   }
@@ -4630,6 +4762,8 @@ elements.siteDialog.addEventListener("click", (event) => {
   }
 });
 
+elements.syncWaitClose.addEventListener("click", hideSyncWaitModal);
+
 elements.toggleLetterVisibilityButton.addEventListener("click", () => {
   letterHidden = !letterHidden;
   renderLetter();
@@ -4825,6 +4959,31 @@ window.addEventListener("online", () => {
   void syncCloudState({ force: true });
 });
 
+async function hydrateCloudStateAfterFirstRender() {
+  try {
+    const cloudData = await loadCloudState({ preserveFlow: true });
+    if (!cloudData) {
+      setSyncStatus("云同步暂时失败，已先显示本地内容", {
+        error: true,
+        autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
+      });
+      return;
+    }
+    await migrateLocalStorageToCloud(cloudData);
+    saveState();
+    if (siteUnlocked) {
+      renderAfterCloudSync();
+      maybeShowUnreadNotificationPopup();
+    }
+  } catch (error) {
+    console.error("background cloud hydrate failed.", error);
+    setSyncStatus("云同步暂时失败，已先显示本地内容", {
+      error: true,
+      autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
+    });
+  }
+}
+
 async function initApp() {
   setBootLoading(true);
   try {
@@ -4834,8 +4993,6 @@ async function initApp() {
     if (savedUser) {
       currentUser = savedUser;
     }
-    const cloudData = await loadCloudState();
-    await migrateLocalStorageToCloud(cloudData);
     resetVolatileFlow();
     saveState();
     currentUser = rememberedUser();
@@ -4846,6 +5003,7 @@ async function initApp() {
     }
     browserHistoryReady = true;
     syncBrowserHistory(state.currentStep, { replace: true });
+    void hydrateCloudStateAfterFirstRender();
   } catch (error) {
     console.error("initApp failed.", error);
     renderFromState();

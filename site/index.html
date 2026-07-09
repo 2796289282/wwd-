@@ -683,6 +683,18 @@
     </footer>
     </div>
 
+    <div id="sync-status" class="sync-status" role="status" aria-live="polite" hidden>
+      <span class="sync-status-spinner" aria-hidden="true"></span>
+      <span id="sync-status-text">正在同步</span>
+    </div>
+    <div id="sync-wait-modal" class="sync-wait-modal" role="status" aria-live="polite" hidden>
+      <section class="sync-wait-card" aria-labelledby="sync-wait-title">
+        <span id="sync-wait-spinner" class="sync-wait-spinner" aria-hidden="true"></span>
+        <h2 id="sync-wait-title">正在同步</h2>
+        <p id="sync-wait-message">正在把内容保存到云端，请稍等。</p>
+        <button id="sync-wait-close" class="secondary-button" type="button" hidden>知道了</button>
+      </section>
+    </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <div id="diary-editor-modal" class="diary-modal" hidden>
       <div class="diary-modal-backdrop" data-close-diary-editor></div>

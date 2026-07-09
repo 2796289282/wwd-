@@ -1,9 +1,26 @@
-function json(body, init = {}) {
+function corsHeaders(request) {
+  const origin = request?.headers?.get("Origin") || "";
+  const allowed =
+    origin === "null" ||
+    origin === "https://peiwanjie.pages.dev" ||
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:");
+
+  return {
+    ...(allowed ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    Vary: "Origin",
+  };
+}
+
+function json(body, init = {}, request) {
   return new Response(JSON.stringify(body), {
     ...init,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      ...corsHeaders(request),
       ...(init.headers || {}),
     },
   });
@@ -32,8 +49,8 @@ function normalizeData(data) {
   };
 }
 
-export async function onRequestOptions() {
-  return json({}, { status: 204 });
+export async function onRequestOptions({ request }) {
+  return json({}, { status: 204 }, request);
 }
 
 export async function onRequestPost({ request, env }) {
@@ -41,21 +58,21 @@ export async function onRequestPost({ request, env }) {
   try {
     data = await request.json();
   } catch {
-    return json({ error: "Invalid JSON body" }, { status: 400 });
+    return json({ error: "Invalid JSON body" }, { status: 400 }, request);
   }
 
   const nextData = normalizeData(data);
 
   if (env.APP_STATE) {
     await env.APP_STATE.put("main", JSON.stringify(nextData));
-    return json({ data: nextData, storage: "cloudflare-kv" });
+    return json({ data: nextData, storage: "cloudflare-kv" }, {}, request);
   }
 
   const supabaseUrl = env.SUPABASE_URL;
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    return json({ error: "Missing cloud storage binding" }, { status: 500 });
+    return json({ error: "Missing cloud storage binding" }, { status: 500 }, request);
   }
 
   try {
@@ -79,11 +96,11 @@ export async function onRequestPost({ request, env }) {
 
     if (!response.ok) {
       const detail = await response.text();
-      return json({ error: "Supabase save failed", detail }, { status: response.status });
+      return json({ error: "Supabase save failed", detail }, { status: response.status }, request);
     }
 
-    return json({ data: nextData, storage: "supabase" });
+    return json({ data: nextData, storage: "supabase" }, {}, request);
   } catch (error) {
-    return json({ error: "Cloud save failed", detail: error.message }, { status: 500 });
+    return json({ error: "Cloud save failed", detail: error.message }, { status: 500 }, request);
   }
 }

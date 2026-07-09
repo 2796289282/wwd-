@@ -16,29 +16,46 @@ const DEFAULT_DATA = {
   updatedAt: "",
 };
 
-function json(body, init = {}) {
+function corsHeaders(request) {
+  const origin = request?.headers?.get("Origin") || "";
+  const allowed =
+    origin === "null" ||
+    origin === "https://peiwanjie.pages.dev" ||
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("http://127.0.0.1:");
+
+  return {
+    ...(allowed ? { "Access-Control-Allow-Origin": origin } : {}),
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    Vary: "Origin",
+  };
+}
+
+function json(body, init = {}, request) {
   return new Response(JSON.stringify(body), {
     ...init,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
+      ...corsHeaders(request),
       ...(init.headers || {}),
     },
   });
 }
 
-export async function onRequestOptions() {
-  return json({}, { status: 204 });
+export async function onRequestOptions({ request }) {
+  return json({}, { status: 204 }, request);
 }
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ env, request }) {
   if (env.APP_STATE) {
     try {
       const stored = await env.APP_STATE.get("main");
       const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
-      return json({ data, storage: "cloudflare-kv" });
+      return json({ data, storage: "cloudflare-kv" }, {}, request);
     } catch (error) {
-      return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 });
+      return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 }, request);
     }
   }
 
@@ -46,7 +63,7 @@ export async function onRequestGet({ env }) {
   const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseKey) {
-    return json({ data: DEFAULT_DATA, storage: "none" }, { status: 200 });
+    return json({ data: DEFAULT_DATA, storage: "none" }, { status: 200 }, request);
   }
 
   try {
@@ -62,12 +79,12 @@ export async function onRequestGet({ env }) {
 
     if (!response.ok) {
       const detail = await response.text();
-      return json({ error: "Supabase load failed", detail }, { status: response.status });
+      return json({ error: "Supabase load failed", detail }, { status: response.status }, request);
     }
 
     const rows = await response.json();
-    return json({ data: rows[0]?.data || DEFAULT_DATA, storage: "supabase" });
+    return json({ data: rows[0]?.data || DEFAULT_DATA, storage: "supabase" }, {}, request);
   } catch (error) {
-    return json({ error: "Cloud load failed", detail: error.message }, { status: 500 });
+    return json({ error: "Cloud load failed", detail: error.message }, { status: 500 }, request);
   }
 }
