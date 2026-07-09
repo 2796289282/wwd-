@@ -20,7 +20,6 @@ const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const CLOUD_REMOTE_ORIGIN = "https://peiwanjie.pages.dev";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
-const LETTER_HISTORY_LIMIT = 20;
 const CLOUD_SYNC_POLL_INTERVAL = 5000;
 const CLOUD_LOAD_TIMEOUT_MS = 4500;
 const CLOUD_SAVE_TIMEOUT_MS = 6500;
@@ -875,6 +874,7 @@ let cloudReady = false;
 let lastSavedCloudPayload = "";
 let latestLocalCloudUpdatedAt = "";
 let cloudSaveInFlightCount = 0;
+let pendingCloudSave = null;
 let lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
 let siteUnlocked = false;
 let specialBoundaryConfirmed = false;
@@ -1104,8 +1104,7 @@ function normalizeLetterHistory(value) {
       seen.add(key);
       return true;
     })
-    .sort((a, b) => new Date(b.time) - new Date(a.time))
-    .slice(0, LETTER_HISTORY_LIMIT);
+    .sort((a, b) => new Date(b.time) - new Date(a.time));
 }
 
 function mergeLetterHistory(primary = [], secondary = []) {
@@ -1926,11 +1925,24 @@ async function loadCloudState({ preserveFlow = false } = {}) {
 
 async function saveCloudState({ silent = false } = {}) {
   saveState();
-  await mergeLatestCloudPlanNotesBeforeSave();
-  saveState();
-  const data = cloudDataFromState();
-  const serialized = JSON.stringify(data);
+  let data = cloudDataFromState();
+  let serialized = JSON.stringify(data);
   if (serialized === lastSavedCloudPayload && cloudReady) return;
+
+  if (cloudSaveInFlightCount > 0) {
+    pendingCloudSave = {
+      silent: pendingCloudSave ? pendingCloudSave.silent && silent : silent,
+    };
+    if (silent) {
+      setSyncStatus("正在同步");
+    } else {
+      setSyncWaitModal({
+        title: "正在同步",
+        message: "正在排队保存最新内容，请稍等。",
+      });
+    }
+    return;
+  }
 
   cloudSaveInFlightCount += 1;
   if (silent) {
@@ -1942,6 +1954,10 @@ async function saveCloudState({ silent = false } = {}) {
     });
   }
   try {
+    await mergeLatestCloudPlanNotesBeforeSave();
+    saveState();
+    data = cloudDataFromState();
+    serialized = JSON.stringify(data);
     const response = await fetchWithTimeout(
       cloudEndpoint(CLOUD_SAVE_ENDPOINT),
       {
@@ -1986,6 +2002,11 @@ async function saveCloudState({ silent = false } = {}) {
     if (!silent) showToast("已保存到本地，云同步失败");
   } finally {
     cloudSaveInFlightCount = Math.max(0, cloudSaveInFlightCount - 1);
+    if (cloudSaveInFlightCount === 0 && pendingCloudSave) {
+      const nextSave = pendingCloudSave;
+      pendingCloudSave = null;
+      await saveCloudState(nextSave);
+    }
   }
 }
 
