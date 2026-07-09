@@ -49,6 +49,64 @@ function normalizeData(data) {
   };
 }
 
+function normalizeLetterHistory(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set();
+  return value
+    .map((item) => {
+      if (typeof item === "string") {
+        const text = item.trim();
+        return text ? { id: "", text, time: new Date().toISOString() } : null;
+      }
+      if (!item || typeof item !== "object") return null;
+      const text = typeof item.text === "string" ? item.text.trim() : "";
+      if (!text) return null;
+      const time =
+        typeof item.time === "string" && !Number.isNaN(Date.parse(item.time))
+          ? item.time
+          : new Date().toISOString();
+      return {
+        id: typeof item.id === "string" ? item.id : "",
+        text,
+        time,
+      };
+    })
+    .filter(Boolean)
+    .filter((item) => {
+      const key = item.id || `${item.text}|${item.time}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(b.time) - new Date(a.time));
+}
+
+async function mergeExistingLetterHistory(env, nextData) {
+  if (!env.APP_STATE) return nextData;
+
+  try {
+    const stored = await env.APP_STATE.get("main");
+    if (!stored) return {
+      ...nextData,
+      letterHistory: normalizeLetterHistory(nextData.letterHistory),
+    };
+
+    const currentData = JSON.parse(stored.replace(/^\uFEFF/, ""));
+    return {
+      ...nextData,
+      letterHistory: normalizeLetterHistory([
+        ...nextData.letterHistory,
+        ...normalizeLetterHistory(currentData?.letterHistory),
+      ]),
+    };
+  } catch {
+    return {
+      ...nextData,
+      letterHistory: normalizeLetterHistory(nextData.letterHistory),
+    };
+  }
+}
+
 export async function onRequestOptions({ request }) {
   return json({}, { status: 204 }, request);
 }
@@ -61,9 +119,10 @@ export async function onRequestPost({ request, env }) {
     return json({ error: "Invalid JSON body" }, { status: 400 }, request);
   }
 
-  const nextData = normalizeData(data);
+  let nextData = normalizeData(data);
 
   if (env.APP_STATE) {
+    nextData = await mergeExistingLetterHistory(env, nextData);
     await env.APP_STATE.put("main", JSON.stringify(nextData));
     return json({ data: nextData, storage: "cloudflare-kv" }, {}, request);
   }
