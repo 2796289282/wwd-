@@ -1,19 +1,10 @@
-const CACHE_NAME = "xw-house-pwa-v4";
-const APP_SHELL = [
-  "/",
-  "/index.html",
-  "/styles.css",
-  "/script.js",
-  "/plan-document.js",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/manifest.webmanifest"
-];
+const CACHE_NAME = "xw-house-pwa-v5";
+const OFFLINE_PAGE = "/index.html";
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(APP_SHELL))
+      .then((cache) => cache.add(OFFLINE_PAGE))
       .then(() => self.skipWaiting())
   );
 });
@@ -36,13 +27,38 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(request.url);
   if (url.pathname.startsWith("/api/")) return;
 
+  if (request.mode === "navigate" || request.destination === "document") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(OFFLINE_PAGE, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(OFFLINE_PAGE))
+    );
+    return;
+  }
+
+  if (url.origin !== self.location.origin) return;
+
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
-        return response;
-      })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match("/index.html")))
+    caches.match(request).then((cached) => {
+      const network = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        });
+      if (cached) {
+        event.waitUntil(network.catch(() => undefined));
+        return cached;
+      }
+      return network;
+    })
   );
 });

@@ -22,7 +22,7 @@
     <link rel="icon" href="icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="icon-192.png" />
     <link rel="manifest" href="manifest.webmanifest" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=20260710-performance-sync" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -519,6 +519,9 @@
                 <small>每次保存都会留下一个版本</small>
               </div>
               <ol id="letter-history-list" class="letter-history-list"></ol>
+              <button id="letter-history-more" class="secondary-button history-more-button" type="button" hidden>
+                查看更多
+              </button>
               <p id="letter-history-empty" class="history-empty">
                 还没有历史小纸条，写下第一句就会出现在这里。
               </p>
@@ -667,6 +670,9 @@
             </form>
 
             <div id="diary-list" class="diary-list" aria-live="polite"></div>
+            <button id="diary-more" class="secondary-button history-more-button" type="button" hidden>
+              查看更多
+            </button>
             <div id="diary-empty" class="diary-empty" hidden>
               <span aria-hidden="true">♡</span>
               <p>这里还没有小秘密，写下第一篇吧</p>
@@ -686,13 +692,17 @@
     <div id="sync-status" class="sync-status" role="status" aria-live="polite" hidden>
       <span class="sync-status-spinner" aria-hidden="true"></span>
       <span id="sync-status-text">正在同步</span>
+      <button id="sync-status-retry" class="sync-status-retry" type="button" hidden>点击重试</button>
     </div>
     <div id="sync-wait-modal" class="sync-wait-modal" role="status" aria-live="polite" hidden>
       <section class="sync-wait-card" aria-labelledby="sync-wait-title">
         <span id="sync-wait-spinner" class="sync-wait-spinner" aria-hidden="true"></span>
         <h2 id="sync-wait-title">正在同步</h2>
         <p id="sync-wait-message">正在把内容保存到云端，请稍等。</p>
-        <button id="sync-wait-close" class="secondary-button" type="button" hidden>知道了</button>
+        <div class="sync-wait-actions">
+          <button id="sync-wait-retry" class="special-password-button" type="button" hidden>点击重试</button>
+          <button id="sync-wait-close" class="secondary-button" type="button" hidden>知道了</button>
+        </div>
       </section>
     </div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -960,7 +970,6 @@
         </div>
       </section>
     </div>
-    <script src="plan-document.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=20260710-performance-sync"></script>
   </body>
 </html>

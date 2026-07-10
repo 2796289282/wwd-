@@ -1868,7 +1868,21 @@ footer span {
   box-shadow: 0 10px 30px rgba(10, 28, 49, 0.18);
   font-size: 13px;
   font-weight: 800;
-  pointer-events: none;
+  pointer-events: auto;
+}
+
+.sync-status-retry {
+  padding: 2px 0;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.sync-status-retry[hidden] {
+  display: none;
 }
 
 .sync-status[hidden] {
@@ -6232,6 +6246,21 @@ select:focus {
   color: var(--text-sub);
   font-size: 13px;
   line-height: 1.65;
+}
+
+.sync-wait-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.history-more-button {
+  display: block;
+  margin: 14px auto 0;
+}
+
+.history-more-button[hidden] {
+  display: none;
 }
 
 .sync-wait-spinner {

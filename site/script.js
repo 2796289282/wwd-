@@ -18,11 +18,14 @@ const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/api/load-state";
 const CLOUD_SAVE_ENDPOINT = "/api/save-state";
 const CLOUD_REMOTE_ORIGIN = "https://peiwanjie.pages.dev";
+const PENDING_SYNC_KEY = "xw-pending-cloud-sync-v1";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
-const CLOUD_SYNC_POLL_INTERVAL = 5000;
+const CLOUD_SYNC_POLL_INTERVAL = 15000;
 const CLOUD_LOAD_TIMEOUT_MS = 4500;
 const CLOUD_SAVE_TIMEOUT_MS = 6500;
+const CLOUD_SAVE_RETRY_DELAYS = [1000, 2000, 4000];
+const HISTORY_PAGE_SIZE = 20;
 const SYNC_STATUS_SUCCESS_HIDE_MS = 850;
 const SYNC_STATUS_ERROR_HIDE_MS = 4200;
 const CUSTOM_DIARY_MOOD_VALUE = "__custom";
@@ -645,6 +648,7 @@ const elements = {
   toggleLetterVisibilityButton: document.querySelector("#toggle-letter-visibility-button"),
   letterHistoryList: document.querySelector("#letter-history-list"),
   letterHistoryEmpty: document.querySelector("#letter-history-empty"),
+  letterHistoryMore: document.querySelector("#letter-history-more"),
   letterDetailModal: document.querySelector("#letter-detail-modal"),
   letterDetailMeta: document.querySelector("#letter-detail-meta"),
   letterDetailBody: document.querySelector("#letter-detail-body"),
@@ -701,6 +705,7 @@ const elements = {
   syncWaitTitle: document.querySelector("#sync-wait-title"),
   syncWaitMessage: document.querySelector("#sync-wait-message"),
   syncWaitClose: document.querySelector("#sync-wait-close"),
+  syncWaitRetry: document.querySelector("#sync-wait-retry"),
   announcementModal: document.querySelector("#announcement-modal"),
   announcementForm: document.querySelector("#announcement-form"),
   announcementTitle: document.querySelector("#announcement-title"),
@@ -743,6 +748,7 @@ const elements = {
   newDiaryButton: document.querySelector("#new-diary-button"),
   diaryTitle: document.querySelector("#diary-title"),
   diaryList: document.querySelector("#diary-list"),
+  diaryMore: document.querySelector("#diary-more"),
   diaryEmpty: document.querySelector("#diary-empty"),
   diaryCount: document.querySelector("#diary-count"),
   diaryFilterButtons: [...document.querySelectorAll(".diary-filter button")],
@@ -783,6 +789,7 @@ const elements = {
   drawButtons: [...document.querySelectorAll(".draw-switch button")],
   syncStatus: document.querySelector("#sync-status"),
   syncStatusText: document.querySelector("#sync-status-text"),
+  syncStatusRetry: document.querySelector("#sync-status-retry"),
   toast: document.querySelector("#toast"),
 };
 
@@ -809,16 +816,59 @@ function fetchWithTimeout(url, options = {}, timeoutMs = CLOUD_LOAD_TIMEOUT_MS) 
   }).finally(() => window.clearTimeout(timeoutId));
 }
 
-function setSyncStatus(message, { error = false, autoHideMs = 0 } = {}) {
+function createRequestId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  return `sync-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function readPendingSyncRequest() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PENDING_SYNC_KEY) || "null");
+    return value && typeof value.requestId === "string" ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberPendingSyncRequest(requestId = createRequestId()) {
+  pendingSyncRequest = { requestId, queuedAt: new Date().toISOString() };
+  localStorage.setItem(PENDING_SYNC_KEY, JSON.stringify(pendingSyncRequest));
+  return pendingSyncRequest;
+}
+
+function clearPendingSyncRequest(requestId = "") {
+  if (requestId && pendingSyncRequest?.requestId !== requestId) return;
+  pendingSyncRequest = null;
+  localStorage.removeItem(PENDING_SYNC_KEY);
+}
+
+function requestCloudSnapshot() {
+  if (!navigator.onLine) return Promise.reject(new Error("Offline"));
+  if (cloudLoadPromise) return cloudLoadPromise;
+  cloudLoadPromise = fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" })
+    .then(async (response) => {
+      if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
+      const payload = await response.json();
+      return payload.data || {};
+    })
+    .finally(() => {
+      cloudLoadPromise = null;
+    });
+  return cloudLoadPromise;
+}
+
+function setSyncStatus(message, { error = false, retryable = false, autoHideMs = 0 } = {}) {
   if (!elements.syncStatus || !elements.syncStatusText) return;
   window.clearTimeout(syncStatusTimer);
   elements.syncStatusText.textContent = message;
   elements.syncStatus.classList.toggle("error", error);
+  if (elements.syncStatusRetry) elements.syncStatusRetry.hidden = !retryable;
   elements.syncStatus.hidden = false;
   if (autoHideMs > 0) {
     syncStatusTimer = window.setTimeout(() => {
       elements.syncStatus.hidden = true;
       elements.syncStatus.classList.remove("error");
+      if (elements.syncStatusRetry) elements.syncStatusRetry.hidden = true;
     }, autoHideMs);
   }
 }
@@ -828,6 +878,7 @@ function hideSyncStatus() {
   window.clearTimeout(syncStatusTimer);
   elements.syncStatus.hidden = true;
   elements.syncStatus.classList.remove("error");
+  if (elements.syncStatusRetry) elements.syncStatusRetry.hidden = true;
 }
 
 function setSyncWaitModal({
@@ -835,6 +886,7 @@ function setSyncWaitModal({
   message = "正在把内容保存到云端，请稍等。",
   error = false,
   closable = false,
+  retryable = false,
   autoHideMs = 0,
 } = {}) {
   if (!elements.syncWaitModal) return;
@@ -843,6 +895,7 @@ function setSyncWaitModal({
   elements.syncWaitMessage.textContent = message;
   elements.syncWaitModal.classList.toggle("error", error);
   elements.syncWaitClose.hidden = !closable;
+  if (elements.syncWaitRetry) elements.syncWaitRetry.hidden = !retryable;
   elements.syncWaitModal.hidden = false;
   document.body.classList.add("modal-open");
   if (autoHideMs > 0) {
@@ -856,6 +909,7 @@ function hideSyncWaitModal() {
   elements.syncWaitModal.hidden = true;
   elements.syncWaitModal.classList.remove("error");
   elements.syncWaitClose.hidden = true;
+  if (elements.syncWaitRetry) elements.syncWaitRetry.hidden = true;
   updateModalOpenState();
 }
 
@@ -897,9 +951,18 @@ let editingPlanNoteId = null;
 let activePlanNoteId = null;
 let cloudSyncTimer = null;
 let cloudSyncInFlight = false;
+let cloudLoadPromise = null;
 let lastCloudSyncErrorAt = 0;
+let cloudLoadFailureCount = 0;
+let pendingSyncRequest = null;
+let letterHistoryVisibleCount = HISTORY_PAGE_SIZE;
+let diaryVisibleCount = HISTORY_PAGE_SIZE;
+let notificationVisibleCount = HISTORY_PAGE_SIZE;
+let planDocumentLoadPromise = null;
 let knownUnreadNotificationIds = new Set();
 let suppressNextModalPop = false;
+
+pendingSyncRequest = readPendingSyncRequest();
 
 const stepTargets = {
   intro: () => elements.introSection,
@@ -911,20 +974,11 @@ const stepTargets = {
   diary: () => elements.diaryStep,
 };
 
-function cleanupLegacyPwa() {
-  if ("caches" in window) {
-    caches.keys()
-      .then((keys) => keys.filter((key) => key.startsWith("wanwan-picker-")))
-      .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
-      .catch(() => {});
-  }
-}
-
 function registerPwa() {
   if (!("serviceWorker" in navigator)) return;
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("./sw.js").catch((error) => {
-      console.error("service worker register failed.", error);
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).catch((error) => {
+      console.warn("service worker register failed.", error);
     });
   });
 }
@@ -950,6 +1004,7 @@ function createDefaultState() {
     diaryDate: "",
     diaryEntries: [],
     notifications: [],
+    tombstones: [],
     customDecks: {
       truth: [...decks.truth.options],
       dare: [...decks.dare.options],
@@ -987,6 +1042,7 @@ function loadState() {
       diaryDate: typeof stored.diaryDate === "string" ? stored.diaryDate : "",
       diaryEntries: normalizeDiaryEntries(stored.diaryEntries),
       notifications: normalizeNotifications(stored.notifications),
+      tombstones: normalizeTombstones(stored.tombstones || stored.app?.tombstones),
       currentCard: null,
     };
   } catch {
@@ -1009,10 +1065,48 @@ function saveState() {
     diaryDate: state.diaryDate,
     diaryEntries: state.diaryEntries,
     notifications: state.notifications,
+    tombstones: normalizeTombstones(state.tombstones),
     history: state.history,
     usedCardIds: state.usedCardIds,
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(persistentState));
+}
+
+function stableLegacyId(prefix, ...parts) {
+  const value = parts.map((part) => String(part || "")).join("|");
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `${prefix}-legacy-${(hash >>> 0).toString(36)}`;
+}
+
+function normalizeTombstones(value) {
+  if (!Array.isArray(value)) return [];
+  const latest = new Map();
+  value.forEach((item) => {
+    if (!item || typeof item !== "object") return;
+    const entity = typeof item.entity === "string" ? item.entity : "";
+    const id = typeof item.id === "string" ? item.id : "";
+    const deletedAt = typeof item.deletedAt === "string" && !Number.isNaN(Date.parse(item.deletedAt))
+      ? item.deletedAt
+      : "";
+    if (!entity || !id || !deletedAt) return;
+    const key = `${entity}:${id}`;
+    const previous = latest.get(key);
+    if (!previous || Date.parse(deletedAt) > Date.parse(previous.deletedAt)) {
+      latest.set(key, { entity, id, deletedAt });
+    }
+  });
+  return [...latest.values()];
+}
+
+function addTombstone(entity, id) {
+  state.tombstones = normalizeTombstones([
+    ...(state.tombstones || []),
+    { entity, id, deletedAt: new Date().toISOString() },
+  ]);
 }
 
 function resetVolatileFlow() {
@@ -1075,10 +1169,14 @@ function normalizeLetterHistory(value) {
   return value
     .map((item) => {
       if (typeof item === "string") {
+        const text = item.trim();
+        const time = "1970-01-01T00:00:00.000Z";
         return {
-          id: `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-          text: item.trim(),
-          time: new Date().toISOString(),
+          id: stableLegacyId("letter", text),
+          text,
+          time,
+          createdAt: time,
+          updatedAt: time,
         };
       }
       if (!item || typeof item !== "object") return null;
@@ -1092,9 +1190,17 @@ function normalizeLetterHistory(value) {
         id:
           typeof item.id === "string" && item.id
             ? item.id
-            : `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            : stableLegacyId("letter", text, time),
         text,
         time,
+        createdAt:
+          typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+            ? item.createdAt
+            : time,
+        updatedAt:
+          typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt))
+            ? item.updatedAt
+            : time,
       };
     })
     .filter(Boolean)
@@ -1108,7 +1214,14 @@ function normalizeLetterHistory(value) {
 }
 
 function mergeLetterHistory(primary = [], secondary = []) {
-  return normalizeLetterHistory([...normalizeLetterHistory(primary), ...normalizeLetterHistory(secondary)]);
+  const map = new Map();
+  [...normalizeLetterHistory(secondary), ...normalizeLetterHistory(primary)].forEach((letter) => {
+    const existing = map.get(letter.id);
+    if (!existing || Date.parse(letter.updatedAt) >= Date.parse(existing.updatedAt)) {
+      map.set(letter.id, letter);
+    }
+  });
+  return [...map.values()].sort((a, b) => new Date(b.time) - new Date(a.time));
 }
 
 function letterExcerpt(text, max = 46) {
@@ -1270,6 +1383,10 @@ function normalizeNotifications(value) {
         relatedId: typeof item.relatedId === "string" ? item.relatedId : "",
         isRead: Boolean(item.isRead),
         createdAt,
+        updatedAt:
+          typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt))
+            ? item.updatedAt
+            : createdAt,
       };
     })
     .filter(Boolean)
@@ -1285,7 +1402,10 @@ function normalizeNotifications(value) {
 function mergeNotifications(primary = [], secondary = []) {
   const map = new Map();
   [...normalizeNotifications(secondary), ...normalizeNotifications(primary)].forEach((notice) => {
-    map.set(notice.id, { ...(map.get(notice.id) || {}), ...notice });
+    const existing = map.get(notice.id);
+    if (!existing || Date.parse(notice.updatedAt) >= Date.parse(existing.updatedAt)) {
+      map.set(notice.id, { ...(existing || {}), ...notice });
+    }
   });
   return [...map.values()]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -1327,6 +1447,7 @@ function addNotification({ type, title, content, relatedId = "" }) {
     relatedId,
     isRead: false,
     createdAt,
+    updatedAt: createdAt,
   };
   notice.id = notificationStableId(notice);
   state.notifications = normalizeNotifications([notice, ...state.notifications]);
@@ -1338,7 +1459,7 @@ function markNotificationRead(id) {
   state.notifications = normalizeNotifications(state.notifications).map((notice) => {
     if (notice.id !== id || notice.isRead) return notice;
     changed = true;
-    return { ...notice, isRead: true };
+    return { ...notice, isRead: true, updatedAt: new Date().toISOString() };
   });
   if (changed) {
     saveState();
@@ -1375,11 +1496,14 @@ function normalizePlanNotes(value) {
     return value
       .map((item) => {
         if (typeof item === "string") {
+          const createdAt = "1970-01-01T00:00:00.000Z";
           return {
-            id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            id: stableLegacyId("note", item.trim()),
             text: item.trim(),
             quantity: 0,
-            time: new Date().toISOString(),
+            time: createdAt,
+            createdAt,
+            updatedAt: createdAt,
             settled: false,
             messages: [],
           };
@@ -1387,13 +1511,24 @@ function normalizePlanNotes(value) {
         if (!item || typeof item !== "object") return null;
         const text = typeof item.text === "string" ? item.text.trim() : "";
         if (!text) return null;
-        const id = typeof item.id === "string" && item.id ? item.id : `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        const time = typeof item.time === "string" && !Number.isNaN(Date.parse(item.time))
+          ? item.time
+          : new Date().toISOString();
+        const id = typeof item.id === "string" && item.id ? item.id : stableLegacyId("note", text, time);
         const messages = normalizePlanNoteMessages(item.messages || item.comments || item.replies, id);
         return {
           id,
           text,
           quantity: normalizePlanNoteQuantity(item.quantity),
-          time: typeof item.time === "string" ? item.time : new Date().toISOString(),
+          time,
+          createdAt:
+            typeof item.createdAt === "string" && !Number.isNaN(Date.parse(item.createdAt))
+              ? item.createdAt
+              : time,
+          updatedAt:
+            typeof item.updatedAt === "string" && !Number.isNaN(Date.parse(item.updatedAt))
+              ? item.updatedAt
+              : time,
           settled: Boolean(item.settled),
           ...(messages.length ? { messages } : {}),
         };
@@ -1401,12 +1536,15 @@ function normalizePlanNotes(value) {
       .filter(Boolean);
   }
   if (typeof value === "string" && value.trim()) {
+    const createdAt = "1970-01-01T00:00:00.000Z";
     return [
       {
-        id: `note-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id: stableLegacyId("note", value.trim()),
         text: value.trim(),
         quantity: 0,
-        time: new Date().toISOString(),
+        time: createdAt,
+        createdAt,
+        updatedAt: createdAt,
         settled: false,
         messages: [],
       },
@@ -1476,7 +1614,8 @@ function planNotesTotal(notes = state.planNotes) {
 }
 
 function planNoteTimeMs(note) {
-  const time = typeof note?.time === "string" ? Date.parse(note.time) : 0;
+  const source = typeof note?.updatedAt === "string" ? note.updatedAt : note?.time;
+  const time = typeof source === "string" ? Date.parse(source) : 0;
   return Number.isFinite(time) ? time : 0;
 }
 
@@ -1487,13 +1626,15 @@ function planNotesSignature(notes = []) {
       text: note.text,
       quantity: normalizePlanNoteQuantity(note.quantity),
       time: note.time,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
       settled: Boolean(note.settled),
       messages: normalizePlanNoteMessages(note.messages, note.id),
     })),
   );
 }
 
-function mergePlanNotesByLatest(localNotes = [], remoteNotes = []) {
+function mergePlanNotesByLatest(localNotes = [], remoteNotes = [], tombstonesValue = state?.tombstones) {
   const notesById = new Map();
   const order = [];
   [...normalizePlanNotes(localNotes), ...normalizePlanNotes(remoteNotes)].forEach((note) => {
@@ -1503,7 +1644,14 @@ function mergePlanNotesByLatest(localNotes = [], remoteNotes = []) {
       notesById.set(note.id, note);
     }
   });
-  return order.map((id) => notesById.get(id)).filter(Boolean);
+  const tombstones = new Map(normalizeTombstones(tombstonesValue).map((item) => [`${item.entity}:${item.id}`, item]));
+  return order
+    .map((id) => notesById.get(id))
+    .filter(Boolean)
+    .filter((note) => {
+      const deleted = tombstones.get(`planNotes:${note.id}`);
+      return !deleted || planNoteTimeMs(note) > Date.parse(deleted.deletedAt);
+    });
 }
 
 function diaryCommentAuthor(value) {
@@ -1598,7 +1746,7 @@ function normalizeDiaryEntries(value) {
     .filter(Boolean);
 }
 
-function mergeDiaryEntries(primary = [], secondary = []) {
+function mergeDiaryEntries(primary = [], secondary = [], tombstonesValue = state?.tombstones) {
   const merged = new Map();
   normalizeDiaryEntries(secondary).forEach((entry) => {
     merged.set(entry.id, entry);
@@ -1612,13 +1760,21 @@ function mergeDiaryEntries(primary = [], secondary = []) {
       ],
       entry.id,
     );
+    const latest = !existing || Date.parse(entry.updatedAt) >= Date.parse(existing.updatedAt)
+      ? entry
+      : existing;
     merged.set(entry.id, {
       ...(existing || {}),
-      ...entry,
+      ...latest,
       ...(comments.length ? { comments } : {}),
     });
   });
+  const tombstones = new Map(normalizeTombstones(tombstonesValue).map((item) => [`${item.entity}:${item.id}`, item]));
   return [...merged.values()]
+    .filter((entry) => {
+      const deleted = tombstones.get(`diaryEntries:${entry.id}`);
+      return !deleted || Date.parse(entry.updatedAt) > Date.parse(deleted.deletedAt);
+    })
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
@@ -1653,7 +1809,7 @@ function normalizeUsedCardIds(value = [], mode = "mixed") {
 
 // Cloud sync boundary: the UI still uses the existing state shape, and this
 // function converts it to the JSON document stored in Supabase app_state.data.
-function cloudDataFromState() {
+function cloudDataFromState({ requestId = "" } = {}) {
   const now = new Date().toISOString();
   return {
     customCards: [...state.customDecks.custom],
@@ -1671,6 +1827,11 @@ function cloudDataFromState() {
     notifications: normalizeNotifications(state.notifications),
     history: state.history,
     updatedAt: now,
+    app: {
+      schemaVersion: 2,
+      tombstones: normalizeTombstones(state.tombstones),
+      ...(requestId ? { requestId } : {}),
+    },
   };
 }
 
@@ -1679,6 +1840,10 @@ function cloudDataFromState() {
 function applyCloudData(data) {
   if (!data || typeof data !== "object") return;
   const fallback = createDefaultState();
+  const mergedTombstones = normalizeTombstones([
+    ...(state.tombstones || []),
+    ...(data.app?.tombstones || data.tombstones || []),
+  ]);
 
   state = {
     ...fallback,
@@ -1691,8 +1856,8 @@ function applyCloudData(data) {
     todayMoods: normalizeTodayMoods(data.todayMoods || state.todayMoods),
     announcement: normalizeAnnouncement(data.announcement || state.announcement),
     planBook: typeof data.planBook === "string" ? data.planBook : state.planBook || "",
-    planNotes: normalizePlanNotes(data.planNotes || state.planNotes),
-    diaryEntries: mergeDiaryEntries(data.diaryEntries, state.diaryEntries),
+    planNotes: mergePlanNotesByLatest(state.planNotes, data.planNotes, mergedTombstones),
+    diaryEntries: mergeDiaryEntries(data.diaryEntries, state.diaryEntries, mergedTombstones),
     diaryFilter:
       data.diaryFilter === "date"
         ? "date"
@@ -1701,6 +1866,7 @@ function applyCloudData(data) {
           : state.diaryFilter || "month",
     diaryDate: typeof data.diaryDate === "string" ? data.diaryDate : state.diaryDate || "",
     notifications: mergeNotifications(data.notifications, state.notifications),
+    tombstones: mergedTombstones,
     customDecks: normalizeDeckMap(data.remainingCards || data.customDecks),
     history: Array.isArray(data.history) ? data.history : state.history,
     usedCardIds: normalizeUsedCardIds(
@@ -1755,13 +1921,15 @@ function isUserEditingCloudState() {
 function renderAfterCloudSync() {
   if (!siteUnlocked) return;
   renderHomeDashboard();
-  renderControls();
-  renderPlayer();
-  renderHistory();
-  renderFlow();
-  renderDeckPanel();
-  renderPlan();
-  renderDiary();
+  if (state.currentStep === "play" || state.currentStep === "mode") {
+    renderControls();
+    renderPlayer();
+    renderHistory();
+    renderDeckPanel();
+  }
+  if (state.currentStep === "letter") renderLetter();
+  if (state.currentStep === "plan") renderPlan();
+  if (state.currentStep === "diary") renderDiary();
   renderNotifications();
   refreshActivePlanNoteDetail();
   refreshActiveDiaryDetail();
@@ -1773,45 +1941,17 @@ function cloudUpdatedAtMs(data) {
 }
 
 function shouldIgnoreStaleCloudData(data) {
-  if (cloudSaveInFlightCount > 0) return true;
+  if (cloudSaveInFlightCount > 0 || pendingSyncRequest) return true;
   const localSavedAt = latestLocalCloudUpdatedAt ? Date.parse(latestLocalCloudUpdatedAt) : 0;
   if (!Number.isFinite(localSavedAt) || localSavedAt <= 0) return false;
   const incomingAt = cloudUpdatedAtMs(data);
   return incomingAt <= 0 || incomingAt < localSavedAt;
 }
 
-async function mergeLatestCloudPlanNotesBeforeSave() {
-  try {
-    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
-    if (!response.ok) return;
-    const payload = await response.json();
-    const data = payload.data || {};
-    if (shouldIgnoreStaleCloudData(data)) return;
-    if (
-      data.announcement &&
-      announcementUpdatedAtMs(data.announcement) > announcementUpdatedAtMs(state.announcement)
-    ) {
-      state.announcement = normalizeAnnouncement(data.announcement);
-    }
-    if (!Array.isArray(data.planNotes)) return;
-    const remoteNotes = normalizePlanNotes(data.planNotes);
-    const localSignature = planNotesSignature(state.planNotes);
-    state.planNotes =
-      localSignature === lastAcceptedCloudPlanNotesSignature
-        ? remoteNotes
-        : mergePlanNotesByLatest(state.planNotes, remoteNotes);
-    lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
-  } catch {
-    // Saving should still continue if this pre-save merge cannot reach the cloud.
-  }
-}
-
 async function refreshLatestCloudAnnouncement() {
   try {
-    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
-    if (!response.ok) return;
-    const payload = await response.json();
-    const announcement = payload.data?.announcement;
+    const data = await requestCloudSnapshot();
+    const announcement = data?.announcement;
     if (!announcement) return;
     const remoteAnnouncement = normalizeAnnouncement(announcement);
     const remoteAt = announcementUpdatedAtMs(remoteAnnouncement);
@@ -1902,10 +2042,7 @@ function mergeLocalStateIntoCloud(localState) {
 
 async function loadCloudState({ preserveFlow = false } = {}) {
   try {
-    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
-    if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
-    const payload = await response.json();
-    const data = payload.data || {};
+    const data = await requestCloudSnapshot();
     if (!isCloudStateEmpty(data)) {
       if (preserveFlow) {
         applyCloudDataPreservingFlow(data);
@@ -1917,89 +2054,127 @@ async function loadCloudState({ preserveFlow = false } = {}) {
     lastCloudSyncErrorAt = 0;
     return data;
   } catch (error) {
-    console.error("loadCloudState failed, using local cache.", error);
+    console.warn("loadCloudState failed, using local cache.", error);
     cloudReady = false;
     return null;
   }
 }
 
-async function saveCloudState({ silent = false } = {}) {
+function cloudStateSignature(data) {
+  const app = { ...(data.app || {}) };
+  delete app.requestId;
+  return JSON.stringify({ ...data, updatedAt: "", app });
+}
+
+async function postCloudStateWithRetry(serialized) {
+  let lastError;
+  for (let attempt = 0; attempt <= CLOUD_SAVE_RETRY_DELAYS.length; attempt += 1) {
+    if (!navigator.onLine) throw new Error("Offline");
+    try {
+      const response = await fetchWithTimeout(
+        cloudEndpoint(CLOUD_SAVE_ENDPOINT),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: serialized,
+        },
+        CLOUD_SAVE_TIMEOUT_MS,
+      );
+      if (response.ok) return response.json();
+      const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+      if (!retryable) throw new Error(`Cloud save failed: ${response.status}`);
+      lastError = new Error(`Cloud save failed: ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (error?.message?.startsWith("Cloud save failed: 4")) throw error;
+    }
+    if (attempt < CLOUD_SAVE_RETRY_DELAYS.length) {
+      await delay(CLOUD_SAVE_RETRY_DELAYS[attempt]);
+    }
+  }
+  throw lastError || new Error("Cloud save failed");
+}
+
+async function saveCloudState({ silent = false, requestId = "" } = {}) {
   saveState();
-  let data = cloudDataFromState();
-  let serialized = JSON.stringify(data);
-  if (serialized === lastSavedCloudPayload && cloudReady) return;
+  const activeRequestId = requestId || createRequestId();
+  let data = cloudDataFromState({ requestId: activeRequestId });
+  const initialSignature = cloudStateSignature(data);
+  if (initialSignature === lastSavedCloudPayload && cloudReady && !pendingSyncRequest) return true;
+
+  if (!navigator.onLine) {
+    rememberPendingSyncRequest(activeRequestId);
+    if (silent) {
+      setSyncStatus("当前离线，内容待同步", { error: true });
+    } else {
+      setSyncWaitModal({
+        title: "当前离线",
+        message: "内容已保存在本地，网络恢复后会自动同步。",
+        error: true,
+        closable: true,
+      });
+    }
+    return false;
+  }
 
   if (cloudSaveInFlightCount > 0) {
+    const queuedRequestId = createRequestId();
     pendingCloudSave = {
       silent: pendingCloudSave ? pendingCloudSave.silent && silent : silent,
+      requestId: queuedRequestId,
     };
+    rememberPendingSyncRequest(queuedRequestId);
     if (silent) {
       setSyncStatus("正在同步");
     } else {
-      setSyncWaitModal({
-        title: "正在同步",
-        message: "正在排队保存最新内容，请稍等。",
-      });
+      setSyncWaitModal({ title: "正在同步", message: "正在排队保存最新内容，请稍等。" });
     }
-    return;
+    return true;
   }
 
   cloudSaveInFlightCount += 1;
+  rememberPendingSyncRequest(activeRequestId);
   if (silent) {
     setSyncStatus("正在同步");
   } else {
-    setSyncWaitModal({
-      title: "正在同步",
-      message: "正在把内容保存到云端，请稍等。",
-    });
+    setSyncWaitModal({ title: "正在同步", message: "正在把内容保存到云端，请稍等。" });
   }
   try {
-    await mergeLatestCloudPlanNotesBeforeSave();
+    data = cloudDataFromState({ requestId: activeRequestId });
+    const payload = await postCloudStateWithRetry(JSON.stringify(data));
+    const savedData = payload?.data || data;
+    latestLocalCloudUpdatedAt = savedData.updatedAt || data.updatedAt;
+    applyCloudDataPreservingFlow(savedData);
     saveState();
-    data = cloudDataFromState();
-    serialized = JSON.stringify(data);
-    const response = await fetchWithTimeout(
-      cloudEndpoint(CLOUD_SAVE_ENDPOINT),
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: serialized,
-      },
-      CLOUD_SAVE_TIMEOUT_MS,
-    );
-    if (!response.ok) throw new Error(`Cloud save failed: ${response.status}`);
-    lastSavedCloudPayload = serialized;
-    latestLocalCloudUpdatedAt = data.updatedAt;
+    lastSavedCloudPayload = cloudStateSignature(cloudDataFromState());
     lastAcceptedCloudPlanNotesSignature = planNotesSignature(state.planNotes);
+    clearPendingSyncRequest(activeRequestId);
     cloudReady = true;
     lastCloudSyncErrorAt = 0;
     if (silent) {
       setSyncStatus("已同步", { autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS });
     } else {
-      setSyncWaitModal({
-        title: "同步完成",
-        message: "内容已经保存到云端。",
-        autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS,
-      });
+      setSyncWaitModal({ title: "同步完成", message: "内容已经保存到云端。", autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS });
+      showToast("已同步");
     }
-    if (!silent) showToast("已同步");
+    return true;
   } catch (error) {
+    rememberPendingSyncRequest(activeRequestId);
     cloudReady = false;
-    console.error("saveCloudState failed, state kept in localStorage.", error);
+    console.warn("saveCloudState failed, state kept in localStorage.", error);
     if (silent) {
-      setSyncStatus("已保存到本地，云同步失败", {
-        error: true,
-        autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
-      });
+      setSyncStatus("同步失败", { error: true, retryable: true });
     } else {
       setSyncWaitModal({
         title: "云同步失败",
-        message: "内容已经保存到本地。网络恢复后，再保存一次就会继续同步到云端。",
+        message: "内容已保存在本地。可以点击重试，网络恢复后也会自动同步。",
         error: true,
         closable: true,
+        retryable: true,
       });
+      showToast("已保存到本地，云同步失败");
     }
-    if (!silent) showToast("已保存到本地，云同步失败");
+    return false;
   } finally {
     cloudSaveInFlightCount = Math.max(0, cloudSaveInFlightCount - 1);
     if (cloudSaveInFlightCount === 0 && pendingCloudSave) {
@@ -2008,6 +2183,12 @@ async function saveCloudState({ silent = false } = {}) {
       await saveCloudState(nextSave);
     }
   }
+}
+
+async function retryPendingSync({ silent = false } = {}) {
+  const pending = pendingSyncRequest || readPendingSyncRequest();
+  if (!pending) return syncCloudState({ force: true });
+  return saveCloudState({ silent, requestId: pending.requestId });
 }
 
 // First-run migration: if the browser already has old localStorage data, push
@@ -2105,13 +2286,13 @@ async function migrateLocalStorageToCloud(cloudData) {
 function renderFromState() {
   renderEntranceGate();
   renderHomeDashboard();
-  renderControls();
-  renderPlayer();
-  renderHistory();
+  if (state.currentStep === "play" || state.currentStep === "mode") {
+    renderControls();
+    renderPlayer();
+    renderHistory();
+    renderDeckPanel();
+  }
   renderFlow();
-  renderDeckPanel();
-  renderPlan();
-  renderDiary();
   renderNotifications();
 }
 
@@ -2209,8 +2390,8 @@ function renderNotifications() {
     return;
   }
 
-  elements.notificationList.replaceChildren(
-    ...unread.map((notice) => {
+  const visibleUnread = unread.slice(0, notificationVisibleCount);
+  const rows = visibleUnread.map((notice) => {
       const row = document.createElement("div");
       row.className = "notification-swipe-row";
       row.dataset.notificationSwipeId = notice.id;
@@ -2264,8 +2445,16 @@ function renderNotifications() {
 
       row.append(deleteButton, button);
       return row;
-    }),
-  );
+    });
+  if (visibleUnread.length < unread.length) {
+    const more = document.createElement("button");
+    more.type = "button";
+    more.className = "secondary-button history-more-button";
+    more.dataset.loadMoreNotifications = "true";
+    more.textContent = `查看更多（还有 ${unread.length - visibleUnread.length} 条）`;
+    rows.push(more);
+  }
+  elements.notificationList.replaceChildren(...rows);
 }
 
 function pushModalHistory(type) {
@@ -2608,13 +2797,22 @@ function wireSwipeList(container, {
 async function syncCloudState({ force = false } = {}) {
   if (!siteUnlocked || !currentUser || cloudSyncInFlight) return;
   if (!force && document.hidden) return;
+  if (!force && cloudLoadFailureCount > 0) {
+    const backoff = Math.min(120000, CLOUD_SYNC_POLL_INTERVAL * (2 ** cloudLoadFailureCount));
+    if (Date.now() - lastCloudSyncErrorAt < backoff) return;
+  }
+  if (!navigator.onLine) {
+    setSyncStatus("当前离线，内容待同步", { error: true });
+    return;
+  }
   const onlyUpdateNotifications = isUserEditingCloudState();
   cloudSyncInFlight = true;
   try {
-    const response = await fetchWithTimeout(cloudEndpoint(CLOUD_LOAD_ENDPOINT), { cache: "no-store" });
-    if (!response.ok) throw new Error(`Cloud load failed: ${response.status}`);
-    const payload = await response.json();
-    const data = payload.data || {};
+    if (pendingSyncRequest) {
+      const saved = await retryPendingSync({ silent: true });
+      if (!saved || pendingSyncRequest) return;
+    }
+    const data = await requestCloudSnapshot();
     if (shouldIgnoreStaleCloudData(data)) return;
     const before = JSON.stringify(state);
     applyCloudDataPreservingFlow(data);
@@ -2631,9 +2829,10 @@ async function syncCloudState({ force = false } = {}) {
     maybeShowUnreadNotificationPopup();
     cloudReady = true;
     lastCloudSyncErrorAt = 0;
+    cloudLoadFailureCount = 0;
   } catch (error) {
     cloudReady = false;
-    console.error("syncCloudState failed.", error);
+    console.warn("syncCloudState failed.", error);
     const now = Date.now();
     if (force || now - lastCloudSyncErrorAt > 30000) {
       lastCloudSyncErrorAt = now;
@@ -2642,17 +2841,23 @@ async function syncCloudState({ force = false } = {}) {
         autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
       });
     }
+    cloudLoadFailureCount = Math.min(cloudLoadFailureCount + 1, 3);
   } finally {
     cloudSyncInFlight = false;
   }
 }
 
 function startCloudSyncPolling() {
-  window.clearInterval(cloudSyncTimer);
-  if (!currentUser) return;
+  stopCloudSyncPolling();
+  if (!currentUser || document.hidden || !navigator.onLine) return;
   cloudSyncTimer = window.setInterval(() => {
     void syncCloudState();
   }, CLOUD_SYNC_POLL_INTERVAL);
+}
+
+function stopCloudSyncPolling() {
+  window.clearInterval(cloudSyncTimer);
+  cloudSyncTimer = null;
 }
 
 function currentOptions() {
@@ -2782,8 +2987,9 @@ function renderLetter() {
 function renderLetterHistory() {
   const letters = normalizeLetterHistory(state.letterHistory);
   state.letterHistory = letters;
+  const visibleLetters = letters.slice(0, letterHistoryVisibleCount);
   elements.letterHistoryList.replaceChildren(
-    ...letters.map((letter, index) => {
+    ...visibleLetters.map((letter, index) => {
       const item = document.createElement("li");
       item.className = "letter-history-item";
 
@@ -2815,6 +3021,10 @@ function renderLetterHistory() {
   );
   elements.letterHistoryList.hidden = letters.length === 0;
   elements.letterHistoryEmpty.hidden = letters.length > 0;
+  if (elements.letterHistoryMore) {
+    elements.letterHistoryMore.hidden = visibleLetters.length >= letters.length;
+    elements.letterHistoryMore.textContent = `查看更多（还有 ${letters.length - visibleLetters.length} 条）`;
+  }
 }
 
 function openLetterHistoryDetail(letterId, { fromHistory = false } = {}) {
@@ -2971,7 +3181,28 @@ function closePlanInfoModal({ fromHistory = false } = {}) {
   if (!fromHistory) removeModalHistory("plan-info");
 }
 
-function showPlanDocumentModal() {
+function loadPlanDocument() {
+  if (window.PLAN_DOCUMENT_HTML) return Promise.resolve();
+  if (planDocumentLoadPromise) return planDocumentLoadPromise;
+  planDocumentLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "plan-document.js?v=20260710-performance-sync";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("Plan document failed to load"));
+    document.head.append(script);
+  }).catch((error) => {
+    planDocumentLoadPromise = null;
+    throw error;
+  });
+  return planDocumentLoadPromise;
+}
+
+async function showPlanDocumentModal() {
+  try {
+    await loadPlanDocument();
+  } catch (error) {
+    console.warn("plan document load failed.", error);
+  }
   showPlanInfoModal("婉婉挨揍计划书", (container) => {
     const wrap = document.createElement("div");
     wrap.className = "plan-document-view in-modal";
@@ -3350,10 +3581,15 @@ function renderDiary() {
     button.classList.toggle("active", button.dataset.diaryFilter === (state.diaryFilter || "month"));
   });
   const entries = filteredDiaryEntries();
-  elements.diaryList.replaceChildren(...entries.map(createDiaryItem));
+  const visibleEntries = entries.slice(0, diaryVisibleCount);
+  elements.diaryList.replaceChildren(...visibleEntries.map(createDiaryItem));
   elements.diaryList.hidden = entries.length === 0;
   elements.diaryEmpty.hidden = entries.length > 0;
   elements.diaryCount.textContent = `${entries.length} 个记录`;
+  if (elements.diaryMore) {
+    elements.diaryMore.hidden = visibleEntries.length >= entries.length;
+    elements.diaryMore.textContent = `查看更多（还有 ${entries.length - visibleEntries.length} 篇）`;
+  }
 }
 
 function diaryMoodOptions() {
@@ -3632,6 +3868,7 @@ async function deleteActiveDiary() {
   const confirmed = await confirmInSiteDialog("确定要删除这篇日记吗？删除后不能恢复。", "删除日记");
   if (!confirmed) return;
   state.diaryEntries = state.diaryEntries.filter((item) => item.id !== activeDiaryId);
+  addTombstone("diaryEntries", activeDiaryId);
   saveState();
   renderDiary();
   closeDiaryDetail();
@@ -3658,10 +3895,10 @@ function renderFlow() {
   elements.planStep.hidden = !inPlan;
   elements.diaryStep.hidden = !inDiary;
   elements.footer.hidden = !inIntro;
-  renderSpecialAccess();
-  renderLetter();
-  renderPlan();
-  renderDiary();
+  if (inSpecial) renderSpecialAccess();
+  if (inLetter) renderLetter();
+  if (inPlan) renderPlan();
+  if (inDiary) renderDiary();
 }
 
 function renderDeckPanel() {
@@ -3724,7 +3961,7 @@ function resetBrandLoginTaps() {
 
 function returnToEntranceGate() {
   resetBrandLoginTaps();
-  window.clearInterval(cloudSyncTimer);
+  stopCloudSyncPolling();
   currentUser = "";
   forgetRememberedUser();
   siteUnlocked = false;
@@ -4059,6 +4296,8 @@ function saveLetter() {
         id: letterId,
         text: nextLetter,
         time: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       ...state.letterHistory,
     ]);
@@ -4238,6 +4477,10 @@ function savePlanNoteEdit(event) {
             nextText === item.text && nextQuantity === normalizePlanNoteQuantity(item.quantity)
               ? item.time
               : new Date().toISOString(),
+          updatedAt:
+            nextText === item.text && nextQuantity === normalizePlanNoteQuantity(item.quantity)
+              ? item.updatedAt
+              : new Date().toISOString(),
         }
       : item,
   );
@@ -4259,6 +4502,7 @@ function togglePlanNoteSettled(noteId) {
       ...note,
       settled: !note.settled,
       time: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
   });
   if (!changed) {
@@ -4297,6 +4541,7 @@ function savePlanNoteMessage(event) {
       ...note,
       messages: normalizePlanNoteMessages([...(note.messages || []), message], note.id),
       time: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
   });
   if (!changed) {
@@ -4359,11 +4604,14 @@ function addPlanNote(text, quantity = 1) {
   }
   const normalizedQuantity = normalizePlanNoteQuantity(quantity);
   const noteId = `note-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const now = new Date().toISOString();
   state.planNotes.unshift({
     id: noteId,
     text: value,
     quantity: normalizedQuantity,
-    time: new Date().toISOString(),
+    time: now,
+    createdAt: now,
+    updatedAt: now,
     settled: false,
     messages: [],
   });
@@ -4385,13 +4633,14 @@ function savePlan() {
   state.planBook = elements.planInput.value.trim();
   const wasEditing = planEditable;
   if (planEditable) {
+    const previousNotes = normalizePlanNotes(state.planNotes);
     const quantityInputs = new Map(
       [...elements.planNotesList.querySelectorAll("[data-note-quantity-input]")]
         .map((input) => [input.dataset.noteQuantityInput, input]),
     );
     state.planNotes = [...elements.planNotesList.querySelectorAll("[data-note-edit-input]")]
       .map((input) => {
-        const note = state.planNotes.find((item) => item.id === input.dataset.noteEditInput);
+        const note = previousNotes.find((item) => item.id === input.dataset.noteEditInput);
         const nextText = input.value.trim();
         if (!note || !nextText) return null;
         const quantityInput = quantityInputs.get(note.id);
@@ -4403,9 +4652,16 @@ function savePlan() {
           time: nextText === note.text && nextQuantity === normalizePlanNoteQuantity(note.quantity)
             ? note.time
             : new Date().toISOString(),
+          updatedAt: nextText === note.text && nextQuantity === normalizePlanNoteQuantity(note.quantity)
+            ? note.updatedAt
+            : new Date().toISOString(),
         };
       })
       .filter(Boolean);
+    const remainingIds = new Set(state.planNotes.map((note) => note.id));
+    previousNotes
+      .filter((note) => !remainingIds.has(note.id))
+      .forEach((note) => addTombstone("planNotes", note.id));
   }
   planEditable = false;
   planDocumentOpen = false;
@@ -4540,6 +4796,11 @@ elements.moodButtons.forEach((button) => {
 });
 
 elements.notificationList.addEventListener("click", (event) => {
+  if (event.target.closest("[data-load-more-notifications]")) {
+    notificationVisibleCount += HISTORY_PAGE_SIZE;
+    renderNotifications();
+    return;
+  }
   const deleteButton = event.target.closest("[data-delete-notification]");
   if (deleteButton) {
     dismissNotifications(currentUser, [deleteButton.dataset.deleteNotification]);
@@ -4697,12 +4958,22 @@ elements.letterHistoryList?.addEventListener("click", (event) => {
   openLetterHistoryDetail(openButton.dataset.openLetterHistory);
 });
 
+elements.letterHistoryMore?.addEventListener("click", () => {
+  letterHistoryVisibleCount += HISTORY_PAGE_SIZE;
+  renderLetterHistory();
+});
+
+elements.diaryMore?.addEventListener("click", () => {
+  diaryVisibleCount += HISTORY_PAGE_SIZE;
+  renderDiary();
+});
+
 elements.planInput.addEventListener("input", () => {
   elements.planCount.textContent = `${elements.planInput.value.length} / ${PLAN_BOOK_LIMIT}`;
 });
 
 elements.planDocumentEntryButton.addEventListener("click", () => {
-  showPlanDocumentModal();
+  void showPlanDocumentModal();
   planEditable = false;
   planRequestMode = false;
   renderPlan();
@@ -4784,6 +5055,12 @@ elements.siteDialog.addEventListener("click", (event) => {
 });
 
 elements.syncWaitClose.addEventListener("click", hideSyncWaitModal);
+elements.syncWaitRetry?.addEventListener("click", () => {
+  void retryPendingSync({ silent: false });
+});
+elements.syncStatusRetry?.addEventListener("click", () => {
+  void retryPendingSync({ silent: false });
+});
 
 elements.toggleLetterVisibilityButton.addEventListener("click", () => {
   letterHidden = !letterHidden;
@@ -4796,6 +5073,7 @@ elements.newDiaryButton.addEventListener("click", () => openDiaryEditor());
 
 elements.diaryFilterButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    diaryVisibleCount = HISTORY_PAGE_SIZE;
     if (button.dataset.diaryFilter === "date") {
       state.diaryFilter = "date";
       renderDiary();
@@ -4971,17 +5249,40 @@ window.addEventListener("popstate", (event) => {
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) {
-    void syncCloudState({ force: true });
+  if (document.hidden) {
+    stopCloudSyncPolling();
+    return;
   }
+  startCloudSyncPolling();
+  void syncCloudState({ force: true });
 });
 
 window.addEventListener("online", () => {
+  setSyncStatus("网络已恢复，正在同步");
+  startCloudSyncPolling();
+  void (pendingSyncRequest
+    ? retryPendingSync({ silent: true })
+    : syncCloudState({ force: true }));
+});
+
+window.addEventListener("offline", () => {
+  stopCloudSyncPolling();
+  setSyncStatus("当前离线，内容待同步", { error: true });
+});
+
+window.addEventListener("pagehide", stopCloudSyncPolling);
+window.addEventListener("pageshow", (event) => {
+  if (!event.persisted || !siteUnlocked) return;
+  startCloudSyncPolling();
   void syncCloudState({ force: true });
 });
 
 async function hydrateCloudStateAfterFirstRender() {
   try {
+    if (pendingSyncRequest && navigator.onLine) {
+      await retryPendingSync({ silent: true });
+      if (pendingSyncRequest) return;
+    }
     const cloudData = await loadCloudState({ preserveFlow: true });
     if (!cloudData) {
       setSyncStatus("云同步暂时失败，已先显示本地内容", {
@@ -4997,7 +5298,7 @@ async function hydrateCloudStateAfterFirstRender() {
       maybeShowUnreadNotificationPopup();
     }
   } catch (error) {
-    console.error("background cloud hydrate failed.", error);
+    console.warn("background cloud hydrate failed.", error);
     setSyncStatus("云同步暂时失败，已先显示本地内容", {
       error: true,
       autoHideMs: SYNC_STATUS_ERROR_HIDE_MS,
@@ -5008,7 +5309,6 @@ async function hydrateCloudStateAfterFirstRender() {
 async function initApp() {
   setBootLoading(true);
   try {
-    cleanupLegacyPwa();
     registerPwa();
     const savedUser = rememberedUser();
     if (savedUser) {
