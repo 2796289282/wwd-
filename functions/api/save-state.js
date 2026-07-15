@@ -1,4 +1,5 @@
 import {
+  letterHistoryFromNotifications,
   readLetterStore,
   sameLetterSet,
   writeLetterManifest,
@@ -238,10 +239,20 @@ async function mergeExistingCloudData(env, nextData) {
   try {
     const stored = await env.APP_STATE.get("main");
     currentData = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : {};
-    const store = await readLetterStore(env.APP_STATE, currentData.letterHistory);
-    currentData.letterHistory = mergeRecords(
+    const notificationLetters = letterHistoryFromNotifications(
+      currentData.notifications,
       currentData.letterHistory,
-      store.records,
+    );
+    const store = await readLetterStore(
+      env.APP_STATE,
+      notificationLetters,
+      currentData.letterHistory,
+    );
+    currentData.letterHistory = mergeRecords(
+      notificationLetters,
+      mergeRecords(currentData.letterHistory, store.records, {
+        entity: "letterHistory", prefix: "letter", newestFirst: true,
+      }),
       { entity: "letterHistory", prefix: "letter", newestFirst: true },
     );
     const merged = mergeCloudData(currentData || {}, nextData);

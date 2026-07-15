@@ -39,6 +39,23 @@ export function normalizeLetterHistory(...sources) {
   return [...records.values()].sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
 }
 
+export function letterHistoryFromNotifications(notifications, existingHistory = []) {
+  const existingIds = new Set(normalizeLetterHistory(existingHistory).map((record) => record.id));
+  const recovered = (Array.isArray(notifications) ? notifications : [])
+    .filter((notice) => notice && typeof notice === "object")
+    .filter((notice) => notice.type === "letter-saved")
+    .map((notice) => {
+      const id = typeof notice.relatedId === "string" ? notice.relatedId : "";
+      const text = typeof notice.content === "string" ? notice.content.trim() : "";
+      const time = validTime(notice.createdAt);
+      return id && text && !existingIds.has(id)
+        ? { id, text, time, createdAt: time, updatedAt: time }
+        : null;
+    })
+    .filter(Boolean);
+  return normalizeLetterHistory(recovered);
+}
+
 function parseManifest(raw) {
   try {
     const value = raw ? JSON.parse(raw.replace(/^\uFEFF/, "")) : {};

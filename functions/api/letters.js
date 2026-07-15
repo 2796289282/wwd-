@@ -1,4 +1,5 @@
 import {
+  letterHistoryFromNotifications,
   normalizeLetterHistory,
   readLetterStore,
   sameLetterSet,
@@ -44,8 +45,13 @@ function parseMain(raw) {
 
 async function readAllLetters(env) {
   const main = parseMain(await env.APP_STATE.get("main"));
-  const store = await readLetterStore(env.APP_STATE, main.letterHistory);
-  return { main, store, records: normalizeLetterHistory(main.letterHistory, store.records) };
+  const notificationLetters = letterHistoryFromNotifications(main.notifications, main.letterHistory);
+  const store = await readLetterStore(env.APP_STATE, notificationLetters, main.letterHistory);
+  return {
+    main,
+    store,
+    records: normalizeLetterHistory(notificationLetters, main.letterHistory, store.records),
+  };
 }
 
 async function repairLetterStore(env, store, records) {

@@ -1,4 +1,5 @@
 import {
+  letterHistoryFromNotifications,
   normalizeLetterHistory,
   readLetterStore,
   sameLetterSet,
@@ -61,8 +62,9 @@ export async function onRequestGet({ env, request }) {
     try {
       const stored = await env.APP_STATE.get("main");
       const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
-      const store = await readLetterStore(env.APP_STATE, data.letterHistory);
-      const letterHistory = normalizeLetterHistory(data.letterHistory, store.records);
+      const notificationLetters = letterHistoryFromNotifications(data.notifications, data.letterHistory);
+      const store = await readLetterStore(env.APP_STATE, notificationLetters, data.letterHistory);
+      const letterHistory = normalizeLetterHistory(notificationLetters, data.letterHistory, store.records);
       data.letterHistory = letterHistory;
       if (letterHistory[0]?.text) data.letter = letterHistory[0].text;
       const missingRecords = letterHistory.filter((record) => !store.recordIds.has(record.id));

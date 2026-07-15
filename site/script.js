@@ -4463,7 +4463,7 @@ function saveLetter() {
   renderLetter();
   renderHomeDashboard();
   showToast("已收好。下次打开还在这里。");
-  void (letterRecord ? syncPendingLetterRecords({ silent: false }) : saveCloudState());
+  void (letterRecord ? syncPendingLetterRecords({ silent: true }) : saveCloudState());
 }
 
 function openPlanGate({ fromHistory = false } = {}) {
