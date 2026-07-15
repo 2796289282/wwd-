@@ -1,4 +1,4 @@
-const CACHE_NAME = "xw-house-pwa-v6";
+const CACHE_NAME = "xw-house-pwa-v7";
 const OFFLINE_PAGE = "/index.html";
 
 self.addEventListener("install", (event) => {

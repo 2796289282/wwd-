@@ -1,3 +1,10 @@
+import {
+  readLetterStore,
+  sameLetterSet,
+  writeLetterManifest,
+  writeLetterRecords,
+} from "./_letter-store.js";
+
 function corsHeaders(request) {
   const origin = request?.headers?.get("Origin") || "";
   const allowed =
@@ -227,13 +234,25 @@ function mergeCloudData(currentData, nextData) {
 
 async function mergeExistingCloudData(env, nextData) {
   if (!env.APP_STATE) return nextData;
+  let currentData = {};
   try {
     const stored = await env.APP_STATE.get("main");
-    if (!stored) return mergeCloudData({}, nextData);
-    const currentData = JSON.parse(stored.replace(/^\uFEFF/, ""));
-    return mergeCloudData(currentData || {}, nextData);
+    currentData = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : {};
+    const store = await readLetterStore(env.APP_STATE, currentData.letterHistory);
+    currentData.letterHistory = mergeRecords(
+      currentData.letterHistory,
+      store.records,
+      { entity: "letterHistory", prefix: "letter", newestFirst: true },
+    );
+    const merged = mergeCloudData(currentData || {}, nextData);
+    const missingRecords = merged.letterHistory.filter((record) => !store.recordIds.has(record.id));
+    if (missingRecords.length) await writeLetterRecords(env.APP_STATE, missingRecords);
+    if (missingRecords.length || store.recoveredCount || !sameLetterSet(store.manifestRecords, merged.letterHistory)) {
+      await writeLetterManifest(env.APP_STATE, merged.letterHistory);
+    }
+    return merged;
   } catch {
-    return mergeCloudData({}, nextData);
+    return mergeCloudData(currentData, nextData);
   }
 }
 

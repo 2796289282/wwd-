@@ -1,3 +1,11 @@
+import {
+  normalizeLetterHistory,
+  readLetterStore,
+  sameLetterSet,
+  writeLetterManifest,
+  writeLetterRecords,
+} from "./_letter-store.js";
+
 const DEFAULT_DATA = {
   customCards: [],
   drawnCards: [],
@@ -53,6 +61,15 @@ export async function onRequestGet({ env, request }) {
     try {
       const stored = await env.APP_STATE.get("main");
       const data = stored ? JSON.parse(stored.replace(/^\uFEFF/, "")) : DEFAULT_DATA;
+      const store = await readLetterStore(env.APP_STATE, data.letterHistory);
+      const letterHistory = normalizeLetterHistory(data.letterHistory, store.records);
+      data.letterHistory = letterHistory;
+      if (letterHistory[0]?.text) data.letter = letterHistory[0].text;
+      const missingRecords = letterHistory.filter((record) => !store.recordIds.has(record.id));
+      if (missingRecords.length) await writeLetterRecords(env.APP_STATE, missingRecords);
+      if (missingRecords.length || store.recoveredCount || !sameLetterSet(store.manifestRecords, letterHistory)) {
+        await writeLetterManifest(env.APP_STATE, letterHistory);
+      }
       return json({ data, storage: "cloudflare-kv" }, {}, request);
     } catch (error) {
       return json({ error: "Cloudflare KV load failed", detail: error.message }, { status: 500 }, request);

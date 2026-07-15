@@ -17,8 +17,10 @@ const HIDDEN_ENTRY_TIMEOUT = 1800;
 const HIDDEN_ENTRY_PATTERN = ["mark", "mark", "mark", "text"];
 const CLOUD_LOAD_ENDPOINT = "/api/load-state";
 const CLOUD_SAVE_ENDPOINT = "/api/save-state";
+const CLOUD_LETTERS_ENDPOINT = "/api/letters";
 const CLOUD_REMOTE_ORIGIN = "https://peiwanjie.pages.dev";
 const PENDING_SYNC_KEY = "xw-pending-cloud-sync-v1";
+const PENDING_LETTERS_KEY = "xw-pending-letters-v2";
 const FLIGHT_REDIRECT_URL = "https://flying-chess.orange-trees.com/";
 const RELATIONSHIP_START_DATE = "2025-08-31";
 const CLOUD_SYNC_POLL_INTERVAL = 15000;
@@ -841,6 +843,28 @@ function clearPendingSyncRequest(requestId = "") {
   localStorage.removeItem(PENDING_SYNC_KEY);
 }
 
+function readPendingLetterRecords() {
+  try {
+    return normalizeLetterHistory(JSON.parse(localStorage.getItem(PENDING_LETTERS_KEY) || "[]"));
+  } catch {
+    return [];
+  }
+}
+
+function writePendingLetterRecords(records) {
+  const normalized = normalizeLetterHistory(records);
+  if (normalized.length) {
+    localStorage.setItem(PENDING_LETTERS_KEY, JSON.stringify(normalized));
+  } else {
+    localStorage.removeItem(PENDING_LETTERS_KEY);
+  }
+  return normalized;
+}
+
+function queuePendingLetterRecord(record) {
+  return writePendingLetterRecords([record, ...readPendingLetterRecords()]);
+}
+
 function requestCloudSnapshot() {
   if (!navigator.onLine) return Promise.reject(new Error("Offline"));
   if (cloudLoadPromise) return cloudLoadPromise;
@@ -951,6 +975,7 @@ let activePlanNoteId = null;
 let cloudSyncTimer = null;
 let cloudSyncInFlight = false;
 let cloudLoadPromise = null;
+let letterSyncPromise = null;
 let lastCloudSyncErrorAt = 0;
 let cloudLoadFailureCount = 0;
 let pendingSyncRequest = null;
@@ -2093,6 +2118,109 @@ async function postCloudStateWithRetry(serialized) {
   throw lastError || new Error("Cloud save failed");
 }
 
+async function postLetterRecordsWithRetry(records, requestId) {
+  let lastError;
+  const serialized = JSON.stringify({ records, requestId });
+  for (let attempt = 0; attempt <= CLOUD_SAVE_RETRY_DELAYS.length; attempt += 1) {
+    if (!navigator.onLine) throw new Error("Offline");
+    try {
+      const response = await fetchWithTimeout(
+        cloudEndpoint(CLOUD_LETTERS_ENDPOINT),
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: serialized,
+        },
+        CLOUD_SAVE_TIMEOUT_MS,
+      );
+      if (response.ok) return response.json();
+      const retryable = response.status === 408 || response.status === 429 || response.status >= 500;
+      if (!retryable) throw new Error(`Letter sync failed: ${response.status}`);
+      lastError = new Error(`Letter sync failed: ${response.status}`);
+    } catch (error) {
+      lastError = error;
+      if (error?.message?.startsWith("Letter sync failed: 4")) throw error;
+    }
+    if (attempt < CLOUD_SAVE_RETRY_DELAYS.length) {
+      await delay(CLOUD_SAVE_RETRY_DELAYS[attempt]);
+    }
+  }
+  throw lastError || new Error("Letter sync failed");
+}
+
+function syncPendingLetterRecords({ silent = false } = {}) {
+  if (letterSyncPromise) return letterSyncPromise;
+  const records = readPendingLetterRecords();
+  if (!records.length) return Promise.resolve(true);
+  if (!navigator.onLine) {
+    if (silent) {
+      setSyncStatus("当前离线，小纸条待同步", { error: true });
+    } else {
+      setSyncWaitModal({
+        title: "当前离线",
+        message: "小纸条已保存在本地，网络恢复后会自动同步。",
+        error: true,
+        closable: true,
+      });
+    }
+    return Promise.resolve(false);
+  }
+
+  if (silent) {
+    setSyncStatus("正在同步小纸条");
+  } else {
+    setSyncWaitModal({ title: "正在同步", message: "正在把小纸条安全保存到云端，请稍等。" });
+  }
+
+  const requestId = createRequestId();
+  const sentVersions = new Map(records.map((record) => [record.id, record.updatedAt]));
+  let completed = false;
+  letterSyncPromise = postLetterRecordsWithRetry(records, requestId)
+    .then(async (payload) => {
+      state.letterHistory = mergeLetterHistory(payload?.records, state.letterHistory);
+      if (state.letterHistory[0]?.text) state.secretLetter = state.letterHistory[0].text;
+      writePendingLetterRecords(readPendingLetterRecords().filter((record) => {
+        const sentUpdatedAt = sentVersions.get(record.id);
+        return !sentUpdatedAt || Date.parse(record.updatedAt) > Date.parse(sentUpdatedAt);
+      }));
+      saveState();
+      await saveCloudState({ silent: true });
+      completed = true;
+      if (silent) {
+        setSyncStatus("小纸条已同步", { autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS });
+      } else {
+        setSyncWaitModal({
+          title: "同步完成",
+          message: `小纸条历史已安全保存，共 ${state.letterHistory.length} 条。`,
+          autoHideMs: SYNC_STATUS_SUCCESS_HIDE_MS,
+        });
+      }
+      return true;
+    })
+    .catch((error) => {
+      console.warn("letter sync failed, records kept locally.", error);
+      if (silent) {
+        setSyncStatus("小纸条同步失败", { error: true, retryable: true });
+      } else {
+        setSyncWaitModal({
+          title: "小纸条同步失败",
+          message: "记录已保存在本地，可以点击重试，网络恢复后也会自动同步。",
+          error: true,
+          closable: true,
+          retryable: true,
+        });
+      }
+      return false;
+    })
+    .finally(() => {
+      letterSyncPromise = null;
+      if (completed && readPendingLetterRecords().length && navigator.onLine) {
+        void syncPendingLetterRecords({ silent: true });
+      }
+    });
+  return letterSyncPromise;
+}
+
 async function saveCloudState({ silent = false, requestId = "" } = {}) {
   saveState();
   const activeRequestId = requestId || createRequestId();
@@ -2189,6 +2317,12 @@ async function retryPendingSync({ silent = false } = {}) {
   return saveCloudState({ silent, requestId: pending.requestId });
 }
 
+async function retryAllPendingSync({ silent = false } = {}) {
+  const lettersSaved = await syncPendingLetterRecords({ silent });
+  if (!lettersSaved) return false;
+  return retryPendingSync({ silent });
+}
+
 // First-run migration: if the browser already has old localStorage data, push
 // it to the cloud when the cloud row is still empty.
 async function migrateLocalStorageToCloud(cloudData) {
@@ -2227,6 +2361,13 @@ async function migrateLocalStorageToCloud(cloudData) {
     state.letterHistory = mergedLetterHistory;
   }
   if (localLettersNeedCloudRecovery) {
+    const cloudLettersById = new Map(cloudLetterHistory.map((record) => [record.id, record]));
+    mergedLetterHistory.forEach((record) => {
+      const cloudRecord = cloudLettersById.get(record.id);
+      if (!cloudRecord || Date.parse(record.updatedAt) > Date.parse(cloudRecord.updatedAt)) {
+        queuePendingLetterRecord(record);
+      }
+    });
     changed = true;
   }
   if (
@@ -2282,7 +2423,11 @@ async function migrateLocalStorageToCloud(cloudData) {
   }
   if (changed) {
     saveState();
-    await saveCloudState({ silent: true });
+    if (readPendingLetterRecords().length) {
+      await syncPendingLetterRecords({ silent: true });
+    } else {
+      await saveCloudState({ silent: true });
+    }
   }
 }
 
@@ -2807,6 +2952,10 @@ async function syncCloudState({ force = false } = {}) {
   if (!navigator.onLine) {
     setSyncStatus("当前离线，内容待同步", { error: true });
     return;
+  }
+  if (readPendingLetterRecords().length) {
+    const saved = await syncPendingLetterRecords({ silent: true });
+    if (!saved || readPendingLetterRecords().length) return;
   }
   const onlyUpdateNotifications = isUserEditingCloudState();
   cloudSyncInFlight = true;
@@ -4286,19 +4435,23 @@ async function requestTextInSiteDialog(title, defaultValue = "") {
 function saveLetter() {
   const nextLetter = elements.letterInput.value.trim() || DEFAULT_SECRET_LETTER;
   const previousLatest = normalizeLetterHistory(state.letterHistory)[0]?.text || "";
+  let letterRecord = null;
   state.secretLetter = nextLetter;
   if (nextLetter && nextLetter !== previousLatest) {
     const letterId = `letter-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const now = new Date().toISOString();
+    letterRecord = {
+      id: letterId,
+      text: nextLetter,
+      time: now,
+      createdAt: now,
+      updatedAt: now,
+    };
     state.letterHistory = normalizeLetterHistory([
-      {
-        id: letterId,
-        text: nextLetter,
-        time: new Date().toISOString(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
+      letterRecord,
       ...state.letterHistory,
     ]);
+    queuePendingLetterRecord(letterRecord);
     addNotification({
       type: "letter-saved",
       title: "你收到一张新的小纸条",
@@ -4310,7 +4463,7 @@ function saveLetter() {
   renderLetter();
   renderHomeDashboard();
   showToast("已收好。下次打开还在这里。");
-  void saveCloudState();
+  void (letterRecord ? syncPendingLetterRecords({ silent: false }) : saveCloudState());
 }
 
 function openPlanGate({ fromHistory = false } = {}) {
@@ -5049,10 +5202,10 @@ elements.siteDialog.addEventListener("click", (event) => {
 
 elements.syncWaitClose.addEventListener("click", hideSyncWaitModal);
 elements.syncWaitRetry?.addEventListener("click", () => {
-  void retryPendingSync({ silent: false });
+  void retryAllPendingSync({ silent: false });
 });
 elements.syncStatusRetry?.addEventListener("click", () => {
-  void retryPendingSync({ silent: false });
+  void retryAllPendingSync({ silent: false });
 });
 
 elements.toggleLetterVisibilityButton.addEventListener("click", () => {
@@ -5253,9 +5406,7 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("online", () => {
   setSyncStatus("网络已恢复，正在同步");
   startCloudSyncPolling();
-  void (pendingSyncRequest
-    ? retryPendingSync({ silent: true })
-    : syncCloudState({ force: true }));
+  void retryAllPendingSync({ silent: true });
 });
 
 window.addEventListener("offline", () => {
@@ -5272,6 +5423,10 @@ window.addEventListener("pageshow", (event) => {
 
 async function hydrateCloudStateAfterFirstRender() {
   try {
+    if (readPendingLetterRecords().length && navigator.onLine) {
+      await syncPendingLetterRecords({ silent: true });
+      if (readPendingLetterRecords().length) return;
+    }
     if (pendingSyncRequest && navigator.onLine) {
       await retryPendingSync({ silent: true });
       if (pendingSyncRequest) return;
