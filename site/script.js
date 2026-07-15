@@ -648,7 +648,6 @@ const elements = {
   toggleLetterVisibilityButton: document.querySelector("#toggle-letter-visibility-button"),
   letterHistoryList: document.querySelector("#letter-history-list"),
   letterHistoryEmpty: document.querySelector("#letter-history-empty"),
-  letterHistoryMore: document.querySelector("#letter-history-more"),
   letterDetailModal: document.querySelector("#letter-detail-modal"),
   letterDetailMeta: document.querySelector("#letter-detail-meta"),
   letterDetailBody: document.querySelector("#letter-detail-body"),
@@ -955,7 +954,6 @@ let cloudLoadPromise = null;
 let lastCloudSyncErrorAt = 0;
 let cloudLoadFailureCount = 0;
 let pendingSyncRequest = null;
-let letterHistoryVisibleCount = HISTORY_PAGE_SIZE;
 let diaryVisibleCount = HISTORY_PAGE_SIZE;
 let notificationVisibleCount = HISTORY_PAGE_SIZE;
 let planDocumentLoadPromise = null;
@@ -2222,8 +2220,13 @@ async function migrateLocalStorageToCloud(cloudData) {
     changed = true;
   }
   const mergedLetterHistory = mergeLetterHistory(state.letterHistory, localState.letterHistory);
-  if (mergedLetterHistory.length !== state.letterHistory.length) {
+  const cloudLetterHistory = normalizeLetterHistory(cloudData?.letterHistory);
+  const localLettersNeedCloudRecovery =
+    JSON.stringify(mergedLetterHistory) !== JSON.stringify(cloudLetterHistory);
+  if (JSON.stringify(mergedLetterHistory) !== JSON.stringify(state.letterHistory)) {
     state.letterHistory = mergedLetterHistory;
+  }
+  if (localLettersNeedCloudRecovery) {
     changed = true;
   }
   if (
@@ -2987,9 +2990,8 @@ function renderLetter() {
 function renderLetterHistory() {
   const letters = normalizeLetterHistory(state.letterHistory);
   state.letterHistory = letters;
-  const visibleLetters = letters.slice(0, letterHistoryVisibleCount);
   elements.letterHistoryList.replaceChildren(
-    ...visibleLetters.map((letter, index) => {
+    ...letters.map((letter, index) => {
       const item = document.createElement("li");
       item.className = "letter-history-item";
 
@@ -3021,10 +3023,6 @@ function renderLetterHistory() {
   );
   elements.letterHistoryList.hidden = letters.length === 0;
   elements.letterHistoryEmpty.hidden = letters.length > 0;
-  if (elements.letterHistoryMore) {
-    elements.letterHistoryMore.hidden = visibleLetters.length >= letters.length;
-    elements.letterHistoryMore.textContent = `查看更多（还有 ${letters.length - visibleLetters.length} 条）`;
-  }
 }
 
 function openLetterHistoryDetail(letterId, { fromHistory = false } = {}) {
@@ -4956,11 +4954,6 @@ elements.letterHistoryList?.addEventListener("click", (event) => {
   const openButton = event.target.closest("[data-open-letter-history]");
   if (!openButton) return;
   openLetterHistoryDetail(openButton.dataset.openLetterHistory);
-});
-
-elements.letterHistoryMore?.addEventListener("click", () => {
-  letterHistoryVisibleCount += HISTORY_PAGE_SIZE;
-  renderLetterHistory();
 });
 
 elements.diaryMore?.addEventListener("click", () => {
