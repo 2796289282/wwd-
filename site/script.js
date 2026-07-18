@@ -4856,6 +4856,9 @@ function unlockEntrance(user, { silent = false, deferPopups = false } = {}) {
     }, 180);
   }
   startCloudSyncPolling();
+  // A manual login can happen after the background hydrate has already run.
+  // Pull immediately so notifications never wait for the next polling interval.
+  void syncCloudState({ force: true });
   if (!silent) showToast(`${USER_LABELS[currentUser] || "你"}回家啦`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
